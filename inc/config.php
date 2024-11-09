@@ -16,9 +16,9 @@ if ($test) {
 
      //ToDo ROOT - DEV
      define('DOC_ROOT', $_SERVER['DOCUMENT_ROOT'].'/MMS/MMS_BE');
+     define('DOC_URL', 'http://localhost:5000/MMS/MMS_BE');
      define('API', $_SERVER['DOCUMENT_ROOT'].'/MMS/MMS_BE/api');
      define('FUNC', $_SERVER['DOCUMENT_ROOT'].'/MMS/MMS_BE/functions');
-
 } else {
      // define('host','mysql.nethely.hu');
      // define('user','build_mate');

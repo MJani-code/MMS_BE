@@ -1,4 +1,5 @@
 <?php
+require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 
 function dataManipulation($conn, $data)
 {
@@ -11,41 +12,66 @@ function dataManipulation($conn, $data)
     //getData
     function getData($manipulatedData, $data)
     {
-        //getExtraColumnsAndValues
-        $extraColumnsAndValues = [];
-        if ($data['payload']) {
-            foreach ($data['payload'] as $key => $task) {
-                //Put extraColumnsAndValues and task data together
-                $filteredTask = [];
-                foreach ($task as $key => $value) {
-                    switch ($key) {
-                        // case 'extra_column':
-                        //     break;
+        // echo json_encode($data);
+        if ($data['baseTaskData']['payload']) {
+            $groupedData = [];
+            // Segédtömb az ismétlődések elkerülésére
+            $uniqueTaskFees = [];
 
-                        // case 'extra_column_value':
-                        //     break;
+            foreach ($data['baseTaskData']['payload'] as $task) {
+                $id = $task['id'];
 
-                        case 'responsibles_string':
-                            $filteredTask['responsibles'] = $task['responsibles_string'] ? explode(",", $task['responsibles_string']) : [];
-                            break;
+                // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
+                $existingIndex = array_search($id, array_column($groupedData, 'id'));
 
-                        default:
-                            $filteredTask[$key] = $value;
-                            break;
+                // Ha az objektum még nem létezik, hozzuk létre és inicializáljuk a szükséges kulcsokat
+                if ($existingIndex === false) {
+                    $newTask = $task;
+                    $newTask['taskTypes'] = [];
+                    $newTask['responsibles'] = [];
+                    $newTask['location_photos'] = [];
+                    unset($newTask['types'], $newTask['responsible'], $newTask['url']);
+                    $groupedData[] = $newTask;
+                    $existingIndex = array_key_last($groupedData); // Frissítjük az existingIndex-et az új elem indexével
+                }
+
+                // Feldolgozzuk az egyes mezőket
+                if (isset($task['url']) && !in_array(['url' => $task['url']], $groupedData[$existingIndex]['location_photos'])) {
+                    $groupedData[$existingIndex]['location_photos'][] = ['url' => $task['url']];
+                }
+
+                if (isset($task['types']) && $task['types'] !== null && !in_array($task['types'], $groupedData[$existingIndex]['taskTypes'])) {
+                    $groupedData[$existingIndex]['taskTypes'][] = $task['types'];
+                }
+
+                if (isset($task['responsible']) && $task['responsible'] !== null && !in_array($task['responsible'], $groupedData[$existingIndex]['responsibles'])) {
+                    $groupedData[$existingIndex]['responsibles'][] = $task['responsible'];
+                }
+
+                $taskFeesFound = false; // Flag a taskFees ellenőrzésére
+
+                // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
+                foreach ($data['taskFees']['payload'] as $taskFee) {
+                    $taskId = $taskFee['taskId'];
+                    $taskFeeId = $taskFee['id'];
+
+                    // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueTaskFees` segédtömbben
+                    if (!isset($uniqueTaskFees[$taskId][$taskFeeId]) && $taskId === $id) {
+                        $groupedData[$existingIndex]['taskFees'][] = $taskFee;
+                        $uniqueTaskFees[$taskId][$taskFeeId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
+                        $taskFeesFound = true; // Ha találunk legalább egy taskFee-t
+                    }
+                    // Ha nem találunk taskFee-t, akkor nem módosítjuk a taskFees kulcsot
+                    if (!$taskFeesFound && empty($groupedData[$existingIndex]['taskFees'])) {
+                        // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
+                        $groupedData[$existingIndex]['taskFees'] = [];
                     }
                 }
-
-                $taskIds = array_column($manipulatedData['data'], 'id');
-                if (!in_array($task['id'], $taskIds)) {
-                    $manipulatedData['data'][] = $filteredTask;
-                }
             }
-            return $manipulatedData;
-        } else {
-            $manipulatedData = array(
-                'status' => 500,
-                'errorInfo' => 'Nincsen feladat'
-            );
+
+            // Az átrendezett tömb újra indexelése, hogy numerikus tömb legyen
+            $groupedData = array_values($groupedData);
+            $manipulatedData['data'] = $groupedData;
             return $manipulatedData;
         }
     }
@@ -72,13 +98,31 @@ function dataManipulation($conn, $data)
                         case 'responsibles_string':
                             break;
 
-                        case 'type':
+                        case 'location_photos':
+                            break;
+
+                        case 'location_id':
+                            break;
+
+                        case 'fixing_method':
+                            break;
+
+                        case 'status_exohu':
+                            break;
+
+                        case 'required_site_preparation':
+                            break;
+
+                        case 'taskFees':
+                            break;
+
+                        case 'taskTypes':
                             $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
                             if (!$exists) {
                                 $manipulatedData['headers'][] = array(
                                     'text' => 'Típus',
                                     'dbTable' => 'Task_types',
-                                    'dbColumn' => 'name',
+                                    'dbColumn' => 'type_id',
                                     'isReadonly' => false,
                                     'align' => 'start',
                                     'filterable' => true,
@@ -87,13 +131,13 @@ function dataManipulation($conn, $data)
                             }
                             break;
 
-                        case 'status_partner':
+                        case 'status_partner_id':
                             $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
                             if (!$exists) {
                                 $manipulatedData['headers'][] = array(
                                     'text' => 'Státusz(partner)',
-                                    'dbTable' => 'Task_statuses',
-                                    'dbColumn' => 'name',
+                                    'dbTable' => 'Tasks',
+                                    'dbColumn' => 'status_by_partner_id',
                                     'isReadonly' => false,
                                     'align' => 'start',
                                     'filterable' => true,
@@ -102,13 +146,13 @@ function dataManipulation($conn, $data)
                             }
                             break;
 
-                        case 'status_exohu':
+                        case 'status_exohu_id':
                             $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
                             if (!$exists) {
                                 $manipulatedData['headers'][] = array(
                                     'text' => 'Státusz(exohu)',
-                                    'dbTable' => 'Task_statuses',
-                                    'dbColumn' => 'name',
+                                    'dbTable' => 'Tasks',
+                                    'dbColumn' => 'status_by_exohu_id',
                                     'isReadonly' => false,
                                     'align' => 'start',
                                     'filterable' => true,
@@ -168,7 +212,7 @@ function dataManipulation($conn, $data)
                                 $manipulatedData['headers'][] = array(
                                     'text' => 'Lokáció típus',
                                     'dbTable' => 'Task_locations',
-                                    'dbColumn' => 'type',
+                                    'dbColumn' => 'location_type',
                                     'isReadonly' => false,
                                     'align' => 'start',
                                     'filterable' => true,
@@ -273,7 +317,7 @@ function dataManipulation($conn, $data)
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'errorInfo' => 'Nincsen feladat'
+                'errorInfo' => 'Nincsen megjeleníthető header'
             );
             return $manipulatedData;
         }
@@ -284,3 +328,87 @@ function dataManipulation($conn, $data)
 
     return $manipulatedData;
 }
+
+function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT, $DOC_URL)
+{
+    // Engedélyezett fájltípusok
+    $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+
+    // Alapértelmezett válasz formázása
+    function createResponse($status, $errorMessage = '', $data = null)
+    {
+        return [
+            'status' => $status,
+            'message' => $errorMessage,
+            'payload' => $data,
+        ];
+    }
+
+    try {
+        $fileName = $file['name'];
+        $fileTmpName = $file['tmp_name'];
+        $fileSize = $file['size'];
+        $fileError = $file['error'];
+
+        // Fájl kiterjesztés ellenőrzése
+        $fileActualExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if (!in_array($fileActualExt, $allowedExtensions)) {
+            return createResponse(400, "Ez a fájltípus nem engedélyezett!");
+        }
+
+        // Hibaellenőrzés
+        if ($fileError !== 0) {
+            return createResponse(400, "Hiba történt a fájl feltöltése közben. Kérlek fordulj a rendszergazdához! Hiba: $fileError");
+        }
+
+        // Fájlméret ellenőrzése
+        if ($fileSize > $maxFileSize) {
+            return createResponse(400, "A fájl mérete túl nagy!");
+        }
+
+        // Útvonalak létrehozása
+        $fileDestination = $DOC_ROOT . '/' . $fileName;
+        $fileUrl = $DOC_URL . '/' . $fileName;
+
+        // Ellenőrzi, hogy létezik-e a fájl
+        if (file_exists($fileDestination)) {
+            return createResponse(400, "A fájl már létezik");
+        }
+
+        // Adatok beszúrása az adatbázisba
+        $stmt = $conn->prepare(
+            "INSERT INTO Task_location_photos
+            (location_id, filename, url, created_by)
+            VALUES (:location_id, :filename, :url, :created_by)"
+        );
+
+        $stmt->execute([
+            ':location_id' => $locationId,
+            ':filename' => $fileName,
+            ':url' => $fileUrl,
+            ':created_by' => $userId,
+        ]);
+
+        $payload = array(
+            'photoUpload' => true,
+            'locationId' => intval($locationId),
+            'url' => $fileUrl
+        );
+
+        // Ellenőrzés, hogy sikeres volt-e a beszúrás
+        if ($stmt->rowCount() > 0) {
+            // Fájl mozgatása és jogosultságok beállítása
+            $isFileUplaoded = move_uploaded_file($fileTmpName, $fileDestination);
+            chmod($fileDestination, 0777);
+            if ($isFileUplaoded) {
+                return createResponse(200, "A fájl sikeresen feltöltve.", $payload);
+            }
+        } else {
+            return createResponse(500, "Az adatbázis művelet sikertelen.");
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function getTask($task_id) {}

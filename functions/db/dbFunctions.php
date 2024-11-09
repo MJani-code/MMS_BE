@@ -101,14 +101,13 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                     $query .= " $order";
                 }
                 $stmt = $conn->prepare($query);
-
                 // foreach ($conditions as $col => $value) {
                 //     $paramName = ":cond_" . str_replace(".", "_", $col);
                 //     $stmt->bindValue($paramName, $value);
                 // }
 
                 $stmt->execute();
-
+                // echo $query;
                 $payload = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if ($stmt->execute()) {
                     $results['status'] = 200;
@@ -118,14 +117,14 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                     $errorInfo = $stmt->errorInfo();
                     $results['status'] = 500;
                     $results['message'] = 'Hiba történt a lekérdezés végrehajtása során.';
-                    $results['error_info'] = $errorInfo;
+                    $results['errorInfo'] = $errorInfo;
                 }
                 return $results;
             } catch (Exception $e) {
                 $errorInfo = $e->getMessage();
                 $results['status'] = 500;
                 $results['message'] = 'Hiba történt a lekérdezés végrehajtása során';
-                $results['error_info'] = $errorInfo;
+                $results['errorInfo'] = $errorInfo;
                 return $results;
             }
 
@@ -202,7 +201,6 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
             }
             break;
     }
-
 }
 
 //dataToHandleInDb($conn, $dataToHandleInDb);
