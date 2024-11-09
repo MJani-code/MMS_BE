@@ -94,6 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $params = array_merge($params, $items_to_delete); // hozzáadjuk az `item_id`-kat
 
                                 $stmt->execute($params);
+                                if ($stmt->execute()) {
+                                    $payload = array(
+                                        'taskId' => intval($taskId),
+                                        'column' => 'taskTypes',
+                                        'value' => $new_items
+                                    );
+                                    $this->response = array(
+                                        'status' => 200,
+                                        'message' => 'Data update successful',
+                                        'payload' => $payload
+                                    );
+                                }
                             }
 
                             //5. Ha már létezik a státusz, módosítjuk annak deleted státuszát, ha nem, akkor új sort hozunk létre
@@ -106,12 +118,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $stmt = $conn->prepare($update_query);
                                         $params = [0, $updated_at, $userId, $taskId, $item_id]; // Paraméterek a frissítéshez
                                         $stmt->execute($params);
+                                        if ($stmt->execute()) {
+                                            $payload = array(
+                                                'taskId' => intval($taskId),
+                                                'column' => 'taskTypes',
+                                                'value' => $new_items
+                                            );
+                                            $this->response = array(
+                                                'status' => 200,
+                                                'message' => 'Data update successful',
+                                                'payload' => $payload
+                                            );
+                                        }
                                     } else {
                                         // Ha az elem még nincs benne, akkor INSERT
                                         $insert_query = "INSERT INTO $dbTable (task_id, type_id, created_by) VALUES (?, ?, ?)";
                                         $stmt = $conn->prepare($insert_query);
                                         $params = [$taskId, $item_id, $userId];
                                         $stmt->execute($params);
+                                        if ($stmt->execute()) {
+                                            $payload = array(
+                                                'taskId' => intval($taskId),
+                                                'column' => 'taskTypes',
+                                                'value' => $new_items
+                                            );
+                                            $this->response = array(
+                                                'status' => 200,
+                                                'message' => 'Data update successful',
+                                                'payload' => $payload
+                                            );
+                                        }
                                     }
                                 }
                             }
@@ -127,8 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $stmt = $conn->prepare($query);
                             $stmt->execute(['task_id' => $taskId]);
                             $all_items = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                            if (!$stmt->execute()) {
-                            }
 
                             // 2. Lekérjük az aktuális tételeket az adatbázisból
                             $query = "SELECT user_id FROM $dbTable WHERE task_id = :task_id AND deleted = 0";
@@ -151,6 +185,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $params = array_merge($params, $items_to_delete); // hozzáadjuk az `item_id`-kat
 
                                 $stmt->execute($params);
+                                if ($stmt->execute()) {
+                                    $payload = array(
+                                        'taskId' => intval($taskId),
+                                        'column' => 'responsibles',
+                                        'value' => $new_items
+                                    );
+                                    $this->response = array(
+                                        'status' => 200,
+                                        'message' => 'Data update successful',
+                                        'payload' => $payload
+                                    );
+                                }
                             }
 
                             //5. Ha már létezik a státusz, módosítjuk annak deleted státuszát, ha nem, akkor új sort hozunk létre
@@ -163,12 +209,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $stmt = $conn->prepare($update_query);
                                         $params = [0, $updated_at, $userId, $taskId, $item_id]; // Paraméterek a frissítéshez
                                         $stmt->execute($params);
+                                        if ($stmt->execute()) {
+                                            $payload = array(
+                                                'taskId' => intval($taskId),
+                                                'column' => 'responsibles',
+                                                'value' => $new_items
+                                            );
+                                            $this->response = array(
+                                                'status' => 200,
+                                                'message' => 'Data update successful',
+                                                'payload' => $payload
+                                            );
+                                        }
                                     } else {
                                         // Ha az elem még nincs benne, akkor INSERT
                                         $insert_query = "INSERT INTO $dbTable (task_id, user_id, created_by) VALUES (?, ?, ?)";
                                         $stmt = $conn->prepare($insert_query);
                                         $params = [$taskId, $item_id, $userId];
                                         $stmt->execute($params);
+                                        if ($stmt->execute()) {
+                                            $payload = array(
+                                                'taskId' => intval($taskId),
+                                                'column' => 'responsibles',
+                                                'value' => $new_items
+                                            );
+                                            $this->response = array(
+                                                'status' => 200,
+                                                'message' => 'Data update successful',
+                                                'payload' => $payload
+                                            );
+                                        }
                                     }
                                 }
                             }

@@ -158,7 +158,7 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                 if ($stmt->execute()) {
                     $response = array(
                         "isUpdated" => 1,
-                        "message" => "Data update successfully."
+                        "message" => "Data update successful."
                     );
                 } else {
                     $response = array(
