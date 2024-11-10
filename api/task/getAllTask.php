@@ -96,6 +96,7 @@ class GetAllTask
                     'tf.quantity',
                     'tf.total'
                 ],
+                'condition' => 'WHERE tf.deleted = 0',
                 'other' => "ORDER BY tf.task_id"
             ];
             $result = dataToHandleInDb($this->conn, $baseTaskData);

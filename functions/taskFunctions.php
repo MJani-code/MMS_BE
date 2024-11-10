@@ -1,6 +1,16 @@
 <?php
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 
+// Alapértelmezett válasz formázása
+function createResponse($status, $errorMessage = '', $data = null)
+{
+    return [
+        'status' => $status,
+        'message' => $errorMessage,
+        'payload' => $data,
+    ];
+}
+
 function dataManipulation($conn, $data)
 {
     $manipulatedData = array(
@@ -334,16 +344,6 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
     // Engedélyezett fájltípusok
     $allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
 
-    // Alapértelmezett válasz formázása
-    function createResponse($status, $errorMessage = '', $data = null)
-    {
-        return [
-            'status' => $status,
-            'message' => $errorMessage,
-            'payload' => $data,
-        ];
-    }
-
     try {
         $fileName = $file['name'];
         $fileTmpName = $file['tmp_name'];
@@ -411,4 +411,33 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
     }
 }
 
-function getTask($task_id) {}
+function addFee($conn, $dbTable, $newItems, $userId)
+{
+    try {
+        $created_at = date('Y-m-d H:i:s');
+
+        $insert_query = "INSERT INTO $dbTable (task_id, fee_id, other_items, net_unit_price, quantity, total, created_at, created_by) VALUES (?, ?, ?,?,?,?,?,?)";
+        $stmt = $conn->prepare($insert_query);
+        $params = [$newItems['taskId'], $newItems['feeId'], $newItems['otherItems'], $newItems['netUnitPrice'], $newItems['quantity'], $newItems['total'], $created_at, $userId];
+        // $stmt->execute($params);
+
+        $dataToHandleInDb = [
+            'table' => $dbTable,
+            'method' => "get",
+            'columns' => ['MAX(id)'],
+            'others' => "",
+            'order' => ""
+        ];
+        $getMaxId = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($getMaxId['status'] === 200) {
+            $newItems['id'] = $getMaxId['payload'][0]['MAX(id)'];
+        } else {
+            return createResponse($getMaxId['status'], $getMaxId['message'] . '. ' . $getMaxId['errorInfo']);
+        }
+        if ($stmt->execute($params)) {
+            return createResponse(200, "Item insertion success", $newItems);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
