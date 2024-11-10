@@ -23,7 +23,7 @@ function dataManipulation($conn, $data)
     function getData($manipulatedData, $data)
     {
         // echo json_encode($data);
-        if ($data['baseTaskData']['payload']) {
+        if (isset($data['baseTaskData']['payload'])) {
             $groupedData = [];
             // Segédtömb az ismétlődések elkerülésére
             $uniqueTaskFees = [];
@@ -83,13 +83,19 @@ function dataManipulation($conn, $data)
             $groupedData = array_values($groupedData);
             $manipulatedData['data'] = $groupedData;
             return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető adat'
+            );
+            return $manipulatedData;
         }
     }
 
     //getHeaders
     function getHeaders($manipulatedData, $data)
     {
-        if ($manipulatedData['data']) {
+        if (isset($manipulatedData['data'])) {
             foreach ($manipulatedData['data'] as $key => $task) {
                 foreach ($task as $key => $header) {
                     switch ($key) {
@@ -327,7 +333,7 @@ function dataManipulation($conn, $data)
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'errorInfo' => 'Nincsen megjeleníthető header'
+                'message' => 'Nincsen megjeleníthető header'
             );
             return $manipulatedData;
         }
@@ -436,6 +442,30 @@ function addFee($conn, $dbTable, $newItems, $userId)
         }
         if ($stmt->execute($params)) {
             return createResponse(200, "Item insertion success", $newItems);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function deleteFee($conn, $dbTable, $id, $taskId, $userId)
+{
+    try {
+        $deleted_at = date('Y-m-d H:i:s');
+
+        $dataToHandleInDb = [
+            'table' => $dbTable,
+            'method' => "update",
+            'columns' => ['deleted', 'deleted_at', 'deleted_by'],
+            'values' => [1, $deleted_at, $userId],
+            'others' => "",
+            'conditions' => ['task_id' => $taskId, 'id' => $id]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] === 200) {
+            return createResponse($result['status'], $result['message'], $id = array('id' => $id, 'taskId' => $taskId));
+        } else {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
         return createResponse(500, "Hiba történt: " . $e->getMessage());

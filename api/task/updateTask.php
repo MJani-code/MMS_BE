@@ -243,6 +243,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 }
                             }
                             break;
+
+                        case 'Tasks':
+                            $dataToHandleInDb = [
+                                'table' => $dbTable,
+                                'method' => "update",
+                                'columns' => [$dbColumn],
+                                'values' => [$value],
+                                'others' => "",
+                                'order' => "",
+                                'conditions' => ['id' => $taskId]
+                            ];
+                            $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
+                            break;
                         default:
                             $dataToHandleInDb = [
                                 'table' => $dbTable,

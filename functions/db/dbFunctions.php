@@ -157,11 +157,13 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                 }
                 if ($stmt->execute()) {
                     $response = array(
+                        "status" => 200,
                         "isUpdated" => 1,
                         "message" => "Data update successful."
                     );
                 } else {
                     $response = array(
+                        "status" => 400,
                         "isUpdated" => 0,
                         "error" => "Data update failed."
                     );

@@ -96,8 +96,7 @@ class GetAllTask
                     'tf.quantity',
                     'tf.total'
                 ],
-                'condition' => 'WHERE tf.deleted = 0',
-                'other' => "ORDER BY tf.task_id"
+                'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
             $result = dataToHandleInDb($this->conn, $baseTaskData);
             $result2 = dataToHandleInDb($this->conn, $taskFees);
@@ -114,7 +113,7 @@ class GetAllTask
                 //echo json_encode($result);
                 $this->taskData['baseTaskData'] = $result; // Tároljuk az eredményt
                 $this->taskData['taskFees'] = $result2; // Tároljuk az eredményt
-                return $result;
+                return $this->taskData;
             }
         } catch (Exception $e) {
             $errorInfo = $e->getMessage();
