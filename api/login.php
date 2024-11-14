@@ -61,6 +61,7 @@ class LoginHandler
                 if ($result && password_verify($password, $result['password'])) {
                     $userId = $result['id'];
                     $roleId = $result['role_id'];
+                    $firstName = $result['first_name'];
 
                     // JWT Token generálása
                     $currentTimestamp = time();
@@ -89,7 +90,9 @@ class LoginHandler
                     echo $this->createResponse(200, 'Bejelentkezés sikeres', [
                         "token" => $jwt,
                         "id" => $userId,
-                        "role" => $roleId
+                        "role" => $roleId,
+                        "firstName" => $firstName,
+                        "isLoggedIn" => true
                     ]);
                 } else {
                     // Hibás bejelentkezés válasza
