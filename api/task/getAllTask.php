@@ -84,6 +84,7 @@ class GetAllTask
                         LEFT JOIN Task_type_details ttd on ttd.id = tt.type_id
                         LEFT JOIN Task_statuses ts1 on ts1.id = t.status_by_partner_id
                         LEFT JOIN Task_statuses ts2 on ts2.id = t.status_by_exohu_id
+                        LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts2.id
                         LEFT JOIN Task_locations tl on tl.id = t.id
                         LEFT JOIN Location_types lt on lt.id = tl.location_type_id
                         LEFT JOIN Task_location_photos tlp on tlp.location_id = tl.id
@@ -91,7 +92,12 @@ class GetAllTask
                         LEFT JOIN Task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
                         LEFT JOIN Users u on u.id = tr.user_id
                         ",
-                'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL
+                'conditions' => "tsp.role_id >=
+                        (CASE
+                        WHEN $roleId = $roleId THEN $roleId
+                        ELSE tsp.role_id
+                        END)
+                        AND tlp.deleted = 0 OR tlp.deleted is NULL
                         ORDER BY id"
             ];
 

@@ -49,9 +49,11 @@ class LoginHandler
             try {
                 $stmt = $this->conn->prepare(
                     "SELECT
-                        u.id, u.role_id, u.first_name, u.last_name, u.email, u.password
+                        u.id, u.role_id, u.first_name, u.last_name, u.email, u.password, GROUP_CONCAT(p.name) as permissions
                     FROM Users u
                     LEFT JOIN Roles r ON r.id = u.role_id
+                    LEFT JOIN Role_permissions rp on rp.role_id = u.role_id
+                    LEFT JOIN Permissions p on p.id = rp.permission_id
                     WHERE email = :email AND u.deleted = 0"
                 );
                 $stmt->bindParam(":email", $email);
@@ -86,14 +88,16 @@ class LoginHandler
                     $stmt->bindParam(":token_expire_date", date('Y-m-d H:i:s', $expirationTimestamp));
                     $stmt->execute();
 
+
                     // Sikeres válasz
-                    echo $this->createResponse(200, 'Bejelentkezés sikeres', [
+                    echo $this->createResponse(200, 'success', [
                         "token" => $jwt,
                         "userId" => intval($userId),
                         "roleId" => $roleId,
                         "firstName" => $firstName,
                         "isLoggedIn" => true,
-                        "email" => $email
+                        "email" => $email,
+                        "permissions" => explode(',', $result['permissions'])
                     ]);
                 } else {
                     // Hibás bejelentkezés válasza
