@@ -11,16 +11,21 @@ function createResponse($status, $errorMessage = '', $data = null)
     ];
 }
 
-function dataManipulation($conn, $data)
+function dataManipulation($conn, $data, $userAuthData)
 {
     $manipulatedData = array(
         'headers' => [],
-        'data' => []
+        'data' => [],
+        'statuses' => []
     );
-
+    if ($userAuthData['status'] !== 200) {
+        return;
+    }
+    $userRoleId = $userAuthData['data']->roleId;
+    // echo $userRoleId;
 
     //getData
-    function getData($manipulatedData, $data)
+    function getData($conn, $manipulatedData, $data)
     {
         // echo json_encode($data);
         if (isset($data['baseTaskData']['payload'])) {
@@ -93,241 +98,30 @@ function dataManipulation($conn, $data)
     }
 
     //getHeaders
-    function getHeaders($manipulatedData, $data)
+    function getHeaders($conn, $manipulatedData, $data, $userRoleId)
     {
         if (isset($manipulatedData['data'])) {
-            foreach ($manipulatedData['data'] as $key => $task) {
-                foreach ($task as $key => $header) {
-                    switch ($key) {
-                        case 'extra_column_value':
-                            break;
-
-                        case 'extra_column_permission':
-                            break;
-
-                        case 'status_color':
-                            break;
-
-                        case 'id';
-                            break;
-
-                        case 'responsibles_string':
-                            break;
-
-                        case 'location_photos':
-                            break;
-
-                        case 'location_id':
-                            break;
-
-                        case 'fixing_method':
-                            break;
-
-                        case 'status_exohu':
-                            break;
-
-                        case 'required_site_preparation':
-                            break;
-
-                        case 'taskFees':
-                            break;
-
-                        case 'taskTypes':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Típus',
-                                    'dbTable' => 'Task_types',
-                                    'dbColumn' => 'type_id',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'status_partner_id':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Státusz(partner)',
-                                    'dbTable' => 'Tasks',
-                                    'dbColumn' => 'status_by_partner_id',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'status_exohu_id':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Státusz(exohu)',
-                                    'dbTable' => 'Tasks',
-                                    'dbColumn' => 'status_by_exohu_id',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'zip':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Zip',
-                                    'dbTable' => 'Task_locations',
-                                    'dbColumn' => 'zip',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'city':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Település',
-                                    'dbTable' => 'Task_locations',
-                                    'dbColumn' => 'city',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'address':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Cím',
-                                    'dbTable' => 'Task_locations',
-                                    'dbColumn' => 'address',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'location_type':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Lokáció típus',
-                                    'dbTable' => 'Task_locations',
-                                    'dbColumn' => 'location_type',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'fixing_method':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Rögzítési mód',
-                                    'dbTable' => 'Task_locations',
-                                    'dbColumn' => 'fixing_method',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'responsibles':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Megbízottak',
-                                    'dbTable' => 'Task_responsibles',
-                                    'dbColumn' => 'id',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'planned_delivery_date':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Kivitelezési dátum(terv)',
-                                    'dbTable' => 'Task_dates',
-                                    'dbColumn' => 'planned_delivery_date',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'delivery_date':
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => 'Kivitelezési dátum(tény)',
-                                    'dbTable' => 'Task_dates',
-                                    'dbColumn' => 'delivery_date',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-
-                        case 'extra_column':
-                            $exists = in_array($task[$key], array_column($manipulatedData['headers'], 'value'));
-                            if (!$exists && $task[$key] != NULL) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => $header,
-                                    'dbTable' => 'Task_additional_info',
-                                    'dbColumn' => 'name',
-                                    'isReadonly' => false,
-                                    'align' => 'start',
-                                    'filterable' => true,
-                                    'value' => $task[$key]
-                                );
-                            }
-                            break;
-
-                        default:
-                            $exists = in_array($key, array_column($manipulatedData['headers'], 'text'));
-                            if (!$exists) {
-                                $manipulatedData['headers'][] = array(
-                                    'text' => $key,
-                                    'dbTable' => 'Task_additional_info',
-                                    'dbColumn' => 'name',
-                                    'align' => 'start',
-                                    'isReadonly' => false,
-                                    'filterable' => true,
-                                    'value' => $key
-                                );
-                            }
-                            break;
-                    }
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'Task_columns tc',
+                    'method' => "get",
+                    'columns' => ['text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
+                    'others' => "LEFT JOIN Task_column_permissions tcp on tcp.task_columns_id = tc.id",
+                    'conditions' => "tcp.role_id >=
+                        (CASE
+                        WHEN $userRoleId = $userRoleId THEN $userRoleId
+                        ELSE tcp.role_id
+                        END) AND tc.task_column_types_id = 1 AND tc.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['headers'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
             }
             return $manipulatedData;
         } else {
@@ -339,8 +133,144 @@ function dataManipulation($conn, $data)
         }
     }
 
-    $manipulatedData = getData($manipulatedData, $data);
-    $manipulatedData = getHeaders($manipulatedData, $data);
+    //getStatuses
+    function getStatuses($conn, $manipulatedData, $data, $userRoleId)
+    {
+        if (isset($manipulatedData['data'])) {
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'Task_statuses ts',
+                    'method' => "get",
+                    'columns' => ['ts.id', 'name', 'color'],
+                    'others' => "LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'conditions' => "tsp.role_id >=
+                        (CASE
+                        WHEN $userRoleId = $userRoleId THEN $userRoleId
+                        ELSE tsp.role_id
+                        END) AND ts.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['statuses'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
+                }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
+            }
+            return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető header'
+            );
+            return $manipulatedData;
+        }
+    }
+
+    //getLocationTypes
+    function getLocationTypes($conn, $manipulatedData, $data, $userRoleId)
+    {
+        if (isset($manipulatedData['data'])) {
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'Location_types lt',
+                    'method' => "get",
+                    'columns' => ['id', 'name', 'color'],
+                    'others' => "",
+                    'conditions' => "lt.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['locationTypes'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
+                }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
+            }
+            return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető header'
+            );
+            return $manipulatedData;
+        }
+    }
+
+    //getLocationTypes
+    function getTaskTypes($conn, $manipulatedData, $data, $userRoleId)
+    {
+        if (isset($manipulatedData['data'])) {
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'Task_type_details ttd',
+                    'method' => "get",
+                    'columns' => ['id', 'name', 'color'],
+                    'others' => "",
+                    'conditions' => "ttd.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['taskTypes'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
+                }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
+            }
+            return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető header'
+            );
+            return $manipulatedData;
+        }
+    }
+
+    //getLocationTypes
+    function getUsers($conn, $manipulatedData, $data, $userRoleId)
+    {
+        if (isset($manipulatedData['data'])) {
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'Responsibles r',
+                    'method' => "get",
+                    'columns' => ["r.id", "CONCAT(u.last_name,' ',u.first_name) as name"],
+                    'others' => "LEFT JOIN Users u on u.id = r.user_id",
+                    'conditions' => "r.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['users'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
+                }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
+            }
+            return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető header'
+            );
+            return $manipulatedData;
+        }
+    }
+
+    $manipulatedData = getData($conn, $manipulatedData, $data);
+    $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getUsers($conn, $manipulatedData, $data, $userRoleId);
 
     return $manipulatedData;
 }

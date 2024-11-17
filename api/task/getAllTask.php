@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
 //require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
+require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
 
 
 $response = [];
@@ -18,14 +19,21 @@ class GetAllTask
     private $conn;
     private $response;
     private $taskData = [];
+    private $auth;
+    private $userAuthData;
 
-    public function __construct($conn, &$response)
+    public function __construct($conn, &$response, $auth)
     {
         $this->conn = $conn;
         $this->response = &$response;
+        $this->auth = $auth;
     }
 
     //TODO: user validation here
+    public function Auth()
+    {
+        return $this->auth->authenticate();
+    }
 
     public function getTaskData()
     {
@@ -33,7 +41,17 @@ class GetAllTask
             return $this->taskData;
         }
 
-        $userRoleId = 2;
+        $this->userAuthData = $this->auth->authenticate();
+        //echo json_encode($this->Auth());
+
+        if ($this->userAuthData['status'] !== 200) {
+            return $this->response = array(
+                'status' => $this->userAuthData['status'],
+                'message' => $this->userAuthData['message'],
+                'data' => NULL
+            );;
+        }
+
         try {
             $baseTaskData = [
                 'table' => "Tasks t",
@@ -48,7 +66,7 @@ class GetAllTask
                     'tl.zip as "zip"',
                     'tl.city as "city"',
                     'tl.address as "address"',
-                    'tl.location_type as location_type',
+                    'tl.location_type_id as location_type',
                     'tl.id as location_id',
                     'tl.fixing_method',
                     'tl.required_site_preparation',
@@ -64,24 +82,13 @@ class GetAllTask
                         LEFT JOIN Task_statuses ts1 on ts1.id = t.status_by_partner_id
                         LEFT JOIN Task_statuses ts2 on ts2.id = t.status_by_exohu_id
                         LEFT JOIN Task_locations tl on tl.id = t.id
+                        LEFT JOIN Location_types lt on lt.id = tl.location_type_id
                         LEFT JOIN Task_location_photos tlp on tlp.location_id = tl.id
                         LEFT JOIN Task_dates td on td.task_id = t.id
-                        LEFT JOIN Task_additional_info tai on tai.task_id = t.id
-                        LEFT JOIN Task_additional_info_permissions taip on taip.task_additional_info_id = tai.id
                         LEFT JOIN Task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
                         LEFT JOIN Users u on u.id = tr.user_id
                         ",
-                'conditions' => "
-                        taip.role_id >=
-                        (CASE
-                        WHEN $userRoleId = 1 THEN 1
-                        WHEN $userRoleId = 2 THEN 2
-                        WHEN $userRoleId = 3 THEN 3
-                        WHEN $userRoleId = 4 THEN 4
-                        WHEN $userRoleId = 5 THEN 5
-                        ELSE taip.role_id
-                        END)
-                        OR tai.name is NULL AND tlp.deleted = 0 OR tlp.deleted is NULL
+                'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL
                         ORDER BY id"
             ];
 
@@ -127,15 +134,22 @@ class GetAllTask
     }
     public function dataManipulation(&$response)
     {
-        $rowData = $this->getTaskData();
+        $rowData = $this->taskData;
         if ($rowData) {
-            $result = dataManipulation($this->conn, $rowData);
+            $result = dataManipulation($this->conn, $rowData, $this->userAuthData);
             $response = $result;
-            //echo json_encode($rowData);
         }
     }
 }
-$getAllTask = new GetAllTask($conn, $response);
+
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
+preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
+$token = $matches[1];
+
+$permissionName = 'View_task';
+$auth = new Auth($conn, $token, $secretkey, $permissionName);
+
+$getAllTask = new GetAllTask($conn, $response, $auth, 'View_task');
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

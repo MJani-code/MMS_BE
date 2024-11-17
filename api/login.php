@@ -89,10 +89,11 @@ class LoginHandler
                     // Sikeres válasz
                     echo $this->createResponse(200, 'Bejelentkezés sikeres', [
                         "token" => $jwt,
-                        "id" => $userId,
-                        "role" => $roleId,
+                        "userId" => intval($userId),
+                        "roleId" => $roleId,
                         "firstName" => $firstName,
-                        "isLoggedIn" => true
+                        "isLoggedIn" => true,
+                        "email" => $email
                     ]);
                 } else {
                     // Hibás bejelentkezés válasza

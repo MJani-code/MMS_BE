@@ -107,7 +107,7 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                 // }
 
                 $stmt->execute();
-                // echo $query;
+                //echo $query;
                 $payload = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 if ($stmt->execute()) {
                     $results['status'] = 200;
