@@ -29,7 +29,7 @@ class GetAllTask
         $this->auth = $auth;
     }
 
-    //TODO: user validation here
+
     public function Auth()
     {
         return $this->auth->authenticate();
@@ -37,12 +37,14 @@ class GetAllTask
 
     public function getTaskData()
     {
+        //If there is already data, stop run code again
         if ($this->taskData !== []) {
             return $this->taskData;
         }
-
+        //User validation here
         $this->userAuthData = $this->auth->authenticate();
-        //echo json_encode($this->Auth());
+        $roleId = $this->userAuthData['data']->roleId;
+        //$roleId = 3;
 
         if ($this->userAuthData['status'] !== 200) {
             return $this->response = array(
@@ -52,6 +54,7 @@ class GetAllTask
             );;
         }
 
+        //Data gathering
         try {
             $baseTaskData = [
                 'table' => "Tasks t",
@@ -106,20 +109,36 @@ class GetAllTask
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
             $result = dataToHandleInDb($this->conn, $baseTaskData);
-            $result2 = dataToHandleInDb($this->conn, $taskFees);
-            //echo json_encode($result2);
-            if ($result['status'] && $result2['status'] !== 200) {
-                $errorInfo = isset($result['errorInfo']) ? $result['errorInfo'] : '';
-                $errorInfo = isset($result2['errorInfo']) ? $result2['errorInfo'] : '';
-                $this->response = array(
-                    'status' => 500,
-                    'errorInfo' => $errorInfo,
-                    'data' => NULL
-                );
+
+            //Only roleId under 3 can access to fees
+            if ($roleId < 3) {
+                $result2 = dataToHandleInDb($this->conn, $taskFees);
             } else {
-                //echo json_encode($result);
-                $this->taskData['baseTaskData'] = $result; // Tároljuk az eredményt
-                $this->taskData['taskFees'] = $result2; // Tároljuk az eredményt
+                $result2 = array(
+                    'status' => 200,
+                    'message' => 'nincs hozzáférés a fees részhez',
+                    'data' => null
+                );
+            }
+
+            $errorInfo = '';
+
+            if ($result['status'] !== 200) {
+                $errorInfo = isset($result['errorInfo']) ? $result['errorInfo'] : '';
+                if (isset($result2) && $result2['status'] !== 200) {
+                    $errorInfo .= isset($result2['errorInfo']) ? $result2['errorInfo'] : '';
+                }
+
+                if ($errorInfo) {
+                    $this->response = array(
+                        'status' => 500,
+                        'errorInfo' => $errorInfo,
+                        'data' => NULL
+                    );
+                }
+            } else {
+                $this->taskData['baseTaskData'] = $result;
+                $this->taskData['taskFees'] = $result2;
                 return $this->taskData;
             }
         } catch (Exception $e) {
@@ -132,6 +151,7 @@ class GetAllTask
             return;
         }
     }
+    //Data customizing
     public function dataManipulation(&$response)
     {
         $rowData = $this->taskData;

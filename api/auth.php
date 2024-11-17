@@ -53,7 +53,7 @@ class AuthHandler
                 $decoded = JWT::decode($token, new Key($this->secretKey, 'HS256'));
                 if ($decoded->expirationTime < time()) {
                     // A token lejárt
-                    echo $this->createResponse(400, 'A token lejárt, kérjük jelentkezz be újra.');
+                    echo $this->createResponse(401, 'A token lejárt, kérjük jelentkezz be újra.');
                     return;
                 } else {
                     // A token még érvényes

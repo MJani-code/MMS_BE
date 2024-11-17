@@ -58,7 +58,6 @@ class Auth
                 return $this->createResponse(401, $e, $decoded);
             }
             return $this->createResponse(200, 'success', $decoded);
-            // return $this->userAuthData[] = $decoded;
         }
     }
 }

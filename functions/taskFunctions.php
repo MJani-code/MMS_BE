@@ -66,21 +66,25 @@ function dataManipulation($conn, $data, $userAuthData)
                 $taskFeesFound = false; // Flag a taskFees ellenőrzésére
 
                 // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
-                foreach ($data['taskFees']['payload'] as $taskFee) {
-                    $taskId = $taskFee['taskId'];
-                    $taskFeeId = $taskFee['id'];
+                if (isset($data['taskFees']['payload'])) {
+                    foreach ($data['taskFees']['payload'] as $taskFee) {
+                        $taskId = $taskFee['taskId'];
+                        $taskFeeId = $taskFee['id'];
 
-                    // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueTaskFees` segédtömbben
-                    if (!isset($uniqueTaskFees[$taskId][$taskFeeId]) && $taskId === $id) {
-                        $groupedData[$existingIndex]['taskFees'][] = $taskFee;
-                        $uniqueTaskFees[$taskId][$taskFeeId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                        $taskFeesFound = true; // Ha találunk legalább egy taskFee-t
+                        // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueTaskFees` segédtömbben
+                        if (!isset($uniqueTaskFees[$taskId][$taskFeeId]) && $taskId === $id) {
+                            $groupedData[$existingIndex]['taskFees'][] = $taskFee;
+                            $uniqueTaskFees[$taskId][$taskFeeId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
+                            $taskFeesFound = true; // Ha találunk legalább egy taskFee-t
+                        }
+                        // Ha nem találunk taskFee-t, akkor nem módosítjuk a taskFees kulcsot
+                        if (!$taskFeesFound && empty($groupedData[$existingIndex]['taskFees'])) {
+                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
+                            $groupedData[$existingIndex]['taskFees'] = [];
+                        }
                     }
-                    // Ha nem találunk taskFee-t, akkor nem módosítjuk a taskFees kulcsot
-                    if (!$taskFeesFound && empty($groupedData[$existingIndex]['taskFees'])) {
-                        // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                        $groupedData[$existingIndex]['taskFees'] = [];
-                    }
+                } else {
+                    $groupedData[$existingIndex]['taskFees'] = [];
                 }
             }
 
