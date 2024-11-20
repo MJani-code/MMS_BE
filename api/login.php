@@ -49,7 +49,7 @@ class LoginHandler
             try {
                 $stmt = $this->conn->prepare(
                     "SELECT
-                        u.id, u.role_id, u.first_name, u.last_name, u.email, u.password, GROUP_CONCAT(p.name) as permissions
+                        u.id, u.role_id, u.first_name, u.last_name, u.email, u.password, GROUP_CONCAT(p.id) as permissions
                     FROM Users u
                     LEFT JOIN Roles r ON r.id = u.role_id
                     LEFT JOIN Role_permissions rp on rp.role_id = u.role_id
@@ -97,7 +97,7 @@ class LoginHandler
                         "firstName" => $firstName,
                         "isLoggedIn" => true,
                         "email" => $email,
-                        "permissions" => explode(',', $result['permissions'])
+                        "xtg" => explode(',', $result['permissions'])
                     ]);
                 } else {
                     // Hibás bejelentkezés válasza
