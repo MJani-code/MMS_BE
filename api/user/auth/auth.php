@@ -11,14 +11,14 @@ class Auth
     private $token;
     private $secretKey;
     private $userAuthData = [];
-    private $permissionName;
+    private $permissionId;
 
-    public function __construct($conn, $token, $secretkey, $permissionName)
+    public function __construct($conn, $token, $secretkey, $permissionId)
     {
         $this->conn = $conn;
         $this->token = $token;
         $this->secretKey = $secretkey;
-        $this->permissionName = $permissionName;
+        $this->permissionId = $permissionId;
     }
     private function createResponse($status, $message, $data = null)
     {
@@ -41,7 +41,7 @@ class Auth
                 }
                 // SQL lekérdezés, amely a szerepkör összes jogosultságát visszaadja
                 $query = "
-                        SELECT p.name
+                        SELECT p.id
                         FROM Role_permissions rp
                         LEFT JOIN Permissions p on p.id = rp.permission_id
                         WHERE rp.role_id = :roleId;";
@@ -49,10 +49,9 @@ class Auth
                 $stmt->execute(['roleId' => $roleId]);
                 $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-                // return in_array($permissionName, $permissions);
-                $isAccesGranted = in_array($this->permissionName, $permissions);
+                $isAccesGranted = in_array($this->permissionId, $permissions);
                 if (!$isAccesGranted) {
-                    return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez');
+                    return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez', $decoded);
                 }
             } catch (Exception $e) {
                 return $this->createResponse(401, $e, $decoded);

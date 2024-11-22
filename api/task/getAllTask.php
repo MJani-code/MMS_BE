@@ -92,12 +92,7 @@ class GetAllTask
                         LEFT JOIN Task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
                         LEFT JOIN Users u on u.id = tr.user_id
                         ",
-                'conditions' => "tsp.role_id >=
-                        (CASE
-                        WHEN $roleId = $roleId THEN $roleId
-                        ELSE tsp.role_id
-                        END)
-                        AND tlp.deleted = 0 OR tlp.deleted is NULL
+                'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL
                         ORDER BY id"
             ];
 
@@ -164,6 +159,7 @@ class GetAllTask
         if ($rowData) {
             $result = dataManipulation($this->conn, $rowData, $this->userAuthData);
             $response = $result;
+            $response['status'] = 200;
         }
     }
 }
@@ -172,10 +168,10 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$permissionName = 'View_task';
-$auth = new Auth($conn, $token, $secretkey, $permissionName);
+$permissionId = 4;
+$auth = new Auth($conn, $token, $secretkey, $permissionId);
 
-$getAllTask = new GetAllTask($conn, $response, $auth, 'View_task');
+$getAllTask = new GetAllTask($conn, $response, $auth, $permissionId);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

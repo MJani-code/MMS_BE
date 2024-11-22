@@ -147,6 +147,38 @@ function dataManipulation($conn, $data, $userAuthData)
                     'method' => "get",
                     'columns' => ['ts.id', 'name', 'color'],
                     'others' => "LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'conditions' => "ts.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['statuses'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
+                }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
+            }
+            return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető header'
+            );
+            return $manipulatedData;
+        }
+    }
+
+    //getStatuses
+    function getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId)
+    {
+        if (isset($manipulatedData['data'])) {
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'Task_statuses ts',
+                    'method' => "get",
+                    'columns' => ['ts.id', 'name', 'color'],
+                    'others' => "LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts.id",
                     'conditions' => "tsp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -155,7 +187,7 @@ function dataManipulation($conn, $data, $userAuthData)
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
                 if ($result['status'] === 200) {
-                    $manipulatedData['statuses'] = $result['payload'];
+                    $manipulatedData['allowedStatuses'] = $result['payload'];
                     //return createResponse($result['status'], $result['message'], $result['payload']);
                 } else {
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
@@ -272,6 +304,7 @@ function dataManipulation($conn, $data, $userAuthData)
     $manipulatedData = getData($conn, $manipulatedData, $data);
     $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getUsers($conn, $manipulatedData, $data, $userRoleId);

@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
+require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
 //require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 
 
@@ -26,19 +27,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     {
         private $conn;
         private $response;
+        private $auth;
+        private $userAuthData;
 
-        public function __construct($conn, &$response)
+        public function __construct($conn, &$response, $auth)
         {
             $this->conn = $conn;
             $this->response = &$response;
+            $this->auth = $auth;
         }
 
         //TODO: user validation here
+        public function Auth()
+        {
+            return $this->auth->authenticate();
+        }
 
         public function updateTaskData($isFileUpload, $conn, $file, $locationId)
         {
-            $userRoleId = 2;
-            $userId = 1;
+
+            //User validation here
+            $this->userAuthData = $this->auth->authenticate();
+
+            if ($this->userAuthData['status'] !== 200) {
+                return $this->response = array(
+                    'status' => $this->userAuthData['status'],
+                    'message' => $this->userAuthData['message'],
+                    'data' => NULL
+                );;
+            }
+            //echo json_encode($this->userAuthData);
+
+            $userId = $this->userAuthData['data']->userId;
             $maxFileSize = 2000000;
             $DOC_ROOT = DOC_ROOT . '/uploads';
             $DOC_URL = DOC_URL . '/uploads';
@@ -297,7 +317,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-$updateTask = new updateTask($conn, $response);
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
+preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
+$token = $matches[1];
+
+$permissionId = 2;
+
+$jsonData = file_get_contents("php://input");
+$data = json_decode($jsonData, true);
+$dbColumn = $data['dbColumn'];
+$value = $data['value'];
+$statusIdNeedAccess = [9];
+
+if ($data['dbColumn'] == 'status_by_exohu_id' && in_array($data['value'], $statusIdNeedAccess)) {
+    $permissionId = 8;
+}
+
+$auth = new Auth($conn, $token, $secretkey, $permissionId);
+
+$updateTask = new updateTask($conn, $response, $auth, $permissionId);
 $updateTask->updateTaskData($isFileUpload, $conn, $file, $locationId);
 
 echo json_encode($response);
