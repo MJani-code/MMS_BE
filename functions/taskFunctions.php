@@ -115,7 +115,7 @@ function dataManipulation($conn, $data, $userAuthData)
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
                         ELSE tcp.role_id
-                        END) AND tc.task_column_types_id = 1 AND tc.is_active = 1"
+                        END) AND tc.task_column_types_id = 1 AND tc.is_active = 1 ORDER BY tc.orderId ASC"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
                 if ($result['status'] === 200) {

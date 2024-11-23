@@ -66,6 +66,7 @@ class GetAllTask
                     'ts2.id as "status_exohu_id"',
                     'ts2.name as "status_exohu"',
                     'ts2.color as "status_color"',
+                    'tl.tof_shop_id',
                     'tl.zip as "zip"',
                     'tl.city as "city"',
                     'tl.address as "address"',
