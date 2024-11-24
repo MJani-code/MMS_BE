@@ -32,6 +32,7 @@ function dataManipulation($conn, $data, $userAuthData)
             $groupedData = [];
             // Segédtömb az ismétlődések elkerülésére
             $uniqueTaskFees = [];
+            $uniqueLockers = [];
 
             foreach ($data['baseTaskData']['payload'] as $task) {
                 $id = $task['id'];
@@ -43,6 +44,7 @@ function dataManipulation($conn, $data, $userAuthData)
                 if ($existingIndex === false) {
                     $newTask = $task;
                     $newTask['taskTypes'] = [];
+                    $newTask['lockerSerials'] = [];
                     $newTask['responsibles'] = [];
                     $newTask['location_photos'] = [];
                     unset($newTask['types'], $newTask['responsible'], $newTask['url']);
@@ -63,9 +65,9 @@ function dataManipulation($conn, $data, $userAuthData)
                     $groupedData[$existingIndex]['responsibles'][] = $task['responsible'];
                 }
 
-                $taskFeesFound = false; // Flag a taskFees ellenőrzésére
 
                 // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
+                $taskFeesFound = false; // Flag a taskFees ellenőrzésére
                 if (isset($data['taskFees']['payload'])) {
                     foreach ($data['taskFees']['payload'] as $taskFee) {
                         $taskId = $taskFee['taskId'];
@@ -86,6 +88,39 @@ function dataManipulation($conn, $data, $userAuthData)
                 } else {
                     $groupedData[$existingIndex]['taskFees'] = [];
                 }
+
+                //Add lockers
+
+                if (isset($data['lockers']['payload'])) {
+                    foreach ($data['lockers']['payload'] as $locker) {
+                        if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
+                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
+                        }
+                    }
+                }
+
+
+                // $lockerFound = false; // Flag a locker ellenőrzésére
+                // if (isset($data['lockers']['payload'])) {
+                //     foreach ($data['lockers']['payload'] as $locker) {
+                //         $lockerId = $locker['id'];
+                //         $tofShopId = $locker['tof_shop_id'];
+
+                //         // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueLockers` segédtömbben
+                //         if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
+                //             $groupedData[$existingIndex]['lockers'][] = $locker;
+                //             $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
+                //             $lockerFound = true; // Ha találunk legalább egy locker-t
+                //         }
+                //         // Ha nem találunk taskFee-t, akkor nem módosítjuk a locker kulcsot
+                //         if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
+                //             // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
+                //             $groupedData[$existingIndex]['lockers'] = [];
+                //         }
+                //     }
+                // } else {
+                //     $groupedData[$existingIndex]['lockers'] = [];
+                // }
             }
 
             // Az átrendezett tömb újra indexelése, hogy numerikus tömb legyen

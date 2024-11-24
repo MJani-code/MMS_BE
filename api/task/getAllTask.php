@@ -110,25 +110,38 @@ class GetAllTask
                 ],
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
-            $result = dataToHandleInDb($this->conn, $baseTaskData);
+            $lockers = [
+                'table' => "Lockers l",
+                'method' => "get",
+                'columns' => [
+                    'l.id',
+                    'l.brand',
+                    'l.serial',
+                    'l.tof_shop_id',
+                    'l.is_active'
+                ],
+                'conditions' => "l.deleted = 0"
+            ];
+            $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
+            $resultOfLockers = dataToHandleInDb($this->conn, $lockers);
 
             //Only roleId under 3 can access to fees
             if ($roleId < 3) {
-                $result2 = dataToHandleInDb($this->conn, $taskFees);
+                $resultOfTaskFees = dataToHandleInDb($this->conn, $taskFees);
             } else {
-                $result2 = array(
+                $resultOfTaskFees = array(
                     'status' => 200,
                     'message' => 'nincs hozzáférés a fees részhez',
                     'data' => null
                 );
             }
 
+            //Catch errors from DB functions
             $errorInfo = '';
-
-            if ($result['status'] !== 200) {
-                $errorInfo = isset($result['errorInfo']) ? $result['errorInfo'] : '';
-                if (isset($result2) && $result2['status'] !== 200) {
-                    $errorInfo .= isset($result2['errorInfo']) ? $result2['errorInfo'] : '';
+            if ($resultOfBaseTaskData['status'] !== 200) {
+                $errorInfo = isset($resultOfBaseTaskData['errorInfo']) ? $resultOfBaseTaskData['errorInfo'] : '';
+                if (isset($resultOfTaskFees) && $resultOfTaskFees['status'] !== 200) {
+                    $errorInfo .= isset($resultOfTaskFees['errorInfo']) ? $resultOfTaskFees['errorInfo'] : '';
                 }
 
                 if ($errorInfo) {
@@ -139,8 +152,9 @@ class GetAllTask
                     );
                 }
             } else {
-                $this->taskData['baseTaskData'] = $result;
-                $this->taskData['taskFees'] = $result2;
+                $this->taskData['baseTaskData'] = $resultOfBaseTaskData;
+                $this->taskData['taskFees'] = $resultOfTaskFees;
+                $this->taskData['lockers'] = $resultOfLockers;
                 return $this->taskData;
             }
         } catch (Exception $e) {
