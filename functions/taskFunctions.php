@@ -473,3 +473,44 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId)
         return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
+
+function addLocker($conn, $newItems, $userId)
+{
+    try {
+        $created_at = date('Y-m-d H:i:s');
+        $dbTable = $newItems['dbTable'];
+
+        $insert_query = "INSERT INTO $dbTable (tof_shop_id, serial, created_by) VALUES (?,?,?)";
+        $stmt = $conn->prepare($insert_query);
+        $params = [$newItems['tof_shop_id'], $newItems['value'], $userId];
+
+        if ($stmt->execute($params)) {
+            return createResponse(200, "Item insertion success");
+        }
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function removeLocker($conn, $lockerToRemove, $userId)
+{
+    try {
+        $deleted_at = date('Y-m-d H:i:s');
+        $serial = $lockerToRemove['value'];
+
+        $dataToHandleInDb = [
+            'table' => "Lockers",
+            'method' => "delete",
+            'columns' => [],
+            'conditions' => ['serial' => $serial]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] === 200) {
+            return createResponse($result['status'], "Delete of locker is success");
+        } else {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+        }
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}

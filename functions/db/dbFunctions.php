@@ -193,7 +193,7 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                 }
                 $stmt->execute();
                 $response = array(
-                    "isDeleted" => 1,
+                    "status" => 200,
                     "message" => "Data deleted successfully."
                 );
                 return $response;
