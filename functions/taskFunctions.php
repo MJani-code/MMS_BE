@@ -36,6 +36,7 @@ function dataManipulation($conn, $data, $userAuthData)
 
             foreach ($data['baseTaskData']['payload'] as $task) {
                 $id = $task['id'];
+                $tofShopId = $task['tof_shop_id'];
 
                 // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
                 $existingIndex = array_search($id, array_column($groupedData, 'id'));
@@ -90,37 +91,36 @@ function dataManipulation($conn, $data, $userAuthData)
                 }
 
                 //Add lockers
-
-                if (isset($data['lockers']['payload'])) {
-                    foreach ($data['lockers']['payload'] as $locker) {
-                        if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
-                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                        }
-                    }
-                }
-
-
-                // $lockerFound = false; // Flag a locker ellenőrzésére
                 // if (isset($data['lockers']['payload'])) {
                 //     foreach ($data['lockers']['payload'] as $locker) {
-                //         $lockerId = $locker['id'];
-                //         $tofShopId = $locker['tof_shop_id'];
-
-                //         // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueLockers` segédtömbben
-                //         if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
-                //             $groupedData[$existingIndex]['lockers'][] = $locker;
-                //             $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                //             $lockerFound = true; // Ha találunk legalább egy locker-t
-                //         }
-                //         // Ha nem találunk taskFee-t, akkor nem módosítjuk a locker kulcsot
-                //         if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
-                //             // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                //             $groupedData[$existingIndex]['lockers'] = [];
+                //         if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
+                //             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
                 //         }
                 //     }
-                // } else {
-                //     $groupedData[$existingIndex]['lockers'] = [];
                 // }
+
+
+                $lockerFound = false; // Flag a locker ellenőrzésére
+                if (isset($data['lockers']['payload'])) {
+                    foreach ($data['lockers']['payload'] as $locker) {
+                        $lockerId = $locker['id'];
+                        $tofShopId = $locker['tof_shop_id'];
+
+                        // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
+                        if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
+                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
+                            $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
+                            $lockerFound = true; // Ha találunk legalább egy locker-t
+                        }
+                        // Ha nem találunk locker-t, akkor nem módosítjuk a locker kulcsot
+                        if (!$lockerFound && empty($groupedData[$existingIndex]['lockerSerials'])) {
+                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
+                            $groupedData[$existingIndex]['lockerSerials'] = [];
+                        }
+                    }
+                } else {
+                    $groupedData[$existingIndex]['lockerSerials'] = [];
+                }
             }
 
             // Az átrendezett tömb újra indexelése, hogy numerikus tömb legyen
@@ -424,9 +424,9 @@ function addFee($conn, $dbTable, $newItems, $userId)
     try {
         $created_at = date('Y-m-d H:i:s');
 
-        $insert_query = "INSERT INTO $dbTable (task_id, fee_id, other_items, net_unit_price, quantity, total, created_at, created_by) VALUES (?, ?, ?,?,?,?,?,?)";
+        $insert_query = "INSERT INTO $dbTable (task_id, fee_id, serial, other_items, net_unit_price, quantity, total, created_at, created_by) VALUES (?, ?, ?, ?,?,?,?,?,?)";
         $stmt = $conn->prepare($insert_query);
-        $params = [$newItems['taskId'], $newItems['feeId'], $newItems['otherItems'], $newItems['netUnitPrice'], $newItems['quantity'], $newItems['total'], $created_at, $userId];
+        $params = [$newItems['taskId'], $newItems['feeId'], $newItems['lockerSerial'], $newItems['otherItems'], $newItems['netUnitPrice'], $newItems['quantity'], $newItems['total'], $created_at, $userId];
         // $stmt->execute($params);
 
         $dataToHandleInDb = [

@@ -106,7 +106,8 @@ class GetAllTask
                     'tf.fee_id as feeId',
                     'tf.other_items as otherItems',
                     'tf.quantity',
-                    'tf.total'
+                    'tf.total',
+                    'tf.serial as lockerSerial'
                 ],
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
@@ -120,6 +121,9 @@ class GetAllTask
                     'l.tof_shop_id',
                     'l.is_active'
                 ],
+                'others' => "
+                LEFT JOIN Task_locations tl on tl.tof_shop_id = l.tof_shop_id
+                ",
                 'conditions' => "l.deleted = 0"
             ];
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
