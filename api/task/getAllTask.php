@@ -2,7 +2,6 @@
 header('Content-Type: application/json');
 
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
-//require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
 
@@ -30,10 +29,10 @@ class GetAllTask
     }
 
 
-    public function Auth()
-    {
-        return $this->auth->authenticate();
-    }
+    // public function Auth()
+    // {
+    //     return $this->auth->authenticate();
+    // }
 
     public function getTaskData()
     {
@@ -42,9 +41,8 @@ class GetAllTask
             return $this->taskData;
         }
         //User validation here
-        $this->userAuthData = $this->auth->authenticate();
+        $this->userAuthData = $this->auth->authenticate(4);
         $roleId = $this->userAuthData['data']->roleId;
-        //$roleId = 3;
 
         if ($this->userAuthData['status'] !== 200) {
             return $this->response = array(
@@ -129,15 +127,12 @@ class GetAllTask
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
             $resultOfLockers = dataToHandleInDb($this->conn, $lockers);
 
-            //Only roleId under 3 can access to fees
-            if ($roleId < 3) {
+            //Check if user has permission to taskFees
+            $isAccessTotaskFees = $this->auth->authenticate(6);
+            if ($isAccessTotaskFees['status'] !== 403) {
                 $resultOfTaskFees = dataToHandleInDb($this->conn, $taskFees);
             } else {
-                $resultOfTaskFees = array(
-                    'status' => 200,
-                    'message' => 'nincs hozzáférés a fees részhez',
-                    'data' => null
-                );
+                $resultOfTaskFees = $isAccessTotaskFees;
             }
 
             //Catch errors from DB functions
@@ -187,10 +182,9 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$permissionId = 4;
-$auth = new Auth($conn, $token, $secretkey, $permissionId);
+$auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth, $permissionId);
+$getAllTask = new GetAllTask($conn, $response, $auth);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

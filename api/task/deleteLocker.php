@@ -22,8 +22,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         private $conn;
         private $response;
         private $auth;
-        private $userAuthData;
-        private $userId;
 
         public function __construct($conn, &$response, $auth)
         {
@@ -40,16 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         public function removeLockerFunction($conn, $newItems)
         {
-            $this->userAuthData = $this->auth->authenticate();
-            $this->userId = $this->userAuthData['data']->userId;
-            $userId = $this->userId;
-
-            if ($this->userAuthData['status'] !== 200) {
-                return $this->response = array(
-                    'status' => $this->userAuthData['status'],
-                    'message' => $this->userAuthData['message'],
-                    'data' => NULL
-                );;
+            $userId = null;
+            $isAccess = $this->auth->authenticate(10);
+            if ($isAccess['status'] !== 200) {
+                return $this->response = $isAccess;
+            } else {
+                $userId = $isAccess['data']->userId;
             }
 
             $result = removeLocker($conn, $newItems, $userId);
@@ -61,8 +55,7 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$permissionId = 10;
-$auth = new Auth($conn, $token, $secretkey, $permissionId);
+$auth = new Auth($conn, $token, $secretkey);
 
 $removeLocker = new RemoveLocker($conn, $response, $auth);
 $removeLocker->removeLockerFunction($conn, $newItems);
