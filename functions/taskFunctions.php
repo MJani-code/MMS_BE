@@ -554,7 +554,7 @@ function getUserPassword($conn, $userId)
     }
 }
 
-function updateUser($conn, $hashedNewPassword, $userId)
+function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $userId)
 {
     try {
         $updated_at = date('Y-m-d H:i:s');
@@ -562,8 +562,8 @@ function updateUser($conn, $hashedNewPassword, $userId)
         $dataToHandleInDb = [
             'table' => "Users u",
             'method' => "update",
-            'columns' => ['password', 'updated_at', 'updated_by'],
-            'values' => [$hashedNewPassword, $updated_at, $userId],
+            'columns' => ['first_name', 'last_name', 'email', 'password', 'updated_at', 'updated_by'],
+            'values' => [$firstName, $lastName, $email, $hashedNewPassword, $updated_at, $userId],
             'others' => "",
             'conditions' => ['u.id' => $userId]
         ];
