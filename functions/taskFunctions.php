@@ -531,3 +531,49 @@ function removeLocker($conn, $lockerToRemove, $userId)
         return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }
+
+function getUserPassword($conn, $userId)
+{
+    try {
+        $dataToHandleInDb = [
+            'table' => "Users u",
+            'method' => "get",
+            'columns' => ['u.password'],
+            'others' => "",
+            'conditions' => "u.id = $userId",
+            'order' => ""
+        ];
+        $data = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($data['status'] === 200) {
+            return createResponse($data['status'], "success", $data['payload'][0]);
+        } else {
+            return createResponse($data['status'], $data['message'] . '. ' . $data['errorInfo']);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function updateUser($conn, $hashedNewPassword, $userId)
+{
+    try {
+        $updated_at = date('Y-m-d H:i:s');
+
+        $dataToHandleInDb = [
+            'table' => "Users u",
+            'method' => "update",
+            'columns' => ['password', 'updated_at', 'updated_by'],
+            'values' => [$hashedNewPassword, $updated_at, $userId],
+            'others' => "",
+            'conditions' => ['u.id' => $userId]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] === 200) {
+            return createResponse($result['status'], $result['message']);
+        } else {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
