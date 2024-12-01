@@ -108,18 +108,18 @@ function dataManipulation($conn, $data, $userAuthData)
 
                         // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
                         if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
-                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
+                            $groupedData[$existingIndex]['lockers'][] = $locker;
                             $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
                             $lockerFound = true; // Ha találunk legalább egy locker-t
                         }
                         // Ha nem találunk locker-t, akkor nem módosítjuk a locker kulcsot
-                        if (!$lockerFound && empty($groupedData[$existingIndex]['lockerSerials'])) {
+                        if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
                             // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                            $groupedData[$existingIndex]['lockerSerials'] = [];
+                            $groupedData[$existingIndex]['lockers'] = [];
                         }
                     }
                 } else {
-                    $groupedData[$existingIndex]['lockerSerials'] = [];
+                    $groupedData[$existingIndex]['lockers'] = [];
                 }
             }
 
@@ -484,8 +484,25 @@ function addLocker($conn, $newItems, $userId)
         $stmt = $conn->prepare($insert_query);
         $params = [$newItems['tof_shop_id'], $newItems['value'], $userId];
 
+        $lockers = [
+            'table' => "Lockers l",
+            'method' => "get",
+            'columns' => [
+                'l.id',
+                'l.brand',
+                'l.serial',
+                'l.tof_shop_id as tofShopId',
+                'l.is_active as isActive'
+            ],
+            'others' => "
+            LEFT JOIN Task_locations tl on tl.tof_shop_id = l.tof_shop_id
+            ",
+            'conditions' => "l.deleted = 0 AND l.tof_shop_id = $newItems[tof_shop_id] "
+        ];
+
         if ($stmt->execute($params)) {
-            return createResponse(200, "Item insertion success");
+            $newLockerData = dataToHandleInDb($conn, $lockers);
+            return createResponse(200, "Item insertion success", $newLockerData['payload']);
         }
     } catch (Exception $e) {
         return createResponse(400, "Hiba történt: " . $e->getMessage());
