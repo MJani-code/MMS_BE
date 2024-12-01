@@ -1,5 +1,8 @@
 <?php
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
+require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/vendor/autoload.php');
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 // Alapértelmezett válasz formázása
 function createResponse($status, $errorMessage = '', $data = null)
@@ -575,5 +578,59 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
         }
     } catch (Exception $e) {
         return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function xlsFileRead($filePath)
+{
+    try {
+        $spreadsheet = IOFactory::load($filePath);
+
+        // Az első munkalap kiválasztása
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // 1. Fejléc beolvasása
+        $headerRow = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1', NULL, TRUE, FALSE)[0];
+
+        // 2. Az érdekes fejlécek meghatározása
+        $wantedHeaders = ['Name', 'Serial Number', 'ZIP code', 'City', 'Address', 'Contact', 'Phone', 'Email', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
+        $headerIndexes = [];
+        foreach ($wantedHeaders as $wantedHeader) {
+            $index = array_search($wantedHeader, $headerRow); // Az oszlop indexének keresése
+            if ($index !== false) {
+                $headerIndexes[$wantedHeader] = $index; // Tároljuk az oszlop indexét
+            }
+        }
+
+        // Ellenőrizzük, hogy minden szükséges fejléc megtalálható
+        if (count($headerIndexes) !== count($wantedHeaders)) {
+            throw new Exception('Nem minden szükséges fejléc található meg az Excel fájlban!');
+        }
+
+        // 3. Adatok kigyűjtése
+        $data = [];
+        foreach ($sheet->getRowIterator(2) as $row) { // A második sortól indulva
+            $rowIndex = $row->getRowIndex(); // Az aktuális sor indexe
+            $rowData = $sheet->rangeToArray(
+                'A' . $rowIndex . ':' . $sheet->getHighestColumn() . $rowIndex,
+                NULL,
+                TRUE,
+                FALSE
+            )[0];
+
+            // Csak a kívánt oszlopok értékeinek kigyűjtése
+            $filteredData = [];
+            foreach ($headerIndexes as $header => $index) {
+                $filteredData[$header] = $rowData[$index];
+            }
+            $data[] = $filteredData;
+        }
+
+        // Eredmény kiírása
+        return createResponse(200, "success", $data);
+    } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+        return createResponse(400, $e->getMessage());
+    } catch (Exception $e) {
+        return createResponse(400, $e->getMessage());
     }
 }

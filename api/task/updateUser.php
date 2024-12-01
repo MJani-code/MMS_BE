@@ -13,7 +13,7 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-class GetAllTask
+class UpdateTask
 {
     private $conn;
     private $response;
@@ -35,7 +35,7 @@ class GetAllTask
         ];
     }
 
-    public function getTaskData()
+    public function updateUser()
     {
         //User validation here
         $isAccess = $this->auth->authenticate(4);
@@ -107,7 +107,7 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth);
-$getAllTask->getTaskData();
+$updateuser = new UpdateTask($conn, $response, $auth);
+$updateuser->updateUser();
 
 echo json_encode($response);
