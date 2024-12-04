@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             //Csatolt file feldolgozása
             $filePath = $_FILES['file']['tmp_name'];
-            $result = xlsFileRead($filePath);
+            $result = xlsFileDataToWrite($this->conn, $filePath);
             $this->response = $result;
         }
     }

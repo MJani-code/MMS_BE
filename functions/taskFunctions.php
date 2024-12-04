@@ -591,10 +591,27 @@ function xlsFileRead($filePath)
 
         // 1. Fejléc beolvasása
         $headerRow = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1', NULL, TRUE, FALSE)[0];
+        $highestRow = $sheet->getHighestRow('A');
 
         // 2. Az érdekes fejlécek meghatározása
-        $wantedHeaders = ['Name', 'Serial Number', 'ZIP code', 'City', 'Address', 'Contact', 'Phone', 'Email', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
+        $wantedHeaders = ['Name', 'Serial Number', 'TofShop ID', 'ZIP code', 'City', 'Address', 'Contact', 'Phone', 'Email', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
+        $requiredFields = ['TofShop ID', 'External / Internal'];
         $headerIndexes = [];
+        $keyMapping = [
+            'Name' => 'name',
+            'TofShop ID' => 'tof_shop_id',
+            'ZIP code' => 'zip',
+            'City' => 'city',
+            'Address' => 'address',
+            'Contact' => 'contact',
+            'Phone' => 'phone',
+            'Email' => 'email',
+            'External / Internal' => 'location_type_id',
+            'Fixing' => 'fixing_method',
+            'Site Preparation required' => 'required_site_preparation',
+            'Comment' => 'comment'
+        ];
+
         foreach ($wantedHeaders as $wantedHeader) {
             $index = array_search($wantedHeader, $headerRow); // Az oszlop indexének keresése
             if ($index !== false) {
@@ -604,12 +621,23 @@ function xlsFileRead($filePath)
 
         // Ellenőrizzük, hogy minden szükséges fejléc megtalálható
         if (count($headerIndexes) !== count($wantedHeaders)) {
-            throw new Exception('Nem minden szükséges fejléc található meg az Excel fájlban!');
+            return createResponse(400, "Nem minden szükséges fejléc található meg az Excel fájlban!");
+        }
+
+        //Kicseréljük a header-t az adatbázis header-re.
+        $headerIndexesFitToDb = [];
+        foreach ($headerIndexes as $headerKey => $headerValue) {
+            foreach ($keyMapping as $key => $value) {
+                if ($headerKey == $key) {
+                    $headerIndexesFitToDb[$value] = $headerValue;
+                }
+            }
         }
 
         // 3. Adatok kigyűjtése
         $data = [];
-        foreach ($sheet->getRowIterator(2) as $row) { // A második sortól indulva
+
+        foreach ($sheet->getRowIterator(2, $highestRow) as $row) { // A második sortól indulva
             $rowIndex = $row->getRowIndex(); // Az aktuális sor indexe
             $rowData = $sheet->rangeToArray(
                 'A' . $rowIndex . ':' . $sheet->getHighestColumn() . $rowIndex,
@@ -620,13 +648,26 @@ function xlsFileRead($filePath)
 
             // Csak a kívánt oszlopok értékeinek kigyűjtése
             $filteredData = [];
-            foreach ($headerIndexes as $header => $index) {
-                $filteredData[$header] = $rowData[$index];
+
+            foreach ($headerIndexesFitToDb as $header => $index) {
+                $headerValue = array_search($index, $headerIndexes);
+                $value = $rowData[$index];
+                if (in_array($headerValue, $requiredFields)) {
+                    if ($value === null || $value == "") {
+                        return createResponse(400, "A betöltés nem sikerült. Van olyan kötelező mező, aminél nincsen adat megadva");
+                    }
+                }
+
+                if ($value === 'Internal') {
+                    $value = 1;
+                }
+                if ($value === 'External') {
+                    $value = 2;
+                }
+                $filteredData[$header] = $value;
             }
             $data[] = $filteredData;
         }
-
-        // Eredmény kiírása
         return createResponse(200, "success", $data);
     } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
         return createResponse(400, $e->getMessage());
@@ -634,3 +675,59 @@ function xlsFileRead($filePath)
         return createResponse(400, $e->getMessage());
     }
 }
+
+function xlsFileDataToWrite($conn, $filePath)
+{
+    $created_at = date('Y-m-d H:i:s');
+
+    $data = xlsFileRead($filePath);
+    if ($data['status'] !== 200) {
+        return $data;
+    }
+    $newLocations = $data['payload'];
+
+    $stmt = $conn->query('SELECT tof_shop_id FROM Task_locations');
+    $alreadyExistedTofShopId = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $multipleTofShopId = [];
+
+
+    try {
+        // Tranzakció indítása
+        $conn->beginTransaction();
+
+        // `Tasks` tábla beszúró lekérdezés
+        $userId = 1;
+        $taskSql = "INSERT INTO Tasks (created_by) VALUES (?)";
+        $taskStmt = $conn->prepare($taskSql);
+
+        // `Task_locations` tábla beszúró lekérdezés
+        $taskLocationSql = "INSERT INTO Task_locations (name, task_id, tof_shop_id, zip, city,address, contact,phone,email,created_by,location_type_id,fixing_method,required_site_preparation,comment) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        $taskLocationStmt = $conn->prepare($taskLocationSql);
+
+        foreach ($newLocations as $newLocation) {
+
+            //Ha már létezik a TofShop ID visszadobjuk
+            if (in_array($newLocation['tof_shop_id'], $alreadyExistedTofShopId)) {
+                return createResponse(400, $newLocation['tof_shop_id'] . " azonosítóval már létezik elem. A betöltés nem sikerült");
+            }
+
+            // Task beszúrása a `Tasks` táblába
+            $taskStmt->execute([$userId]);
+            $taskId = $conn->lastInsertId();
+
+            // Location adatok bezsúrása a Task_locations táblába
+            $taskLocationStmt->execute([$newLocation['name'], $taskId, $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $newLocation['contact'], $newLocation['phone'], $newLocation['email'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+        }
+
+        // Tranzakció lezárása
+        $conn->commit();
+        return createResponse(200, "success");
+    } catch (Exception $e) {
+        // Hiba esetén rollback
+        $conn->rollBack();
+        return createResponse(400, $e->getMessage());
+    }
+}
+// Szétválasztott és átnevezett adatok
+//$splitData = splitAndMapDataByTable($data, $keyMapping);
+//print_r($splitData);
