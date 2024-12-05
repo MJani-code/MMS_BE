@@ -68,7 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $taskId = $data['task_id'];
                 $dbTable = $data['dbTable'];
                 $dbColumn = $data['dbColumn'];
-                $value = $data['value'];
+                $value = $data['value'] ?? '';
 
                 //Speciális engedély ellenőrzés a státuszra
                 $statusIdNeedAccess = [9];

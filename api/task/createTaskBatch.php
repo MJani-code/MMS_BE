@@ -17,45 +17,36 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // $jsonData = file_get_contents("php://input");
-    // $data = json_decode($jsonData, true);
+class CreateTaskBatch
+{
+    private $conn;
+    private $response;
+    private $auth;
 
-    // $isFileUpload = $_POST['fileUpload'] ?? NULL;
-    // $locationId = $_POST['locationId'] ?? NULL;
-    // $file = $_FILES['file'] ?? NULL;
-
-
-    class CreateTaskBatch
+    public function __construct($conn, &$response, $auth)
     {
-        private $conn;
-        private $response;
-        private $auth;
+        $this->conn = $conn;
+        $this->response = &$response;
+        $this->auth = $auth;
+    }
 
-        public function __construct($conn, &$response, $auth)
-        {
-            $this->conn = $conn;
-            $this->response = &$response;
-            $this->auth = $auth;
+    public function createTaskBatch()
+    {
+        $userId = null;
+        $isAccess = $this->auth->authenticate(14);
+        if ($isAccess['status'] !== 200) {
+            return $this->response = $isAccess;
+        } else {
+            $userId = $isAccess['data']->userId;
         }
 
-        public function createTaskBatch()
-        {
-            $userId = null;
-            $isAccess = $this->auth->authenticate(14);
-            if ($isAccess['status'] !== 200) {
-                return $this->response = $isAccess;
-            } else {
-                $userId = $isAccess['data']->userId;
-            }
-
-            //Csatolt file feldolgozása
-            $filePath = $_FILES['file']['tmp_name'];
-            $result = xlsFileDataToWrite($this->conn, $filePath);
-            $this->response = $result;
-        }
+        //Csatolt file feldolgozása
+        $filePath = $_FILES['file']['tmp_name'];
+        $result = xlsFileDataToWrite($this->conn, $filePath, $userId);
+        $this->response = $result;
     }
 }
+
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];

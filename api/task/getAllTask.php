@@ -116,6 +116,8 @@ class GetAllTask
                     'l.id',
                     'l.brand',
                     'l.serial',
+                    'l.type',
+                    'l.comment',
                     'l.tof_shop_id',
                     'l.is_active'
                 ],

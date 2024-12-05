@@ -676,7 +676,7 @@ function xlsFileRead($filePath)
     }
 }
 
-function xlsFileDataToWrite($conn, $filePath)
+function xlsFileDataToWrite($conn, $filePath, $userId)
 {
     $created_at = date('Y-m-d H:i:s');
 
@@ -696,7 +696,6 @@ function xlsFileDataToWrite($conn, $filePath)
         $conn->beginTransaction();
 
         // `Tasks` tábla beszúró lekérdezés
-        $userId = 1;
         $taskSql = "INSERT INTO Tasks (created_by) VALUES (?)";
         $taskStmt = $conn->prepare($taskSql);
 
