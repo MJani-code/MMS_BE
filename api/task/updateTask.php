@@ -66,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data = json_decode($jsonData, true);
 
                 $taskId = $data['task_id'];
+                $id = $data['id'] ?? null;
                 $dbTable = $data['dbTable'];
                 $dbColumn = $data['dbColumn'];
                 $value = $data['value'] ?? '';
@@ -278,6 +279,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ];
                             $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                             break;
+                        case 'Lockers':
+                            $dataToHandleInDb = [
+                                'table' => $dbTable,
+                                'method' => "update",
+                                'columns' => [$dbColumn],
+                                'values' => [$value],
+                                'others' => "",
+                                'order' => "",
+                                'conditions' => ['id' => $id]
+                            ];
+                            $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
+                            break;
                         default:
                             $dataToHandleInDb = [
                                 'table' => $dbTable,
@@ -294,6 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (isset($result)) {
                         if ($result['isUpdated']) {
                             $payload = array(
+                                'id' => $id,
                                 'taskId' => intval($taskId),
                                 'column' => $dbColumn,
                                 'value' => $value
