@@ -1,5 +1,8 @@
 <?php
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
+require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/vendor/autoload.php');
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 // Alapértelmezett válasz formázása
 function createResponse($status, $errorMessage = '', $data = null)
@@ -36,6 +39,7 @@ function dataManipulation($conn, $data, $userAuthData)
 
             foreach ($data['baseTaskData']['payload'] as $task) {
                 $id = $task['id'];
+                $tofShopId = $task['tof_shop_id'];
 
                 // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
                 $existingIndex = array_search($id, array_column($groupedData, 'id'));
@@ -90,37 +94,36 @@ function dataManipulation($conn, $data, $userAuthData)
                 }
 
                 //Add lockers
-
-                if (isset($data['lockers']['payload'])) {
-                    foreach ($data['lockers']['payload'] as $locker) {
-                        if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
-                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                        }
-                    }
-                }
-
-
-                // $lockerFound = false; // Flag a locker ellenőrzésére
                 // if (isset($data['lockers']['payload'])) {
                 //     foreach ($data['lockers']['payload'] as $locker) {
-                //         $lockerId = $locker['id'];
-                //         $tofShopId = $locker['tof_shop_id'];
-
-                //         // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueLockers` segédtömbben
-                //         if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
-                //             $groupedData[$existingIndex]['lockers'][] = $locker;
-                //             $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                //             $lockerFound = true; // Ha találunk legalább egy locker-t
-                //         }
-                //         // Ha nem találunk taskFee-t, akkor nem módosítjuk a locker kulcsot
-                //         if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
-                //             // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                //             $groupedData[$existingIndex]['lockers'] = [];
+                //         if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
+                //             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
                 //         }
                 //     }
-                // } else {
-                //     $groupedData[$existingIndex]['lockers'] = [];
                 // }
+
+
+                $lockerFound = false; // Flag a locker ellenőrzésére
+                if (isset($data['lockers']['payload'])) {
+                    foreach ($data['lockers']['payload'] as $locker) {
+                        $lockerId = $locker['id'];
+                        $tofShopId = $locker['tof_shop_id'];
+
+                        // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
+                        if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
+                            $groupedData[$existingIndex]['lockers'][] = $locker;
+                            $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
+                            $lockerFound = true; // Ha találunk legalább egy locker-t
+                        }
+                        // Ha nem találunk locker-t, akkor nem módosítjuk a locker kulcsot
+                        if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
+                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
+                            $groupedData[$existingIndex]['lockers'] = [];
+                        }
+                    }
+                } else {
+                    $groupedData[$existingIndex]['lockers'] = [];
+                }
             }
 
             // Az átrendezett tömb újra indexelése, hogy numerikus tömb legyen
@@ -424,9 +427,9 @@ function addFee($conn, $dbTable, $newItems, $userId)
     try {
         $created_at = date('Y-m-d H:i:s');
 
-        $insert_query = "INSERT INTO $dbTable (task_id, fee_id, other_items, net_unit_price, quantity, total, created_at, created_by) VALUES (?, ?, ?,?,?,?,?,?)";
+        $insert_query = "INSERT INTO $dbTable (task_id, fee_id, serial, other_items, net_unit_price, quantity, total, created_at, created_by) VALUES (?, ?, ?, ?,?,?,?,?,?)";
         $stmt = $conn->prepare($insert_query);
-        $params = [$newItems['taskId'], $newItems['feeId'], $newItems['otherItems'], $newItems['netUnitPrice'], $newItems['quantity'], $newItems['total'], $created_at, $userId];
+        $params = [$newItems['taskId'], $newItems['feeId'], $newItems['lockerSerial'], $newItems['otherItems'], $newItems['netUnitPrice'], $newItems['quantity'], $newItems['total'], $created_at, $userId];
         // $stmt->execute($params);
 
         $dataToHandleInDb = [
@@ -473,3 +476,257 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId)
         return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
+
+function addLocker($conn, $newItems, $userId)
+{
+    try {
+        $created_at = date('Y-m-d H:i:s');
+        $dbTable = $newItems['dbTable'];
+
+        $insert_query = "INSERT INTO $dbTable (tof_shop_id, serial, created_by) VALUES (?,?,?)";
+        $stmt = $conn->prepare($insert_query);
+        $params = [$newItems['tof_shop_id'], $newItems['value'], $userId];
+
+        $lockers = [
+            'table' => "Lockers l",
+            'method' => "get",
+            'columns' => [
+                'l.id',
+                'l.brand',
+                'l.serial',
+                'l.tof_shop_id as tofShopId',
+                'l.is_active as isActive'
+            ],
+            'others' => "
+            LEFT JOIN Task_locations tl on tl.tof_shop_id = l.tof_shop_id
+            ",
+            'conditions' => "l.deleted = 0 AND l.tof_shop_id = $newItems[tof_shop_id] "
+        ];
+
+        if ($stmt->execute($params)) {
+            $newLockerData = dataToHandleInDb($conn, $lockers);
+            return createResponse(200, "Item insertion success", $newLockerData['payload']);
+        }
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function removeLocker($conn, $lockerToRemove, $userId)
+{
+    try {
+        $deleted_at = date('Y-m-d H:i:s');
+        $serial = $lockerToRemove['value'];
+
+        $dataToHandleInDb = [
+            'table' => "Lockers",
+            'method' => "delete",
+            'columns' => [],
+            'conditions' => ['serial' => $serial]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] === 200) {
+            return createResponse($result['status'], "Delete of locker is success");
+        } else {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+        }
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function getUserPassword($conn, $userId)
+{
+    try {
+        $dataToHandleInDb = [
+            'table' => "Users u",
+            'method' => "get",
+            'columns' => ['u.password'],
+            'others' => "",
+            'conditions' => "u.id = $userId",
+            'order' => ""
+        ];
+        $data = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($data['status'] === 200) {
+            return createResponse($data['status'], "success", $data['payload'][0]);
+        } else {
+            return createResponse($data['status'], $data['message'] . '. ' . $data['errorInfo']);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $userId)
+{
+    try {
+        $updated_at = date('Y-m-d H:i:s');
+
+        $dataToHandleInDb = [
+            'table' => "Users u",
+            'method' => "update",
+            'columns' => ['first_name', 'last_name', 'email', 'password', 'updated_at', 'updated_by'],
+            'values' => [$firstName, $lastName, $email, $hashedNewPassword, $updated_at, $userId],
+            'others' => "",
+            'conditions' => ['u.id' => $userId]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] === 200) {
+            return createResponse($result['status'], $result['message']);
+        } else {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function xlsFileRead($filePath)
+{
+    try {
+        $spreadsheet = IOFactory::load($filePath);
+
+        // Az első munkalap kiválasztása
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // 1. Fejléc beolvasása
+        $headerRow = $sheet->rangeToArray('A1:' . $sheet->getHighestColumn() . '1', NULL, TRUE, FALSE)[0];
+        $highestRow = $sheet->getHighestRow('A');
+
+        // 2. Az érdekes fejlécek meghatározása
+        $wantedHeaders = ['Name', 'Serial Number', 'TofShop ID', 'ZIP code', 'City', 'Address', 'Contact', 'Phone', 'Email', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
+        $requiredFields = ['TofShop ID', 'External / Internal'];
+        $headerIndexes = [];
+        $keyMapping = [
+            'Name' => 'name',
+            'TofShop ID' => 'tof_shop_id',
+            'ZIP code' => 'zip',
+            'City' => 'city',
+            'Address' => 'address',
+            'Contact' => 'contact',
+            'Phone' => 'phone',
+            'Email' => 'email',
+            'External / Internal' => 'location_type_id',
+            'Fixing' => 'fixing_method',
+            'Site Preparation required' => 'required_site_preparation',
+            'Comment' => 'comment'
+        ];
+
+        foreach ($wantedHeaders as $wantedHeader) {
+            $index = array_search($wantedHeader, $headerRow); // Az oszlop indexének keresése
+            if ($index !== false) {
+                $headerIndexes[$wantedHeader] = $index; // Tároljuk az oszlop indexét
+            }
+        }
+
+        // Ellenőrizzük, hogy minden szükséges fejléc megtalálható
+        if (count($headerIndexes) !== count($wantedHeaders)) {
+            return createResponse(400, "Nem minden szükséges fejléc található meg az Excel fájlban!");
+        }
+
+        //Kicseréljük a header-t az adatbázis header-re.
+        $headerIndexesFitToDb = [];
+        foreach ($headerIndexes as $headerKey => $headerValue) {
+            foreach ($keyMapping as $key => $value) {
+                if ($headerKey == $key) {
+                    $headerIndexesFitToDb[$value] = $headerValue;
+                }
+            }
+        }
+
+        // 3. Adatok kigyűjtése
+        $data = [];
+
+        foreach ($sheet->getRowIterator(2, $highestRow) as $row) { // A második sortól indulva
+            $rowIndex = $row->getRowIndex(); // Az aktuális sor indexe
+            $rowData = $sheet->rangeToArray(
+                'A' . $rowIndex . ':' . $sheet->getHighestColumn() . $rowIndex,
+                NULL,
+                TRUE,
+                FALSE
+            )[0];
+
+            // Csak a kívánt oszlopok értékeinek kigyűjtése
+            $filteredData = [];
+
+            foreach ($headerIndexesFitToDb as $header => $index) {
+                $headerValue = array_search($index, $headerIndexes);
+                $value = $rowData[$index];
+                if (in_array($headerValue, $requiredFields)) {
+                    if ($value === null || $value == "") {
+                        return createResponse(400, "A betöltés nem sikerült. Van olyan kötelező mező, aminél nincsen adat megadva");
+                    }
+                }
+
+                if ($value === 'Internal') {
+                    $value = 1;
+                }
+                if ($value === 'External') {
+                    $value = 2;
+                }
+                $filteredData[$header] = $value;
+            }
+            $data[] = $filteredData;
+        }
+        return createResponse(200, "success", $data);
+    } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+        return createResponse(400, $e->getMessage());
+    } catch (Exception $e) {
+        return createResponse(400, $e->getMessage());
+    }
+}
+
+function xlsFileDataToWrite($conn, $filePath, $userId)
+{
+    $created_at = date('Y-m-d H:i:s');
+
+    $data = xlsFileRead($filePath);
+    if ($data['status'] !== 200) {
+        return $data;
+    }
+    $newLocations = $data['payload'];
+
+    $stmt = $conn->query('SELECT tof_shop_id FROM Task_locations');
+    $alreadyExistedTofShopId = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $multipleTofShopId = [];
+
+
+    try {
+        // Tranzakció indítása
+        $conn->beginTransaction();
+
+        // `Tasks` tábla beszúró lekérdezés
+        $taskSql = "INSERT INTO Tasks (created_by) VALUES (?)";
+        $taskStmt = $conn->prepare($taskSql);
+
+        // `Task_locations` tábla beszúró lekérdezés
+        $taskLocationSql = "INSERT INTO Task_locations (name, task_id, tof_shop_id, zip, city,address, contact,phone,email,created_by,location_type_id,fixing_method,required_site_preparation,comment) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        $taskLocationStmt = $conn->prepare($taskLocationSql);
+
+        foreach ($newLocations as $newLocation) {
+
+            //Ha már létezik a TofShop ID visszadobjuk
+            if (in_array($newLocation['tof_shop_id'], $alreadyExistedTofShopId)) {
+                return createResponse(400, $newLocation['tof_shop_id'] . " azonosítóval már létezik elem. A betöltés nem sikerült");
+            }
+
+            // Task beszúrása a `Tasks` táblába
+            $taskStmt->execute([$userId]);
+            $taskId = $conn->lastInsertId();
+
+            // Location adatok bezsúrása a Task_locations táblába
+            $taskLocationStmt->execute([$newLocation['name'], $taskId, $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $newLocation['contact'], $newLocation['phone'], $newLocation['email'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+        }
+
+        // Tranzakció lezárása
+        $conn->commit();
+        return createResponse(200, "success");
+    } catch (Exception $e) {
+        // Hiba esetén rollback
+        $conn->rollBack();
+        return createResponse(400, $e->getMessage());
+    }
+}
+// Szétválasztott és átnevezett adatok
+//$splitData = splitAndMapDataByTable($data, $keyMapping);
+//print_r($splitData);

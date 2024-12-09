@@ -159,13 +159,13 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                     $response = array(
                         "status" => 200,
                         "isUpdated" => 1,
-                        "message" => "Data update successful."
+                        "message" => "A frissítés sikeres."
                     );
                 } else {
                     $response = array(
                         "status" => 400,
                         "isUpdated" => 0,
-                        "error" => "Data update failed."
+                        "error" => "A frissítés sikertelen"
                     );
                 }
                 return $response;
@@ -193,7 +193,7 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                 }
                 $stmt->execute();
                 $response = array(
-                    "isDeleted" => 1,
+                    "status" => 200,
                     "message" => "Data deleted successfully."
                 );
                 return $response;

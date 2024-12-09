@@ -2,7 +2,6 @@
 header('Content-Type: application/json');
 
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
-//require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
 
@@ -30,10 +29,10 @@ class GetAllTask
     }
 
 
-    public function Auth()
-    {
-        return $this->auth->authenticate();
-    }
+    // public function Auth()
+    // {
+    //     return $this->auth->authenticate();
+    // }
 
     public function getTaskData()
     {
@@ -42,9 +41,8 @@ class GetAllTask
             return $this->taskData;
         }
         //User validation here
-        $this->userAuthData = $this->auth->authenticate();
+        $this->userAuthData = $this->auth->authenticate(4);
         $roleId = $this->userAuthData['data']->roleId;
-        //$roleId = 3;
 
         if ($this->userAuthData['status'] !== 200) {
             return $this->response = array(
@@ -67,6 +65,7 @@ class GetAllTask
                     'ts2.name as "status_exohu"',
                     'ts2.color as "status_color"',
                     'tl.tof_shop_id',
+                    'tl.box_id',
                     'tl.zip as "zip"',
                     'tl.city as "city"',
                     'tl.address as "address"',
@@ -74,6 +73,7 @@ class GetAllTask
                     'tl.id as location_id',
                     'tl.fixing_method',
                     'tl.required_site_preparation',
+                    'tl.comment',
                     'u.id as "responsible"',
                     'td.planned_delivery_date',
                     'td.delivery_date',
@@ -86,7 +86,7 @@ class GetAllTask
                         LEFT JOIN Task_statuses ts1 on ts1.id = t.status_by_partner_id
                         LEFT JOIN Task_statuses ts2 on ts2.id = t.status_by_exohu_id
                         LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts2.id
-                        LEFT JOIN Task_locations tl on tl.id = t.id
+                        LEFT JOIN Task_locations tl on tl.task_id = t.id
                         LEFT JOIN Location_types lt on lt.id = tl.location_type_id
                         LEFT JOIN Task_location_photos tlp on tlp.location_id = tl.id
                         LEFT JOIN Task_dates td on td.task_id = t.id
@@ -106,7 +106,8 @@ class GetAllTask
                     'tf.fee_id as feeId',
                     'tf.other_items as otherItems',
                     'tf.quantity',
-                    'tf.total'
+                    'tf.total',
+                    'tf.serial as lockerSerial'
                 ],
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
@@ -117,23 +118,25 @@ class GetAllTask
                     'l.id',
                     'l.brand',
                     'l.serial',
+                    'l.type',
+                    'l.comment',
                     'l.tof_shop_id',
                     'l.is_active'
                 ],
+                'others' => "
+                LEFT JOIN Task_locations tl on tl.tof_shop_id = l.tof_shop_id
+                ",
                 'conditions' => "l.deleted = 0"
             ];
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
             $resultOfLockers = dataToHandleInDb($this->conn, $lockers);
 
-            //Only roleId under 3 can access to fees
-            if ($roleId < 3) {
+            //Check if user has permission to taskFees
+            $isAccessTotaskFees = $this->auth->authenticate(6);
+            if ($isAccessTotaskFees['status'] !== 403) {
                 $resultOfTaskFees = dataToHandleInDb($this->conn, $taskFees);
             } else {
-                $resultOfTaskFees = array(
-                    'status' => 200,
-                    'message' => 'nincs hozzáférés a fees részhez',
-                    'data' => null
-                );
+                $resultOfTaskFees = $isAccessTotaskFees;
             }
 
             //Catch errors from DB functions
@@ -183,10 +186,9 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$permissionId = 4;
-$auth = new Auth($conn, $token, $secretkey, $permissionId);
+$auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth, $permissionId);
+$getAllTask = new GetAllTask($conn, $response, $auth);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

@@ -13,12 +13,11 @@ class Auth
     private $userAuthData = [];
     private $permissionId;
 
-    public function __construct($conn, $token, $secretkey, $permissionId)
+    public function __construct($conn, $token, $secretkey)
     {
         $this->conn = $conn;
         $this->token = $token;
         $this->secretKey = $secretkey;
-        $this->permissionId = $permissionId;
     }
     private function createResponse($status, $message, $data = null)
     {
@@ -28,7 +27,7 @@ class Auth
             'data' => $data,
         ]);
     }
-    public function authenticate()
+    public function authenticate($permissionId)
     {
         // Token validation
         if ($this->token) {
@@ -49,9 +48,9 @@ class Auth
                 $stmt->execute(['roleId' => $roleId]);
                 $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-                $isAccesGranted = in_array($this->permissionId, $permissions);
+                $isAccesGranted = in_array($permissionId, $permissions);
                 if (!$isAccesGranted) {
-                    return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez', $decoded);
+                    return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez');
                 }
             } catch (Exception $e) {
                 return $this->createResponse(401, $e, $decoded);

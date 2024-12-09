@@ -4,7 +4,6 @@ header('Content-Type: application/json');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
-//require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 
 
 $response = [];
@@ -37,45 +36,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->auth = $auth;
         }
 
-        //TODO: user validation here
-        public function Auth()
-        {
-            return $this->auth->authenticate();
-        }
-
         public function updateTaskData($isFileUpload, $conn, $file, $locationId)
         {
-
-            //User validation here
-            $this->userAuthData = $this->auth->authenticate();
-
-            if ($this->userAuthData['status'] !== 200) {
-                return $this->response = array(
-                    'status' => $this->userAuthData['status'],
-                    'message' => $this->userAuthData['message'],
-                    'data' => NULL
-                );;
+            //Update Engedély ellenőrzése
+            $userId = null;
+            $isAccess = $this->auth->authenticate(2);
+            if ($isAccess['status'] !== 200) {
+                return $this->response = $isAccess;
+            } else {
+                $userId = $isAccess['data']->userId;
             }
-            //echo json_encode($this->userAuthData);
 
-            $userId = $this->userAuthData['data']->userId;
-            $maxFileSize = 2000000;
-            $DOC_ROOT = DOC_ROOT . '/uploads';
-            $DOC_URL = DOC_URL . '/uploads';
-
+            //File feltőltés
             if ($isFileUpload) {
+                $maxFileSize = 2000000;
+                $DOC_ROOT = DOC_ROOT . '/uploads';
+                $DOC_URL = DOC_URL . '/uploads';
+
+                //Upload Engedély ellenőrzése
+                $isAccess = $this->auth->authenticate(13);
+                if ($isAccess['status'] !== 200) {
+                    return $this->response = $isAccess;
+                }
                 $result = uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT, $DOC_URL);
                 $this->response = $result;
-                //File feltőltés
             } else {
                 //Adat frissítés
                 $jsonData = file_get_contents("php://input");
                 $data = json_decode($jsonData, true);
 
                 $taskId = $data['task_id'];
+                $id = $data['id'] ?? null;
                 $dbTable = $data['dbTable'];
                 $dbColumn = $data['dbColumn'];
-                $value = $data['value'];
+                $value = $data['value'] ?? '';
+
+                //Speciális engedély ellenőrzés a státuszra
+                $statusIdNeedAccess = [9];
+                if ($data['dbColumn'] == 'status_by_exohu_id' && in_array($data['value'], $statusIdNeedAccess)) {
+                    $isAccess = $this->auth->authenticate(8);
+                    if ($isAccess['status'] !== 200) {
+                        return $this->response = $isAccess;
+                    }
+                }
 
                 try {
                     switch ($dbTable) {
@@ -276,6 +279,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ];
                             $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                             break;
+                        case 'Lockers':
+                            $dataToHandleInDb = [
+                                'table' => $dbTable,
+                                'method' => "update",
+                                'columns' => [$dbColumn],
+                                'values' => [$value],
+                                'others' => "",
+                                'order' => "",
+                                'conditions' => ['id' => $id]
+                            ];
+                            $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
+                            break;
                         default:
                             $dataToHandleInDb = [
                                 'table' => $dbTable,
@@ -292,6 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (isset($result)) {
                         if ($result['isUpdated']) {
                             $payload = array(
+                                'id' => $id,
                                 'taskId' => intval($taskId),
                                 'column' => $dbColumn,
                                 'value' => $value
@@ -321,21 +337,9 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$permissionId = 2;
+$auth = new Auth($conn, $token, $secretkey);
 
-$jsonData = file_get_contents("php://input");
-$data = json_decode($jsonData, true);
-$dbColumn = $data['dbColumn'];
-$value = $data['value'];
-$statusIdNeedAccess = [9];
-
-if ($data['dbColumn'] == 'status_by_exohu_id' && in_array($data['value'], $statusIdNeedAccess)) {
-    $permissionId = 8;
-}
-
-$auth = new Auth($conn, $token, $secretkey, $permissionId);
-
-$updateTask = new updateTask($conn, $response, $auth, $permissionId);
+$updateTask = new updateTask($conn, $response, $auth);
 $updateTask->updateTaskData($isFileUpload, $conn, $file, $locationId);
 
 echo json_encode($response);

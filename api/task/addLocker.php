@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
+//require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
 require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
 
@@ -16,14 +17,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jsonData = file_get_contents("php://input");
     $newItems = json_decode($jsonData, true);
 
-    $dbTable = 'Task_fees';
-
-    class AddFee
+    class AddLocker
     {
         private $conn;
         private $response;
         private $auth;
-        private $userAuthData;
 
         public function __construct($conn, &$response, $auth)
         {
@@ -32,27 +30,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->auth = $auth;
         }
 
-        public function addFeeFunction($conn, $dbTable, $newItems)
+
+        public function addLockerFunction($conn, $newItems)
         {
+
             $userId = null;
-            $isAccess = $this->auth->authenticate(11);
+            $isAccess = $this->auth->authenticate(9);
             if ($isAccess['status'] !== 200) {
                 return $this->response = $isAccess;
             } else {
                 $userId = $isAccess['data']->userId;
             }
-            $result = addFee($conn, $dbTable, $newItems, $userId);
+
+            $result = addLocker($conn, $newItems, $userId);
             $this->response = $result;
         }
     }
 }
-
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new AddFee($conn, $response, $auth);
-$getAllTask->addFeeFunction($conn, $dbTable, $newItems);
+$addLocker = new AddLocker($conn, $response, $auth);
+$addLocker->addLockerFunction($conn, $newItems);
 echo json_encode($response);
