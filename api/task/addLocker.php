@@ -1,52 +1,46 @@
 <?php
 header('Content-Type: application/json');
 
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
-//require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
+require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
+require('../../api/user/auth/auth.php');
 
 $response = [];
 
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+$jsonData = file_get_contents("php://input");
+$newItems = json_decode($jsonData, true);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $jsonData = file_get_contents("php://input");
-    $newItems = json_decode($jsonData, true);
+class AddLocker
+{
+    private $conn;
+    private $response;
+    private $auth;
 
-    class AddLocker
+    public function __construct($conn, &$response, $auth)
     {
-        private $conn;
-        private $response;
-        private $auth;
+        $this->conn = $conn;
+        $this->response = &$response;
+        $this->auth = $auth;
+    }
 
-        public function __construct($conn, &$response, $auth)
-        {
-            $this->conn = $conn;
-            $this->response = &$response;
-            $this->auth = $auth;
+
+    public function addLockerFunction($conn, $newItems)
+    {
+
+        $userId = null;
+        $isAccess = $this->auth->authenticate(9);
+        if ($isAccess['status'] !== 200) {
+            return $this->response = $isAccess;
+        } else {
+            $userId = $isAccess['data']->userId;
         }
 
-
-        public function addLockerFunction($conn, $newItems)
-        {
-
-            $userId = null;
-            $isAccess = $this->auth->authenticate(9);
-            if ($isAccess['status'] !== 200) {
-                return $this->response = $isAccess;
-            } else {
-                $userId = $isAccess['data']->userId;
-            }
-
-            $result = addLocker($conn, $newItems, $userId);
-            $this->response = $result;
-        }
+        $result = addLocker($conn, $newItems, $userId);
+        $this->response = $result;
     }
 }
+
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];

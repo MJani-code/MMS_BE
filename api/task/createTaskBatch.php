@@ -1,10 +1,10 @@
 <?php
 header('Content-Type: application/json');
 
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/vendor/autoload.php');
+require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
+require('../../api/user/auth/auth.php');
+require('../../vendor/autoload.php');
 
 
 use PhpOffice\PhpSpreadsheet\IOFactory;

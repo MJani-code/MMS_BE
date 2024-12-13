@@ -1,6 +1,6 @@
 <?php
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/db/dbFunctions.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/vendor/autoload.php');
+require('db/dbFunctions.php');
+require('../../vendor/autoload.php');
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -72,7 +72,7 @@ function dataManipulation($conn, $data, $userAuthData)
 
                 // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
                 $taskFeesFound = false; // Flag a taskFees ellenőrzésére
-                if (isset($data['taskFees']['payload'])) {
+                if (!empty($data['taskFees']['payload'])) {
                     foreach ($data['taskFees']['payload'] as $taskFee) {
                         $taskId = $taskFee['taskId'];
                         $taskFeeId = $taskFee['id'];
@@ -104,7 +104,7 @@ function dataManipulation($conn, $data, $userAuthData)
 
 
                 $lockerFound = false; // Flag a locker ellenőrzésére
-                if (isset($data['lockers']['payload'])) {
+                if (!empty($data['lockers']['payload'])) {
                     foreach ($data['lockers']['payload'] as $locker) {
                         $lockerId = $locker['id'];
                         $tofShopId = $locker['tof_shop_id'];
@@ -145,10 +145,10 @@ function dataManipulation($conn, $data, $userAuthData)
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
-                    'table' => 'Task_columns tc',
+                    'table' => 'task_columns tc',
                     'method' => "get",
                     'columns' => ['text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
-                    'others' => "LEFT JOIN Task_column_permissions tcp on tcp.task_columns_id = tc.id",
+                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id",
                     'conditions' => "tcp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -181,10 +181,10 @@ function dataManipulation($conn, $data, $userAuthData)
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
-                    'table' => 'Task_statuses ts',
+                    'table' => 'task_statuses ts',
                     'method' => "get",
                     'columns' => ['ts.id', 'name', 'color'],
-                    'others' => "LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id",
                     'conditions' => "ts.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -213,10 +213,10 @@ function dataManipulation($conn, $data, $userAuthData)
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
-                    'table' => 'Task_statuses ts',
+                    'table' => 'task_statuses ts',
                     'method' => "get",
                     'columns' => ['ts.id', 'name', 'color'],
-                    'others' => "LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id",
                     'conditions' => "tsp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -249,7 +249,7 @@ function dataManipulation($conn, $data, $userAuthData)
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
-                    'table' => 'Location_types lt',
+                    'table' => 'location_types lt',
                     'method' => "get",
                     'columns' => ['id', 'name', 'color'],
                     'others' => "",
@@ -281,7 +281,7 @@ function dataManipulation($conn, $data, $userAuthData)
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
-                    'table' => 'Task_type_details ttd',
+                    'table' => 'task_type_details ttd',
                     'method' => "get",
                     'columns' => ['id', 'name', 'color'],
                     'others' => "",
@@ -313,10 +313,10 @@ function dataManipulation($conn, $data, $userAuthData)
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
-                    'table' => 'Responsibles r',
+                    'table' => 'responsibles r',
                     'method' => "get",
                     'columns' => ["r.id", "CONCAT(u.last_name,' ',u.first_name) as name"],
-                    'others' => "LEFT JOIN Users u on u.id = r.user_id",
+                    'others' => "LEFT JOIN users u on u.id = r.user_id",
                     'conditions' => "r.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -388,7 +388,7 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
 
         // Adatok beszúrása az adatbázisba
         $stmt = $conn->prepare(
-            "INSERT INTO Task_location_photos
+            "INSERT INTO task_location_photos
             (location_id, filename, url, created_by)
             VALUES (:location_id, :filename, :url, :created_by)"
         );
@@ -408,6 +408,10 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
 
         // Ellenőrzés, hogy sikeres volt-e a beszúrás
         if ($stmt->rowCount() > 0) {
+            // Ellenőrizd, hogy létezik-e a könyvtár
+            if (!is_dir(dirname($fileDestination))) {
+                mkdir(dirname($fileDestination), 0777, true);
+            }
             // Fájl mozgatása és jogosultságok beállítása
             $isFileUplaoded = move_uploaded_file($fileTmpName, $fileDestination);
             chmod($fileDestination, 0777);
@@ -488,7 +492,7 @@ function addLocker($conn, $newItems, $userId)
         $params = [$newItems['tof_shop_id'], $newItems['value'], $userId];
 
         $lockers = [
-            'table' => "Lockers l",
+            'table' => "lockers l",
             'method' => "get",
             'columns' => [
                 'l.id',
@@ -498,7 +502,7 @@ function addLocker($conn, $newItems, $userId)
                 'l.is_active as isActive'
             ],
             'others' => "
-            LEFT JOIN Task_locations tl on tl.tof_shop_id = l.tof_shop_id
+            LEFT JOIN task_locations tl on tl.tof_shop_id = l.tof_shop_id
             ",
             'conditions' => "l.deleted = 0 AND l.tof_shop_id = $newItems[tof_shop_id] "
         ];
@@ -519,7 +523,7 @@ function removeLocker($conn, $lockerToRemove, $userId)
         $serial = $lockerToRemove['value'];
 
         $dataToHandleInDb = [
-            'table' => "Lockers",
+            'table' => "lockers",
             'method' => "delete",
             'columns' => [],
             'conditions' => ['serial' => $serial]
@@ -539,7 +543,7 @@ function getUserPassword($conn, $userId)
 {
     try {
         $dataToHandleInDb = [
-            'table' => "Users u",
+            'table' => "users u",
             'method' => "get",
             'columns' => ['u.password'],
             'others' => "",
@@ -563,7 +567,7 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
         $updated_at = date('Y-m-d H:i:s');
 
         $dataToHandleInDb = [
-            'table' => "Users u",
+            'table' => "users u",
             'method' => "update",
             'columns' => ['first_name', 'last_name', 'email', 'password', 'updated_at', 'updated_by'],
             'values' => [$firstName, $lastName, $email, $hashedNewPassword, $updated_at, $userId],
@@ -594,7 +598,7 @@ function xlsFileRead($filePath)
         $highestRow = $sheet->getHighestRow('A');
 
         // 2. Az érdekes fejlécek meghatározása
-        $wantedHeaders = ['Name', 'Serial Number', 'TofShop ID', 'ZIP code', 'City', 'Address', 'Contact', 'Phone', 'Email', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
+        $wantedHeaders = ['Name', 'Serial Number', 'TofShop ID', 'ZIP code', 'City', 'Address', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
         $requiredFields = ['TofShop ID', 'External / Internal'];
         $headerIndexes = [];
         $keyMapping = [
@@ -695,13 +699,22 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
         // Tranzakció indítása
         $conn->beginTransaction();
 
-        // `Tasks` tábla beszúró lekérdezés
-        $taskSql = "INSERT INTO Tasks (created_by) VALUES (?)";
+        // `tasks` tábla beszúró lekérdezés
+        $taskSql = "INSERT INTO tasks (created_by) VALUES (?)";
         $taskStmt = $conn->prepare($taskSql);
 
-        // `Task_locations` tábla beszúró lekérdezés
-        $taskLocationSql = "INSERT INTO Task_locations (name, task_id, tof_shop_id, zip, city,address, contact,phone,email,created_by,location_type_id,fixing_method,required_site_preparation,comment) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        // `task_locations` tábla beszúró lekérdezés
+        $taskLocationSql = "INSERT INTO task_locations (name, task_id, tof_shop_id, zip, city,address,created_by,location_type_id,fixing_method,required_site_preparation,comment) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
         $taskLocationStmt = $conn->prepare($taskLocationSql);
+
+        //task_types táblába beszúró lekérdezés
+        $taskTypesSql = "INSERT INTO task_types (type_id, task_id, created_by) VALUES (?,?,?)";
+        $taskTypesStmt = $conn->prepare($taskTypesSql);
+
+        //task_dates táblába beszúró lekérdezés
+        $taskDatesSql = "INSERT INTO task_dates (task_id, created_by) VALUES (?,?)";
+        $taskDatesStmt = $conn->prepare($taskDatesSql);
+
 
         foreach ($newLocations as $newLocation) {
 
@@ -710,17 +723,23 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
                 return createResponse(400, $newLocation['tof_shop_id'] . " azonosítóval már létezik elem. A betöltés nem sikerült");
             }
 
-            // Task beszúrása a `Tasks` táblába
+            // Task beszúrása a `tasks` táblába
             $taskStmt->execute([$userId]);
             $taskId = $conn->lastInsertId();
 
-            // Location adatok bezsúrása a Task_locations táblába
-            $taskLocationStmt->execute([$newLocation['name'], $taskId, $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $newLocation['contact'], $newLocation['phone'], $newLocation['email'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+            // Location adatok bezsúrása a task_locations táblába
+            $taskLocationStmt->execute([$newLocation['name'], $taskId, $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+
+            // Type adatok bezsúrása a task_types táblába
+            $taskTypesStmt->execute([3, $taskId, $userId]);
+
+            // Date adatok bezsúrása a task_dates táblába
+            $taskDatesStmt->execute([$taskId, $userId]);
         }
 
         // Tranzakció lezárása
         $conn->commit();
-        return createResponse(200, "success");
+        return createResponse(200, "Sikeres betöltés");
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();

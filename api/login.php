@@ -1,8 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: http://192.168.76.68:3000");
-header("Access-Control-Allow-Methods: *");
-header("Access-Control-Allow-Headers: *");
-header("Content-Type: application/json");
+// header("Access-Control-Allow-Origin: http://192.168.76.68:3000");
+// header("Access-Control-Allow-Methods: *");
+// header("Access-Control-Allow-Headers: *");
+// header("Content-Type: application/json");
 
 require('../inc/conn.php');
 require('../inc/secretkey.php');
@@ -50,10 +50,10 @@ class LoginHandler
                 $stmt = $this->conn->prepare(
                     "SELECT
                         u.id, u.role_id, u.first_name, u.last_name, u.email, u.password, GROUP_CONCAT(p.id) as permissions
-                    FROM Users u
-                    LEFT JOIN Roles r ON r.id = u.role_id
-                    LEFT JOIN Role_permissions rp on rp.role_id = u.role_id
-                    LEFT JOIN Permissions p on p.id = rp.permission_id
+                    FROM users u
+                    LEFT JOIN roles r ON r.id = u.role_id
+                    LEFT JOIN role_permissions rp on rp.role_id = u.role_id
+                    LEFT JOIN permissions p on p.id = rp.permission_id
                     WHERE email = :email AND u.deleted = 0"
                 );
                 $stmt->bindParam(":email", $email);

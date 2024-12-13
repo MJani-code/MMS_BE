@@ -41,8 +41,8 @@ class Auth
                 // SQL lekérdezés, amely a szerepkör összes jogosultságát visszaadja
                 $query = "
                         SELECT p.id
-                        FROM Role_permissions rp
-                        LEFT JOIN Permissions p on p.id = rp.permission_id
+                        FROM role_permissions rp
+                        LEFT JOIN permissions p on p.id = rp.permission_id
                         WHERE rp.role_id = :roleId;";
                 $stmt = $this->conn->prepare($query);
                 $stmt->execute(['roleId' => $roleId]);
@@ -50,7 +50,7 @@ class Auth
 
                 $isAccesGranted = in_array($permissionId, $permissions);
                 if (!$isAccesGranted) {
-                    return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez');
+                    return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez', $decoded);
                 }
             } catch (Exception $e) {
                 return $this->createResponse(401, $e, $decoded);

@@ -1,17 +1,12 @@
 <?php
 header('Content-Type: application/json');
 
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
+require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
+require('../../api/user/auth/auth.php');
 
 
 $response = [];
-
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 class GetAllTask
 {
@@ -25,7 +20,14 @@ class GetAllTask
         $this->response = &$response;
         $this->auth = $auth;
     }
-
+    private function createResponse($status, $message, $data = null)
+    {
+        return [
+            'status' => $status,
+            'message' => $message,
+            'data' => $data,
+        ];
+    }
     public function getTaskData()
     {
         //User validation here
@@ -39,7 +41,7 @@ class GetAllTask
         //Data gathering
         try {
             $userData = [
-                'table' => "Users u",
+                'table' => "users u",
                 'method' => "get",
                 'columns' => ['u.id', 'u.first_name as firstName', 'u.last_name as lastName', 'u.email as email', ' "" as password', ' "" as newPassword', ' "" as newPasswordConfirm'],
                 'others' => "",
@@ -47,12 +49,16 @@ class GetAllTask
             ];
             $result = dataToHandleInDb($this->conn, $userData);
 
+            if ($result['status'] !== 200) {
+                return $this->response = $this->createResponse(400, $result['errorInfo']);
+            }
+
             return $this->response = $result;
         } catch (Exception $e) {
             $errorInfo = $e->getMessage();
             $this->response = array(
                 'status' => 500,
-                'errorInfo' => $errorInfo,
+                'message' => $errorInfo,
                 'data' => NULL
             );
             return;

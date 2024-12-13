@@ -1,17 +1,12 @@
 <?php
 header('Content-Type: application/json');
 
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/inc/conn.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/functions/taskFunctions.php');
-require('/Applications/XAMPP/xamppfiles/htdocs/MMS/MMS_BE/api/user/auth/auth.php');
-
+require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
+require('../../api/user/auth/auth.php');
 
 $response = [];
 
-
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 class GetAllTask
 {
@@ -55,7 +50,7 @@ class GetAllTask
         //Data gathering
         try {
             $baseTaskData = [
-                'table' => "Tasks t",
+                'table' => "tasks t",
                 'method' => "get",
                 'columns' => [
                     't.id as id',
@@ -81,24 +76,24 @@ class GetAllTask
 
                 ],
                 'others' => "
-                        LEFT JOIN Task_types tt on tt.task_id = t.id AND tt.deleted = 0
-                        LEFT JOIN Task_type_details ttd on ttd.id = tt.type_id
-                        LEFT JOIN Task_statuses ts1 on ts1.id = t.status_by_partner_id
-                        LEFT JOIN Task_statuses ts2 on ts2.id = t.status_by_exohu_id
-                        LEFT JOIN Task_status_permissions tsp on tsp.task_status_id = ts2.id
-                        LEFT JOIN Task_locations tl on tl.task_id = t.id
-                        LEFT JOIN Location_types lt on lt.id = tl.location_type_id
-                        LEFT JOIN Task_location_photos tlp on tlp.location_id = tl.id
-                        LEFT JOIN Task_dates td on td.task_id = t.id
-                        LEFT JOIN Task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
-                        LEFT JOIN Users u on u.id = tr.user_id
+                        LEFT JOIN task_types tt on tt.task_id = t.id AND tt.deleted = 0
+                        LEFT JOIN task_type_details ttd on ttd.id = tt.type_id
+                        LEFT JOIN task_statuses ts1 on ts1.id = t.status_by_partner_id
+                        LEFT JOIN task_statuses ts2 on ts2.id = t.status_by_exohu_id
+                        LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts2.id
+                        LEFT JOIN task_locations tl on tl.task_id = t.id
+                        LEFT JOIN location_types lt on lt.id = tl.location_type_id
+                        LEFT JOIN task_location_photos tlp on tlp.location_id = tl.id
+                        LEFT JOIN task_dates td on td.task_id = t.id
+                        LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
+                        LEFT JOIN users u on u.id = tr.user_id
                         ",
                 'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL
                         ORDER BY id"
             ];
 
             $taskFees = [
-                'table' => "Task_fees tf",
+                'table' => "task_fees tf",
                 'method' => "get",
                 'columns' => [
                     'tf.id as id',
@@ -112,7 +107,7 @@ class GetAllTask
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
             $lockers = [
-                'table' => "Lockers l",
+                'table' => "lockers l",
                 'method' => "get",
                 'columns' => [
                     'l.id',
@@ -124,7 +119,7 @@ class GetAllTask
                     'l.is_active'
                 ],
                 'others' => "
-                LEFT JOIN Task_locations tl on tl.tof_shop_id = l.tof_shop_id
+                LEFT JOIN task_locations tl on tl.tof_shop_id = l.tof_shop_id
                 ",
                 'conditions' => "l.deleted = 0"
             ];
