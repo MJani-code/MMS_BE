@@ -7,38 +7,37 @@ require('../../api/user/auth/auth.php');
 
 $response = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $jsonData = file_get_contents("php://input");
-    $newItems = json_decode($jsonData, true);
 
-    $dbTable = 'task_fees';
+$jsonData = file_get_contents("php://input");
+$newItems = json_decode($jsonData, true);
 
-    class AddFee
+$dbTable = 'task_fees';
+
+class AddFee
+{
+    private $conn;
+    private $response;
+    private $auth;
+    private $userAuthData;
+
+    public function __construct($conn, &$response, $auth)
     {
-        private $conn;
-        private $response;
-        private $auth;
-        private $userAuthData;
+        $this->conn = $conn;
+        $this->response = &$response;
+        $this->auth = $auth;
+    }
 
-        public function __construct($conn, &$response, $auth)
-        {
-            $this->conn = $conn;
-            $this->response = &$response;
-            $this->auth = $auth;
+    public function addFeeFunction($conn, $dbTable, $newItems)
+    {
+        $userId = null;
+        $isAccess = $this->auth->authenticate(11);
+        if ($isAccess['status'] !== 200) {
+            return $this->response = $isAccess;
+        } else {
+            $userId = $isAccess['data']->userId;
         }
-
-        public function addFeeFunction($conn, $dbTable, $newItems)
-        {
-            $userId = null;
-            $isAccess = $this->auth->authenticate(11);
-            if ($isAccess['status'] !== 200) {
-                return $this->response = $isAccess;
-            } else {
-                $userId = $isAccess['data']->userId;
-            }
-            $result = addFee($conn, $dbTable, $newItems, $userId);
-            $this->response = $result;
-        }
+        $result = addFee($conn, $dbTable, $newItems, $userId);
+        $this->response = $result;
     }
 }
 

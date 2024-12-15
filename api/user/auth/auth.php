@@ -47,13 +47,12 @@ class Auth
                 $stmt = $this->conn->prepare($query);
                 $stmt->execute(['roleId' => $roleId]);
                 $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
                 $isAccesGranted = in_array($permissionId, $permissions);
                 if (!$isAccesGranted) {
                     return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez', $decoded);
                 }
             } catch (Exception $e) {
-                return $this->createResponse(401, $e, $decoded);
+                return $this->createResponse(401, $e->getMessage(), $decoded);
             }
             return $this->createResponse(200, 'success', $decoded);
         }

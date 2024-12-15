@@ -91,7 +91,16 @@ class GetAllTask
                 'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL
                         ORDER BY id"
             ];
-
+            $fees = [
+                'table' => "fees f",
+                'method' => "get",
+                'columns' => [
+                    'f.id as id',
+                    'f.name as name',
+                    'f.net_unit_price as value'
+                ],
+                'conditions' => "f.is_active = 1 ORDER BY f.id"
+            ];
             $taskFees = [
                 'table' => "task_fees tf",
                 'method' => "get",
@@ -126,18 +135,29 @@ class GetAllTask
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
             $resultOfLockers = dataToHandleInDb($this->conn, $lockers);
 
+            $errorInfo = '';
             //Check if user has permission to taskFees
             $isAccessTotaskFees = $this->auth->authenticate(6);
             if ($isAccessTotaskFees['status'] !== 403) {
                 $resultOfTaskFees = dataToHandleInDb($this->conn, $taskFees);
+                $errorInfo .= isset($resultOfTaskFees['errorInfo']) ? $resultOfTaskFees['errorInfo'] : '';
             } else {
                 $resultOfTaskFees = $isAccessTotaskFees;
             }
 
+            //Check if user has permission to fees
+            $isAccessTofees = $this->auth->authenticate(6);
+            if ($isAccessTofees['status'] !== 403) {
+                $resultOffees = dataToHandleInDb($this->conn, $fees);
+                $errorInfo .= isset($resultOffees['errorInfo']) ? $resultOffees['errorInfo'] : '';
+            } else {
+                $resultOffees = $isAccessTofees;
+            }
+
             //Catch errors from DB functions
-            $errorInfo = '';
+
             if ($resultOfBaseTaskData['status'] !== 200) {
-                $errorInfo = isset($resultOfBaseTaskData['errorInfo']) ? $resultOfBaseTaskData['errorInfo'] : '';
+                $errorInfo .= isset($resultOfBaseTaskData['errorInfo']) ? $resultOfBaseTaskData['errorInfo'] : '';
                 if (isset($resultOfTaskFees) && $resultOfTaskFees['status'] !== 200) {
                     $errorInfo .= isset($resultOfTaskFees['errorInfo']) ? $resultOfTaskFees['errorInfo'] : '';
                 }
@@ -153,6 +173,7 @@ class GetAllTask
                 $this->taskData['baseTaskData'] = $resultOfBaseTaskData;
                 $this->taskData['taskFees'] = $resultOfTaskFees;
                 $this->taskData['lockers'] = $resultOfLockers;
+                $this->taskData['fees'] = $resultOffees;
                 return $this->taskData;
             }
         } catch (Exception $e) {

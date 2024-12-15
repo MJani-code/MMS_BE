@@ -93,14 +93,14 @@ function dataManipulation($conn, $data, $userAuthData)
                     $groupedData[$existingIndex]['taskFees'] = [];
                 }
 
-                //Add lockers
-                // if (isset($data['lockers']['payload'])) {
-                //     foreach ($data['lockers']['payload'] as $locker) {
-                //         if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
-                //             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                //         }
-                //     }
-                // }
+                //Add lockers into lockerSerials
+                if (isset($data['lockers']['payload'])) {
+                    foreach ($data['lockers']['payload'] as $locker) {
+                        if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
+                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
+                        }
+                    }
+                }
 
 
                 $lockerFound = false; // Flag a locker ellenőrzésére
@@ -125,6 +125,12 @@ function dataManipulation($conn, $data, $userAuthData)
                     $groupedData[$existingIndex]['lockers'] = [];
                 }
             }
+
+            //fees hozzáadása
+            if (!empty($data['fees']['payload'])) {
+                $manipulatedData['fees'] = $data['fees']['payload'];
+            }
+
 
             // Az átrendezett tömb újra indexelése, hogy numerikus tömb legyen
             $groupedData = array_values($groupedData);
