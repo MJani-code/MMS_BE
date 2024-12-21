@@ -66,7 +66,6 @@ class updateTask
                 return $this->response = $isAccess;
             }
             $result = uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT, $DOC_URL);
-            echo json_encode($result);
             return $this->response = $result;
         } else {
             //Speciális engedély ellenőrzés a státuszra

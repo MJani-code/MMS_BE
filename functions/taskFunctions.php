@@ -3,6 +3,9 @@ require('db/dbFunctions.php');
 require('../../vendor/autoload.php');
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+
 
 // Alapértelmezett válasz formázása
 function createResponse($status, $errorMessage = '', $data = null)
@@ -752,6 +755,54 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
         return createResponse(400, $e->getMessage());
     }
 }
-// Szétválasztott és átnevezett adatok
-//$splitData = splitAndMapDataByTable($data, $keyMapping);
-//print_r($splitData);
+
+function downloadTig($conn)
+{
+    try {
+        // SQL Lekérdezés
+        $stmt = $conn->query("SELECT tl.name, CONCAT(tl.zip,' ',tl.city,' ',tl.address)as helyszín ,td.delivery_date, f.name as díjtípus, tf.serial, tf.net_unit_price, tf.quantity, tf.total, tl.tof_shop_id
+        FROM task_fees tf
+        LEFT JOIN tasks t on t.id = tf.task_id
+        LEFT JOIN task_locations tl on tl.task_id = t.id
+        LEFT JOIN task_dates td on td.task_id = t.id
+        LEFT JOIN fees f on f.id = tf.fee_id;");
+        $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Excel generálása
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Fejléc
+        $fejlec = ['Helyszín neve', 'Cím', 'Telepítés dátuma', 'Díjtípus', 'Sorozatszám', 'Nettó egységár', 'Mennyiség', 'Összesen', 'TofShop ID'];
+        $sheet->fromArray($fejlec, NULL, 'A1');
+
+        // Adatok beírása
+        $startRow = 2;
+        foreach ($adatok as $index => $sor) {
+            $sheet->fromArray(array_values($sor), NULL, 'A' . ($startRow + $index));
+        }
+
+        // Ideiglenes fájl létrehozása
+        $temp_file = tempnam(sys_get_temp_dir(), 'excel');
+        $temp_file_with_ext = $temp_file . '.xlsx';
+        rename($temp_file, $temp_file_with_ext);
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($temp_file_with_ext);
+
+        // Fájl letöltése
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="tig.xlsx"');
+        header('Cache-Control: max-age=0');
+        readfile($temp_file_with_ext);
+
+        // Fájl törlése
+        unlink($temp_file_with_ext);
+        exit();
+    } catch (Exception $e) {
+        // Győződj meg róla, hogy nincs semmilyen extra kimenet a HTTP fejlécek előtt
+        header('Content-Type: application/json');
+        echo json_encode(createResponse(400, $e->getMessage()));
+        exit();
+    }
+}
