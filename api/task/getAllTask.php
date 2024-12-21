@@ -59,6 +59,7 @@ class GetAllTask
                     'ts2.id as "status_exohu_id"',
                     'ts2.name as "status_exohu"',
                     'ts2.color as "status_color"',
+                    'tl.name',
                     'tl.tof_shop_id',
                     'tl.box_id',
                     'tl.zip as "zip"',
