@@ -624,7 +624,8 @@ function xlsFileRead($filePath)
             'External / Internal' => 'location_type_id',
             'Fixing' => 'fixing_method',
             'Site Preparation required' => 'required_site_preparation',
-            'Comment' => 'comment'
+            'Comment' => 'comment',
+            'Serial Number' => 'serial'
         ];
 
         foreach ($wantedHeaders as $wantedHeader) {
@@ -726,6 +727,10 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
         $taskDatesSql = "INSERT INTO task_dates (task_id, created_by) VALUES (?,?)";
         $taskDatesStmt = $conn->prepare($taskDatesSql);
 
+        //lockers táblába beszúró lekérdezés
+        // $lockersSql = "INSERT INTO lockers (tof_shop_id, brand, serial, type, created_by) VALUES (?,?,?,?,?)";
+        // $lockersStmt = $conn->prepare($lockersSql);
+
 
         foreach ($newLocations as $newLocation) {
 
@@ -746,6 +751,11 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
 
             // Date adatok bezsúrása a task_dates táblába
             $taskDatesStmt->execute([$taskId, $userId]);
+
+            //Ha a serial nem üres akkor beszúrjuk a lockers táblába
+            // if ($newLocation['serial'] !== null) {
+            //     $lockersStmt->execute([$newLocation['tof_shop_id'], 'ARKA', $newLocation['serial'], 'Master', $userId]);
+            // }
         }
 
         // Tranzakció lezárása
@@ -767,7 +777,7 @@ function downloadTig($conn)
         LEFT JOIN tasks t on t.id = tf.task_id
         LEFT JOIN task_locations tl on tl.task_id = t.id
         LEFT JOIN task_dates td on td.task_id = t.id
-        LEFT JOIN fees f on f.id = tf.fee_id WHERE t.status_by_exohu_id = 6;");
+        LEFT JOIN fees f on f.id = tf.fee_id WHERE t.status_by_exohu_id = 9;");
         $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Excel generálása
