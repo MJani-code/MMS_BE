@@ -767,7 +767,7 @@ function downloadTig($conn)
         LEFT JOIN tasks t on t.id = tf.task_id
         LEFT JOIN task_locations tl on tl.task_id = t.id
         LEFT JOIN task_dates td on td.task_id = t.id
-        LEFT JOIN fees f on f.id = tf.fee_id;");
+        LEFT JOIN fees f on f.id = tf.fee_id WHERE t.status_by_exohu_id = 6;");
         $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Excel generálása
