@@ -97,13 +97,13 @@ function dataManipulation($conn, $data, $userAuthData)
                 }
 
                 //Add lockers into lockerSerials
-                if (isset($data['lockers']['payload'])) {
-                    foreach ($data['lockers']['payload'] as $locker) {
-                        if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
-                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                        }
-                    }
-                }
+                // if (isset($data['lockers']['payload'])) {
+                //     foreach ($data['lockers']['payload'] as $locker) {
+                //         if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
+                //             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
+                //         }
+                //     }
+                // }
 
 
                 $lockerFound = false; // Flag a locker ellenőrzésére
@@ -115,6 +115,7 @@ function dataManipulation($conn, $data, $userAuthData)
                         // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
                         if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
                             $groupedData[$existingIndex]['lockers'][] = $locker;
+                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
                             $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
                             $lockerFound = true; // Ha találunk legalább egy locker-t
                         }
@@ -122,6 +123,7 @@ function dataManipulation($conn, $data, $userAuthData)
                         if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
                             // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
                             $groupedData[$existingIndex]['lockers'] = [];
+                            $groupedData[$existingIndex]['lockerSerials'] = [];
                         }
                     }
                 } else {
