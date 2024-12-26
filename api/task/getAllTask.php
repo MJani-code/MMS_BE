@@ -126,7 +126,12 @@ class GetAllTask
                     'l.type',
                     'l.comment',
                     'l.tof_shop_id',
-                    'l.is_active'
+                    'l.is_registered',
+                    'l.is_active',
+                    'l.private_key1_error as privateKey1Error',
+                    'l.battery_level as batteryLevel',
+                    'l.current_version as currentVersion',
+                    'l.last_connection_timestamp as lastConnectionTimestamp'
                 ],
                 'others' => "
                 LEFT JOIN task_locations tl on tl.tof_shop_id = l.tof_shop_id

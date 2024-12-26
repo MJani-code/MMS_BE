@@ -28,8 +28,6 @@ function dataManipulation($conn, $data, $userAuthData)
         return;
     }
     $userRoleId = $userAuthData['data']->roleId;
-    // echo $userRoleId;
-
     //getData
     function getData($conn, $manipulatedData, $data)
     {
@@ -816,5 +814,26 @@ function downloadTig($conn)
         header('Content-Type: application/json');
         echo json_encode(createResponse(400, $e->getMessage()));
         exit();
+    }
+}
+
+function updateCheckLockerResult($conn, $data, $userId)
+{
+    try {
+        $dataToHandleInDb = [
+            'table' => "lockers",
+            'method' => "update",
+            'columns' => ['is_registered', 'is_active', 'private_key1_error', 'battery_level', 'current_version', 'last_connection_timestamp', 'updated_by'],
+            'values' => [$data['is_registered'], $data['isActive'], $data['privateKey1Error'] ? 1 : 0, $data['batteryLevel'], $data['currentVersion'], $data['lastConnectionTimestamp'], $userId],
+            'conditions' => ['id' => $data['id']]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] === 200) {
+            return createResponse($result['status'], $result['message']);
+        } else {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+        }
+    } catch (Exception $e) {
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
