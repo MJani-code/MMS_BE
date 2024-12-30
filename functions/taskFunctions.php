@@ -824,7 +824,7 @@ function updateCheckLockerResult($conn, $data, $userId)
             'table' => "lockers",
             'method' => "update",
             'columns' => ['is_registered', 'is_active', 'private_key1_error', 'battery_level', 'current_version', 'last_connection_timestamp', 'updated_by'],
-            'values' => [$data['is_registered'], $data['isActive'], $data['privateKey1Error'] ? 1 : 0, $data['batteryLevel'], $data['currentVersion'], $data['lastConnectionTimestamp'], $userId],
+            'values' => [$data['is_registered'], $data['is_active'], $data['privateKey1Error'] ? 1 : 0, $data['batteryLevel'], $data['currentVersion'], $data['lastConnectionTimestamp'], $userId],
             'conditions' => ['id' => $data['id']]
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);

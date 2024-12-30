@@ -9,8 +9,6 @@ $response = [];
 
 $jsonData = file_get_contents("php://input");
 $lockerData = json_decode($jsonData, true);
-//Eltávolítani az isActive mezőt a lockerData tömbből
-unset($lockerData['is_active']);
 
 class CheckLocker
 {
@@ -63,8 +61,10 @@ class CheckLocker
         //locker adatok lekérdezése
         try {
             $token = $this->token;
+            $page = $lockerData['page'];
+            $pageSize = $lockerData['pageSize'];
             $url = $this->losGetLockerStationsForPortalUrl;
-            $data = array('Countrycode' => 'HU', 'Filter' => $lockerData['serial'], 'IsActive' => true, 'Page' => 1, 'PageNumber' => 1, 'PageSize' => 50);
+            $data = array('Countrycode' => 'HU', 'Filter' => null, 'IsActive' => true, 'PageNumber' => $page, 'PageSize' => $pageSize);
             $options = array(
                 'http' => array(
                     'header'  => "Content-type: application/json\r\n" .
@@ -85,39 +85,7 @@ class CheckLocker
                 }
             } else {
                 $result = json_decode($result, true);
-                if (!isset($result['payload']['resultList'][0])) {
-                    return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
-                }
-                $isLockerAdded = isset($result['payload']['resultList'][0]['lockerStationId']) ? 1 : 0;
-                $isActive = $result['payload']['resultList'][0]['lockerList'][0]['isPassive'] ? 0 : 1;
-                $privateKey1Error = $result['payload']['resultList'][0]['lockerList'][0]['privateKey1Error'] ? 1 : 0;
-                $batteryLevel = $result['payload']['resultList'][0]['lockerList'][0]['batteryLevel'];
-                $currentVersion = $result['payload']['resultList'][0]['lockerList'][0]['currentVersion'];
-                $lastConnectionTimestamp = $result['payload']['resultList'][0]['lockerList'][0]['lastConnectionTimestamp'];
-
-                $arrayToStoreResult = array(
-                    'id' => $lockerData['id'],
-                    'is_registered' => $isLockerAdded,
-                    'is_active' => $isActive,
-                    'privateKey1Error' => $privateKey1Error,
-                    'batteryLevel' => $batteryLevel,
-                    'currentVersion' => $currentVersion,
-                    'lastConnectionTimestamp' => $lastConnectionTimestamp
-                );
-                //Get user data
-                $userId = null;
-                $isAccess = $this->auth->authenticate(4);
-                if ($isAccess['status'] !== 200) {
-                    return $this->response = $isAccess;
-                } else {
-                    $userId = $isAccess['data']->userId;
-                }
-                $result = updateCheckLockerResult($this->conn, $arrayToStoreResult, $userId);
-                if ($result['status'] == 200) {
-                    //put lockerData and arrayToStoreResult into one array
-                    $lockerData = array_merge($lockerData, $arrayToStoreResult);
-                    $this->response = $this->createResponse(200, 'Sikeres lekérdezés', $lockerData);
-                }
+                $this->response = $result;
             }
         } catch (Exception $e) {
             return $this->response = $this->createResponse(400, $e->getMessage());
