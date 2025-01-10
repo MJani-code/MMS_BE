@@ -56,7 +56,7 @@ class updateTask
 
         //File feltőltés
         if ($isFileUpload) {
-            $maxFileSize = 2000000;
+            $maxFileSize = 20000000;
             $DOC_ROOT = DOC_ROOT . '/uploads/' . $locationId;
             $DOC_URL = DOC_URL . '/uploads/' . $locationId;
 
