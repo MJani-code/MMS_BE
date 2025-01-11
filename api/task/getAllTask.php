@@ -124,7 +124,7 @@ class GetAllTask
                     'l.brand',
                     'l.serial',
                     'l.type',
-                    'l.comment',
+                    'l.fault',
                     'l.tof_shop_id',
                     'l.is_registered',
                     'l.is_active',
