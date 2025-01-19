@@ -12,9 +12,6 @@ require('../vendor/autoload.php');
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 class AuthHandler
 {
@@ -56,8 +53,16 @@ class AuthHandler
                     echo $this->createResponse(401, 'A token lejárt, kérjük jelentkezz be újra.');
                     return;
                 } else {
-                    // A token még érvényes
-                    echo $this->createResponse(200, 'Érvényes token.');
+                    // A token még érvényes. Leellenőrizzük, hogy a token létezik-e az adatbázisban
+                    $query = "SELECT * FROM user_login WHERE token = :token";
+                    $stmt = $this->conn->prepare($query);
+                    $stmt->execute(['token' => $token]);
+                    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$user) {
+                        echo $this->createResponse(400, 'Hiányzik a token.');
+                    }else{
+                        echo $this->createResponse(200, 'Érvényes token.');
+                    }
                 }
             } catch (Exception $e) {
                 echo $this->createResponse(400, 'Hibás token. ' . $e);
