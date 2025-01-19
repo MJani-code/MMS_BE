@@ -5,6 +5,7 @@ require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 
+
 $response = [];
 
 
@@ -38,6 +39,8 @@ class GetAllTask
         //User validation here
         $this->userAuthData = $this->auth->authenticate(4);
         $roleId = $this->userAuthData['data']->roleId;
+        $companyId = $this->userAuthData['data']->companyId;
+        $permissions = $this->userAuthData['data']->permissions;
 
         if ($this->userAuthData['status'] !== 200) {
             return $this->response = array(
@@ -70,7 +73,7 @@ class GetAllTask
                     'tl.fixing_method',
                     'tl.required_site_preparation',
                     'tl.comment',
-                    'u.id as "responsible"',
+                    'c.id as "responsible"',
                     'td.planned_delivery_date',
                     'td.delivery_date',
                     'tlp.url'
@@ -87,10 +90,9 @@ class GetAllTask
                         LEFT JOIN task_location_photos tlp on tlp.location_id = tl.id
                         LEFT JOIN task_dates td on td.task_id = t.id
                         LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
-                        LEFT JOIN users u on u.id = tr.user_id
+                        LEFT JOIN companies c on c.id = tr.company_id
                         ",
-                'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL
-                        ORDER BY id"
+                'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL " . (in_array(17, $permissions) ? "" : "AND tr.company_id = $companyId") . " ORDER BY id"
             ];
             $fees = [
                 'table' => "fees f",
@@ -171,7 +173,7 @@ class GetAllTask
                 if ($errorInfo) {
                     $this->response = array(
                         'status' => 500,
-                        'errorInfo' => $errorInfo,
+                        'message' => $errorInfo,
                         'data' => NULL
                     );
                 }
@@ -198,8 +200,7 @@ class GetAllTask
         $rowData = $this->taskData;
         if ($rowData) {
             $result = dataManipulation($this->conn, $rowData, $this->userAuthData);
-            $response = $result;
-            $response['status'] = 200;
+            $response = $result;            
         }
     }
 }
