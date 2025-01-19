@@ -51,7 +51,7 @@ class LoginHandler
             try {
                 $stmt = $this->conn->prepare(
                     "SELECT
-                        u.id, u.role_id, u.first_name, u.last_name, u.email, u.password, GROUP_CONCAT(p.id) as permissions
+                        u.id, u.role_id, u.company_id, u.first_name, u.last_name, u.email, u.password, GROUP_CONCAT(p.id) as permissions
                     FROM users u
                     LEFT JOIN roles r ON r.id = u.role_id
                     LEFT JOIN role_permissions rp on rp.role_id = u.role_id
@@ -65,6 +65,7 @@ class LoginHandler
                 if ($result && password_verify($password, $result['password'])) {
                     $userId = $result['id'];
                     $roleId = $result['role_id'];
+                    $companyId = $result['company_id'];
                     $firstName = $result['first_name'];
 
                     // JWT Token generálása
@@ -74,7 +75,8 @@ class LoginHandler
                         'email' => $email,
                         'expirationTime' => $expirationTimestamp,
                         'userId' => $userId,
-                        'roleId' => $roleId
+                        'roleId' => $roleId,
+                        'companyId' => $companyId
                     ];
                     $jwt = JWT::encode($payload, $this->secretKey, 'HS256');
 
