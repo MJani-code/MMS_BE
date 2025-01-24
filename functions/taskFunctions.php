@@ -6,7 +6,6 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
-
 // Alapértelmezett válasz formázása
 function createResponse($status, $errorMessage = '', $data = null)
 {
@@ -20,6 +19,7 @@ function createResponse($status, $errorMessage = '', $data = null)
 function dataManipulation($conn, $data, $userAuthData)
 {
     $manipulatedData = array(
+        'status' => 200,
         'headers' => [],
         'data' => [],
         'statuses' => []
@@ -317,20 +317,20 @@ function dataManipulation($conn, $data, $userAuthData)
     }
 
     //getLocationTypes
-    function getUsers($conn, $manipulatedData, $data, $userRoleId)
+    function getResponsibles($conn, $manipulatedData, $data, $userRoleId)
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'responsibles r',
                     'method' => "get",
-                    'columns' => ["r.id", "CONCAT(u.last_name,' ',u.first_name) as name"],
-                    'others' => "LEFT JOIN users u on u.id = r.user_id",
+                    'columns' => ["r.company_id as id", "c.name as name"],
+                    'others' => "LEFT JOIN companies c on c.id = r.company_id",
                     'conditions' => "r.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
                 if ($result['status'] === 200) {
-                    $manipulatedData['users'] = $result['payload'];
+                    $manipulatedData['companies'] = $result['payload'];
                     //return createResponse($result['status'], $result['message'], $result['payload']);
                 } else {
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
@@ -354,7 +354,7 @@ function dataManipulation($conn, $data, $userAuthData)
     $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getUsers($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getResponsibles($conn, $manipulatedData, $data, $userRoleId);
 
     return $manipulatedData;
 }

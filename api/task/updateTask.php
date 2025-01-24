@@ -178,13 +178,13 @@ class updateTask
                         $updated_at = date('Y-m-d H:i:s'); // a frissítés ideje
 
                         //1. Lekérünk minden elemet
-                        $query = "SELECT user_id FROM $dbTable WHERE task_id = :task_id";
+                        $query = "SELECT company_id FROM $dbTable WHERE task_id = :task_id";
                         $stmt = $conn->prepare($query);
                         $stmt->execute(['task_id' => $taskId]);
                         $all_items = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
                         // 2. Lekérjük az aktuális tételeket az adatbázisból
-                        $query = "SELECT user_id FROM $dbTable WHERE task_id = :task_id AND deleted = 0";
+                        $query = "SELECT company_id FROM $dbTable WHERE task_id = :task_id AND deleted = 0";
                         $stmt = $conn->prepare($query);
                         $stmt->execute(['task_id' => $taskId]);
                         $current_items = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -195,8 +195,15 @@ class updateTask
 
                         // 4. Törlünk az eltávolított tételeket az adatbázisból
                         if (!empty($items_to_delete)) {
+
+                            //Ellenőrizni, hogy a felhasználó törölheti-e responsibles mezőt
+                            $isAccess = $this->auth->authenticate(20);
+                            if ($isAccess['status'] !== 200) {
+                                return $this->response = $isAccess;
+                            }
+
                             $update_query = "UPDATE $dbTable SET deleted = 1, deleted_at = ?, deleted_by = ?
-                                                 WHERE task_id = ? AND user_id IN (" . implode(',', array_fill(0, count($items_to_delete), '?')) . ")";
+                                                 WHERE task_id = ? AND company_id IN (" . implode(',', array_fill(0, count($items_to_delete), '?')) . ")";
                             $stmt = $conn->prepare($update_query);
 
                             // A frissítési értékek paraméterei
@@ -220,11 +227,18 @@ class updateTask
 
                         //5. Ha már létezik a státusz, módosítjuk annak deleted státuszát, ha nem, akkor új sort hozunk létre
                         if (!empty($items_to_add)) {
+                            //Ellenőrizni, hogy a felhasználó módosíthatja-e responsibles mezőt
+                            $isAccess = $this->auth->authenticate(18);
+                            if ($isAccess['status'] !== 200) {
+                                unset($isAccess['data']);                                
+                                return $this->response = $isAccess;
+                            }
+
                             // Először végigmegyünk az új elemek listáján
                             foreach ($items_to_add as $item_id) {
                                 // Ha az elem már szerepel a $current_items listában, akkor UPDATE
                                 if (in_array($item_id, $all_items)) {
-                                    $update_query = "UPDATE $dbTable SET deleted = ?, updated_at = ?, updated_by = ? WHERE task_id = ? AND user_id = ?";
+                                    $update_query = "UPDATE $dbTable SET deleted = ?, updated_at = ?, updated_by = ? WHERE task_id = ? AND company_id = ?";
                                     $stmt = $conn->prepare($update_query);
                                     $params = [0, $updated_at, $userId, $taskId, $item_id]; // Paraméterek a frissítéshez
                                     $stmt->execute($params);
@@ -242,7 +256,14 @@ class updateTask
                                     }
                                 } else {
                                     // Ha az elem még nincs benne, akkor INSERT
-                                    $insert_query = "INSERT INTO $dbTable (task_id, user_id, created_by) VALUES (?, ?, ?)";
+
+                                    //Ellenőrizni, hogy a felhasználó adhat-e hozzá responsibles mezőt
+                                    $isAccess = $this->auth->authenticate(19);
+                                    if ($isAccess['status'] !== 200) {
+                                        return $this->response = $isAccess;
+                                    }
+
+                                    $insert_query = "INSERT INTO $dbTable (task_id, company_id, created_by) VALUES (?, ?, ?)";
                                     $stmt = $conn->prepare($insert_query);
                                     $params = [$taskId, $item_id, $userId];
                                     $stmt->execute($params);

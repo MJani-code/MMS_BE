@@ -46,7 +46,9 @@ class Auth
                         WHERE rp.role_id = :roleId;";
                 $stmt = $this->conn->prepare($query);
                 $stmt->execute(['roleId' => $roleId]);
-                $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $permissions = $stmt->fetchAll(PDO::FETCH_COLUMN);                
+                //decodedhoz hozzáadni a jogosultságokat
+                $decoded->permissions = $permissions;
                 $isAccesGranted = in_array($permissionId, $permissions);
                 if (!$isAccesGranted) {
                     return $this->createResponse(403, 'Nincs hozzáférésed a kért művelethez', $decoded);
