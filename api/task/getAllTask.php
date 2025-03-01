@@ -77,7 +77,6 @@ class GetAllTask
                     'td.planned_delivery_date',
                     'td.delivery_date',
                     'tlp.url'
-
                 ],
                 'others' => "
                         LEFT JOIN task_types tt on tt.task_id = t.id AND tt.deleted = 0
@@ -85,9 +84,9 @@ class GetAllTask
                         LEFT JOIN task_statuses ts1 on ts1.id = t.status_by_partner_id
                         LEFT JOIN task_statuses ts2 on ts2.id = t.status_by_exohu_id
                         LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts2.id
-                        LEFT JOIN task_locations tl on tl.task_id = t.id
+                        LEFT JOIN task_locations tl on tl.id = t.task_locations_id
                         LEFT JOIN location_types lt on lt.id = tl.location_type_id
-                        LEFT JOIN task_location_photos tlp on tlp.location_id = tl.id
+                        LEFT JOIN task_location_photos tlp on tlp.task_locations_id = tl.id
                         LEFT JOIN task_dates td on td.task_id = t.id
                         LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
                         LEFT JOIN companies c on c.id = tr.company_id
@@ -119,26 +118,28 @@ class GetAllTask
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
             $lockers = [
-                'table' => "lockers l",
+                'table' => "task_lockers tl",
                 'method' => "get",
                 'columns' => [
-                    'l.id',
-                    'l.brand',
-                    'l.serial',
-                    'l.type',
-                    'l.fault',
-                    'l.tof_shop_id',
-                    'l.is_registered',
-                    'l.is_active',
-                    'l.private_key1_error as privateKey1Error',
-                    'l.battery_level as batteryLevel',
-                    'l.current_version as currentVersion',
-                    'l.last_connection_timestamp as lastConnectionTimestamp'
+                    'tl.id',
+                    'tl.task_id',
+                    'tl.task_locations_id',
+                    'tl.brand',
+                    'tl.serial',
+                    'tl.type',
+                    'tl.fault',
+                    'tl.tof_shop_id',
+                    'tl.is_registered',
+                    'tl.is_active',
+                    'tl.private_key1_error as privateKey1Error',
+                    'tl.battery_level as batteryLevel',
+                    'tl.current_version as currentVersion',
+                    'tl.last_connection_timestamp as lastConnectionTimestamp'
                 ],
                 'others' => "
-                LEFT JOIN task_locations tl on tl.tof_shop_id = l.tof_shop_id
+                LEFT JOIN tasks t on t.id = tl.task_id
                 ",
-                'conditions' => "l.deleted = 0"
+                'conditions' => "tl.deleted = 0"
             ];
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
             $resultOfLockers = dataToHandleInDb($this->conn, $lockers);

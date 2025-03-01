@@ -54,8 +54,8 @@ class CheckLocker
 
     private function storeTokenInDatabase($token)
     {
-        $stmt = $this->conn->prepare("INSERT INTO api_tokens (token) VALUES (:token)");
-        $stmt->execute([':token' => $token]);
+        $stmt = $this->conn->prepare("INSERT INTO api_tokens (token, api) VALUES (:token, :api)");
+        $stmt->execute([':token' => $token , ':api' => 'LOS']);
     }
 
     public function getLockerDataFunction($lockerData)
@@ -65,59 +65,62 @@ class CheckLocker
             $token = $this->token;
             $url = $this->losGetLockerStationsForPortalUrl;
             $data = array('Countrycode' => 'HU', 'Filter' => $lockerData['serial'], 'IsActive' => true, 'Page' => 1, 'PageNumber' => 1, 'PageSize' => 50);
-            $options = array(
-                'http' => array(
-                    'header'  => "Content-type: application/json\r\n" .
-                        "Authorization: Bearer " . $token . "\r\n",
-                    'method'  => 'POST',
-                    'content' => json_encode($data)
-                )
-            );
-            $context  = stream_context_create($options);
-            $result = file_get_contents($url, false, $context);
-            if ($result === false) {
-                $headers = $http_response_header;
-                foreach ($headers as $header) {
-                    if (strpos($header, 'HTTP/1.1 401') !== false) {
-                        $loginResult = $this->login();
-                        return $this->getLockerDataFunction($lockerData);
-                    }
-                }
-            } else {
-                $result = json_decode($result, true);
-                if (!isset($result['payload']['resultList'][0])) {
-                    return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
-                }
-                $isLockerAdded = isset($result['payload']['resultList'][0]['lockerStationId']) ? 1 : 0;
-                $isActive = $result['payload']['resultList'][0]['lockerList'][0]['isPassive'] ? 0 : 1;
-                $privateKey1Error = $result['payload']['resultList'][0]['lockerList'][0]['privateKey1Error'] ? 1 : 0;
-                $batteryLevel = $result['payload']['resultList'][0]['lockerList'][0]['batteryLevel'];
-                $currentVersion = $result['payload']['resultList'][0]['lockerList'][0]['currentVersion'];
-                $lastConnectionTimestamp = $result['payload']['resultList'][0]['lockerList'][0]['lastConnectionTimestamp'];
 
-                $arrayToStoreResult = array(
-                    'id' => $lockerData['id'],
-                    'is_registered' => $isLockerAdded,
-                    'is_active' => $isActive,
-                    'privateKey1Error' => $privateKey1Error,
-                    'batteryLevel' => $batteryLevel,
-                    'currentVersion' => $currentVersion,
-                    'lastConnectionTimestamp' => $lastConnectionTimestamp
-                );
-                //Get user data
-                $userId = null;
-                $isAccess = $this->auth->authenticate(4);
-                if ($isAccess['status'] !== 200) {
-                    return $this->response = $isAccess;
-                } else {
-                    $userId = $isAccess['data']->userId;
-                }
-                $result = updateCheckLockerResult($this->conn, $arrayToStoreResult, $userId);
-                if ($result['status'] == 200) {
-                    //put lockerData and arrayToStoreResult into one array
-                    $lockerData = array_merge($lockerData, $arrayToStoreResult);
-                    $this->response = $this->createResponse(200, 'Sikeres lekérdezés', $lockerData);
-                }
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($httpCode == 401) {
+                $loginResult = $this->login();
+                return $this->getLockerDataFunction($lockerData);
+            }
+
+            if ($result === false) {
+                return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
+            }
+
+            curl_close($ch);
+            $result = json_decode($result, true);
+            if (!isset($result['payload']['resultList'][0])) {
+                return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
+            }
+            $isLockerAdded = isset($result['payload']['resultList'][0]['lockerStationId']) ? 1 : 0;
+            $isActive = $result['payload']['resultList'][0]['lockerList'][0]['isPassive'] ? 0 : 1;
+            $privateKey1Error = $result['payload']['resultList'][0]['lockerList'][0]['privateKey1Error'] ? 1 : 0;
+            $batteryLevel = $result['payload']['resultList'][0]['lockerList'][0]['batteryLevel'];
+            $currentVersion = $result['payload']['resultList'][0]['lockerList'][0]['currentVersion'];
+            $lastConnectionTimestamp = $result['payload']['resultList'][0]['lockerList'][0]['lastConnectionTimestamp'];
+
+            $arrayToStoreResult = array(
+                'id' => $lockerData['id'],
+                'is_registered' => $isLockerAdded,
+                'is_active' => $isActive,
+                'privateKey1Error' => $privateKey1Error,
+                'batteryLevel' => $batteryLevel,
+                'currentVersion' => $currentVersion,
+                'lastConnectionTimestamp' => $lastConnectionTimestamp
+            );
+            //Get user data
+            $userId = null;
+            $isAccess = $this->auth->authenticate(4);
+            if ($isAccess['status'] !== 200) {
+                return $this->response = $isAccess;
+            } else {
+                $userId = $isAccess['data']->userId;
+            }
+            $result = updateCheckLockerResult($this->conn, $arrayToStoreResult, $userId);
+            if ($result['status'] == 200) {
+                //put lockerData and arrayToStoreResult into one array
+                $lockerData = array_merge($lockerData, $arrayToStoreResult);
+                $this->response = $this->createResponse(200, 'Sikeres lekérdezés', $lockerData);
             }
         } catch (Exception $e) {
             return $this->response = $this->createResponse(400, $e->getMessage());
@@ -130,16 +133,25 @@ class CheckLocker
         try {
             $url = $this->losLoginUrl;
             $data = array('username' => $this->losUserName, 'password' => $this->losPassword);
-            $options = array(
-                'http' => array(
-                    'header'  => "Content-type: application/json\r\n",
-                    'method'  => 'POST',
-                    'content' => json_encode($data)
-                )
-            );
-            $context  = stream_context_create($options);
-            $result = file_get_contents($url, false, $context);
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($result === false) {
+                return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
+            }
+
+            curl_close($ch);
             $result = json_decode($result, true);
+
             if (isset($result['payload']['token'])) {
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);

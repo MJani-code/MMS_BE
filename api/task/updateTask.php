@@ -80,6 +80,7 @@ class updateTask
             try {
                 switch ($dbTable) {
                     case 'task_types':
+                        $taskId = $data['id'];
                         $new_items = $value; // a felhasználó által kiválasztott új tételek
                         $deleted_by = $userId; // például azonos felhasználó végzi a "törlést"
                         $deleted_at = date('Y-m-d H:i:s'); // a frissítés ideje
@@ -115,7 +116,7 @@ class updateTask
                             $stmt->execute($params);
                             if ($stmt->execute()) {
                                 $payload = array(
-                                    'taskId' => intval($taskId),
+                                    'id' => intval($taskId),
                                     'column' => 'taskTypes',
                                     'value' => $new_items
                                 );
@@ -139,7 +140,7 @@ class updateTask
                                     $stmt->execute($params);
                                     if ($stmt->execute()) {
                                         $payload = array(
-                                            'taskId' => intval($taskId),
+                                            'id' => intval($taskId),
                                             'column' => 'taskTypes',
                                             'value' => $new_items
                                         );
@@ -157,7 +158,7 @@ class updateTask
                                     $stmt->execute($params);
                                     if ($stmt->execute()) {
                                         $payload = array(
-                                            'taskId' => intval($taskId),
+                                            'id' => intval($taskId),
                                             'column' => 'taskTypes',
                                             'value' => $new_items
                                         );
@@ -172,6 +173,7 @@ class updateTask
                         }
                         break;
                     case 'task_responsibles':
+                        $taskId = $data['id'];
                         $new_items = $value; // a felhasználó által kiválasztott új tételek
                         $deleted_by = $userId; // például azonos felhasználó végzi a "törlést"
                         $deleted_at = date('Y-m-d H:i:s'); // a frissítés ideje
@@ -213,7 +215,7 @@ class updateTask
                             $stmt->execute($params);
                             if ($stmt->execute()) {
                                 $payload = array(
-                                    'taskId' => intval($taskId),
+                                    'id' => intval($taskId),
                                     'column' => 'responsibles',
                                     'value' => $new_items
                                 );
@@ -230,7 +232,7 @@ class updateTask
                             //Ellenőrizni, hogy a felhasználó módosíthatja-e responsibles mezőt
                             $isAccess = $this->auth->authenticate(18);
                             if ($isAccess['status'] !== 200) {
-                                unset($isAccess['data']);                                
+                                unset($isAccess['data']);
                                 return $this->response = $isAccess;
                             }
 
@@ -244,7 +246,7 @@ class updateTask
                                     $stmt->execute($params);
                                     if ($stmt->execute()) {
                                         $payload = array(
-                                            'taskId' => intval($taskId),
+                                            'id' => intval($taskId),
                                             'column' => 'responsibles',
                                             'value' => $new_items
                                         );
@@ -269,7 +271,7 @@ class updateTask
                                     $stmt->execute($params);
                                     if ($stmt->execute()) {
                                         $payload = array(
-                                            'taskId' => intval($taskId),
+                                            'id' => intval($taskId),
                                             'column' => 'responsibles',
                                             'value' => $new_items
                                         );
@@ -285,23 +287,37 @@ class updateTask
                         break;
 
                     case 'tasks':
+                        $taskId = $data['id'];
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",
-                            'columns' => [$dbColumn],
-                            'values' => [$value],
+                            'columns' => [$dbColumn, 'updated_by'],
+                            'values' => [$value, $userId],
                             'others' => "",
                             'order' => "",
                             'conditions' => ['id' => $taskId]
                         ];
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                         break;
-                    case 'lockers':
+                    case 'task_lockers':
+                        $taskId = $data['id'];
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",
-                            'columns' => [$dbColumn],
-                            'values' => [$value],
+                            'columns' => [$dbColumn, 'updated_by'],
+                            'values' => [$value, $userId],
+                            'others' => "",
+                            'order' => "",
+                            'conditions' => ['id' => $taskId]
+                        ];
+                        $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
+                        break;
+                    case 'task_locations':
+                        $dataToHandleInDb = [
+                            'table' => $dbTable,
+                            'method' => "update",
+                            'columns' => [$dbColumn, 'updated_by'],
+                            'values' => [$value, $userId],
                             'others' => "",
                             'order' => "",
                             'conditions' => ['id' => $id]
@@ -309,6 +325,7 @@ class updateTask
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                         break;
                     default:
+                        $taskId = $data['id'];
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",

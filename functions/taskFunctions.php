@@ -40,7 +40,7 @@ function dataManipulation($conn, $data, $userAuthData)
 
             foreach ($data['baseTaskData']['payload'] as $task) {
                 $id = $task['id'];
-                $tofShopId = $task['tof_shop_id'];
+                //$tofShopId = $task['tof_shop_id'];
 
                 // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
                 $existingIndex = array_search($id, array_column($groupedData, 'id'));
@@ -108,13 +108,14 @@ function dataManipulation($conn, $data, $userAuthData)
                 if (!empty($data['lockers']['payload'])) {
                     foreach ($data['lockers']['payload'] as $locker) {
                         $lockerId = $locker['id'];
-                        $tofShopId = $locker['tof_shop_id'];
+                        $locationId = $locker['task_locations_id'];
+                        $lockerTaskId = $locker['task_id'];
 
                         // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
-                        if (!isset($uniqueLockers[$lockerId][$tofShopId]) && $tofShopId === $task['tof_shop_id']) {
+                        if (!isset($uniqueLockers[$lockerId][$lockerTaskId]) && $lockerTaskId === $task['id']) {
                             $groupedData[$existingIndex]['lockers'][] = $locker;
                             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                            $uniqueLockers[$lockerId][$tofShopId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
+                            $uniqueLockers[$lockerId][$lockerTaskId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
                             $lockerFound = true; // Ha találunk legalább egy locker-t
                         }
                         // Ha nem találunk locker-t, akkor nem módosítjuk a locker kulcsot
@@ -398,12 +399,12 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
         // Adatok beszúrása az adatbázisba
         $stmt = $conn->prepare(
             "INSERT INTO task_location_photos
-            (location_id, filename, url, created_by)
-            VALUES (:location_id, :filename, :url, :created_by)"
+            (task_locations_id, filename, url, created_by)
+            VALUES (:task_locations_id, :filename, :url, :created_by)"
         );
 
         $stmt->execute([
-            ':location_id' => $locationId,
+            ':task_locations_id' => $locationId,
             ':filename' => $fileName,
             ':url' => $fileUrl,
             ':created_by' => $userId,
@@ -421,12 +422,38 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
             if (!is_dir(dirname($fileDestination))) {
                 mkdir(dirname($fileDestination), 0777, true);
             }
-            // Fájl mozgatása és jogosultságok beállítása
-            $isFileUplaoded = move_uploaded_file($fileTmpName, $fileDestination);
-            chmod($fileDestination, 0777);
-            if ($isFileUplaoded) {
-                return createResponse(200, "A fájl sikeresen feltöltve.", $payload);
+            // Ha a kép file mérete nagyobb, mint 1MB, akkor felezze a méretét
+            if ($fileSize > 1000000) {
+                $image = imagecreatefromstring(file_get_contents($fileTmpName));
+                $newImage = imagescale($image, imagesx($image) / 2, imagesy($image) / 2);                
+                if (function_exists('exif_read_data')) {
+                    $exif = @exif_read_data($fileTmpName);
+                    if ($exif && isset($exif['Orientation'])) {
+                        $orientation = $exif['Orientation'];
+                        switch ($orientation) {
+                            case 3:
+                                $newImage = imagerotate($newImage, 180, 0);
+                                break;
+                            case 6:
+                                $newImage = imagerotate($newImage, -90, 0);
+                                break;
+                            case 8:
+                                $newImage = imagerotate($newImage, 90, 0);
+                                break;
+                        }
+                    }
+                }
+                imagejpeg($newImage, $fileDestination);
+            } else {
+                move_uploaded_file($fileTmpName, $fileDestination);
             }
+            // Eredeti kép törlése a memóriából
+            imagedestroy($image);
+
+            // Jogosultságok beállítása
+            chmod($fileDestination, 0777);
+
+            return createResponse(200, "A fájl sikeresen feltöltve.", $payload);
         } else {
             return createResponse(500, "Az adatbázis művelet sikertelen.");
         }
@@ -496,24 +523,23 @@ function addLocker($conn, $newItems, $userId)
         $created_at = date('Y-m-d H:i:s');
         $dbTable = $newItems['dbTable'];
 
-        $insert_query = "INSERT INTO $dbTable (tof_shop_id, serial, created_by) VALUES (?,?,?)";
+        $insert_query = "INSERT INTO $dbTable (task_id, tof_shop_id, task_locations_id, serial, created_by) VALUES (?,?,?,?,?)";
         $stmt = $conn->prepare($insert_query);
-        $params = [$newItems['tof_shop_id'], $newItems['value'], $userId];
+        $params = [$newItems['task_id'], $newItems['tof_shop_id'], $newItems['task_locations_id'], $newItems['value'], $userId];
 
         $lockers = [
-            'table' => "lockers l",
+            'table' => "$dbTable tl",
             'method' => "get",
             'columns' => [
-                'l.id',
-                'l.brand',
-                'l.serial',
-                'l.tof_shop_id as tofShopId',
-                'l.is_active as isActive'
+                'tl.id',
+                'tl.task_id as taskId',
+                'tl.brand',
+                'tl.serial',
+                'tl.task_locations_id',
+                'tl.is_active as isActive'
             ],
-            'others' => "
-            LEFT JOIN task_locations tl on tl.tof_shop_id = l.tof_shop_id
-            ",
-            'conditions' => "l.deleted = 0 AND l.tof_shop_id = $newItems[tof_shop_id] "
+            'others' => "",
+            'conditions' => "tl.deleted = 0 AND tl.task_locations_id = $newItems[task_locations_id] AND tl.task_id = $newItems[task_id]"
         ];
 
         if ($stmt->execute($params)) {
@@ -525,17 +551,16 @@ function addLocker($conn, $newItems, $userId)
     }
 }
 
-function removeLocker($conn, $lockerToRemove, $userId)
+function removeLocker($conn, $lockerToRemove)
 {
     try {
-        $deleted_at = date('Y-m-d H:i:s');
         $serial = $lockerToRemove['value'];
 
         $dataToHandleInDb = [
-            'table' => "lockers",
+            'table' => "task_lockers",
             'method' => "delete",
             'columns' => [],
-            'conditions' => ['serial' => $serial]
+            'conditions' => ['serial' => $serial, 'id' => $lockerToRemove['id']]
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
@@ -710,11 +735,11 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
         $conn->beginTransaction();
 
         // `tasks` tábla beszúró lekérdezés
-        $taskSql = "INSERT INTO tasks (created_by) VALUES (?)";
+        $taskSql = "INSERT INTO tasks (task_locations_id, created_by) VALUES (?,?)";
         $taskStmt = $conn->prepare($taskSql);
 
         // `task_locations` tábla beszúró lekérdezés
-        $taskLocationSql = "INSERT INTO task_locations (name, task_id, tof_shop_id, zip, city,address,created_by,location_type_id,fixing_method,required_site_preparation,comment) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
+        $taskLocationSql = "INSERT INTO task_locations (name, tof_shop_id, zip, city, address, created_by, location_type_id, fixing_method, required_site_preparation, comment) VALUES (?,?,?,?,?,?,?,?,?,?)";
         $taskLocationStmt = $conn->prepare($taskLocationSql);
 
         //task_types táblába beszúró lekérdezés
@@ -733,16 +758,17 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
         foreach ($newLocations as $newLocation) {
 
             //Ha már létezik a TofShop ID visszadobjuk
-            if (in_array($newLocation['tof_shop_id'], $alreadyExistedTofShopId)) {
-                return createResponse(400, $newLocation['tof_shop_id'] . " azonosítóval már létezik elem. A betöltés nem sikerült");
-            }
-
-            // Task beszúrása a `tasks` táblába
-            $taskStmt->execute([$userId]);
-            $taskId = $conn->lastInsertId();
+            // if (in_array($newLocation['tof_shop_id'], $alreadyExistedTofShopId)) {
+            //     return createResponse(400, $newLocation['tof_shop_id'] . " azonosítóval már létezik elem. A betöltés nem sikerült");
+            // }
 
             // Location adatok bezsúrása a task_locations táblába
-            $taskLocationStmt->execute([$newLocation['name'], $taskId, $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+            $taskLocationStmt->execute([$newLocation['name'], $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+            $taskLocationId = $conn->lastInsertId();
+
+            // Task beszúrása a `tasks` táblába
+            $taskStmt->execute([$taskLocationId, $userId]);
+            $taskId = $conn->lastInsertId();
 
             // Type adatok bezsúrása a task_types táblába
             $taskTypesStmt->execute([3, $taskId, $userId]);
@@ -821,7 +847,7 @@ function updateCheckLockerResult($conn, $data, $userId)
 {
     try {
         $dataToHandleInDb = [
-            'table' => "lockers",
+            'table' => "task_lockers",
             'method' => "update",
             'columns' => ['is_registered', 'is_active', 'private_key1_error', 'battery_level', 'current_version', 'last_connection_timestamp', 'updated_by'],
             'values' => [$data['is_registered'], $data['is_active'], $data['privateKey1Error'] ? 1 : 0, $data['batteryLevel'], $data['currentVersion'], $data['lastConnectionTimestamp'], $userId],
@@ -835,5 +861,167 @@ function updateCheckLockerResult($conn, $data, $userId)
         }
     } catch (Exception $e) {
         return createResponse(500, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function addTask($conn, $newTask, $userId)
+{
+    $typeId = $newTask['taskType'];
+    $responsible = $newTask['responsible'];
+    $plannedDeliveryDate = $newTask['plannedDeliveryDate'];
+    $tofShopId = $newTask['tofShopId'];
+
+    //ha a fenti adatok üresek akkor hibaüzenetet kell visszaadni
+    if (empty($typeId) || empty($responsible) || empty($plannedDeliveryDate) || empty($tofShopId)) {
+        return createResponse(400, "A kötelező mezők nincsenek kitöltve");
+    }
+
+    //Ha a typeId egyenlő 1-el vagy 2-vel és a newTask['lockers'] tömb üres akkor hibaüzenetet kell visszaadni
+    if (($typeId == 1 || $typeId == 2)) {
+        foreach ($newTask['lockers'] as $locker) {
+            if (empty($locker['uuid'])) {
+                return createResponse(400, "A uuid mező nincsen kitöltve");
+            }
+            foreach ($locker['issues'] as $issue) {
+                if (empty($issue['type']) || empty($issue['compartmentNumber'])) {
+                    return createResponse(400, "A locker hibamező nincsen kitöltve");
+                }
+            }
+        }
+        return createResponse(400, "A lockers mező nincsen kitöltve");
+    }
+
+    try {
+        // Tranzakció indítása
+        $conn->beginTransaction();
+
+        //Helyszín adatainak lekérése tofShopId alapján
+        $dataToHandleInDb = [
+            'table' => "task_locations tl",
+            'method' => "get",
+            'columns' => ['tl.id', 'tl.tof_shop_id', 'tl.box_id', 'tl.location_type_id', 'tl.name', 'tl.zip', 'tl.city', 'tl.address'],
+            'others' => "",
+            'conditions' => "tof_shop_id = $tofShopId"
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        $tofShopId = $result['payload'][0]['tof_shop_id'];
+        $boxId = $result['payload'][0]['box_id'];
+        $locationTypeId = $result['payload'][0]['location_type_id'];
+        $name = $result['payload'][0]['name'];
+        $zip = $result['payload'][0]['zip'];
+        $city = $result['payload'][0]['city'];
+        $address = $result['payload'][0]['address'];
+
+
+        // `tasks_locations` tábla beszúró lekérdezés
+        $taskLocationsSql = "INSERT INTO task_locations (tof_shop_id, box_id, location_type_id, name, zip, city, address, created_by) VALUES (?,?,?,?,?,?,?,?)";
+        $taskLocationsStmt = $conn->prepare($taskLocationsSql);
+        $taskLocationsStmt->execute([$tofShopId, $boxId, $locationTypeId, $name, $zip, $city, $address, $userId]);
+
+        //legutóbbi location_id lekérdezése
+        $dataToHandleInDb = [
+            'table' => "task_locations",
+            'method' => "get",
+            'columns' => ['MAX(id)'],
+            'others' => "",
+            'conditions' => ""
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        $locationId = $result['payload'][0]['MAX(id)'];
+
+        //Ha a newTask['location'] tömbb tartalmaz location adatokat akkor updatelni kell a location táblát location_id alapján
+        if (isset($newTask['location'])) {
+            $fixingMethod = $newTask['location']['fixingMethod'];
+            $requiredSitePreparation = $newTask['location']['requiredSitePreparation'];
+            $comment = $newTask['location']['comment'];
+
+            $dataToHandleInDb = [
+                'table' => "task_locations",
+                'method' => "update",
+                'columns' => ['fixing_method', 'required_site_preparation', 'comment'],
+                'values' => [$fixingMethod, $requiredSitePreparation, $comment],
+                'conditions' => ['id' => $locationId]
+            ];
+            $result = dataToHandleInDb($conn, $dataToHandleInDb);
+            if ($result['status'] !== 200) {
+                return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+            }
+        }
+
+        // `tasks` tábla beszúró lekérdezés
+        $taskSql = "INSERT INTO tasks (task_locations_id, created_by) VALUES (?,?)";
+        $taskStmt = $conn->prepare($taskSql);
+        $taskStmt->execute([$locationId, $userId]);
+
+        //legutóbbi task_id lekérdezése
+        $dataToHandleInDb = [
+            'table' => "tasks",
+            'method' => "get",
+            'columns' => ['MAX(id)'],
+            'others' => "",
+            'conditions' => ""
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        $taskId = $result['payload'][0]['MAX(id)'];
+
+        // `task_types` tábla beszúró lekérdezés
+        $taskTypesSql = "INSERT INTO task_types (type_id, task_id, created_by) VALUES (?,?,?)";
+        $taskTypesStmt = $conn->prepare($taskTypesSql);
+        $taskTypesStmt->execute([$typeId, $taskId, $userId]);
+
+        //task_dates táblába beszúró lekérdezés
+        $taskDatesSql = "INSERT INTO task_dates (task_id, planned_delivery_date, created_by) VALUES (?,?,?)";
+        $taskDatesStmt = $conn->prepare($taskDatesSql);
+        $taskDatesStmt->execute([$taskId, $plannedDeliveryDate, $userId]);
+
+        //task_responsibels táblába beszúró lekérdezés
+        $taskResponsiblesSql = "INSERT INTO task_responsibles (company_id, task_id, created_by) VALUES (?,?,?)";
+        $taskResponsiblesStmt = $conn->prepare($taskResponsiblesSql);
+        $taskResponsiblesStmt->execute([$responsible, $taskId, $userId]);
+
+        //newTask['lockers'] körbejárása és adatainak beszúrása a task_locker_issues táblába
+        foreach ($newTask['lockers'] as $locker) {
+            foreach ($locker['issues'] as $issue) {
+                $lockerSql = "INSERT INTO task_lockers_issues (task_id, tof_shop_id, uuid, issue_type, compartment_number, created_by) VALUES (?,?,?,?,?,?)";
+                $lockerStmt = $conn->prepare($lockerSql);
+                $lockerStmt->execute([$taskId, $newTask['tofShopId'], $locker['uuid'], $issue['type'], $issue['compartmentNumber'], $userId]);
+            }
+        }
+
+        // Tranzakció lezárása
+        $conn->commit();
+        return createResponse(200, "Sikeres betöltés", $newTask);
+    } catch (Exception $e) {
+        // Hiba esetén rollback
+        $conn->rollBack();
+        return createResponse(400, "Hiba történt a művelet során: " . $e->getMessage());
+    }
+}
+
+function deleteImage($conn, $url, $DOC_ROOT)
+{
+    try {
+        // Get the file URL from the database
+        $stmt = $conn->prepare("SELECT url, task_locations_id, filename FROM task_location_photos WHERE url = :url");
+        $stmt->execute([':url' => $url]);
+        $file = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        //echo json_encode($file);
+        //echo $DOC_ROOT;
+        if ($file) {
+            $filePath = $DOC_ROOT . '/uploads' . '/' . $file['task_locations_id'] . '/' . $file['filename'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+                // Delete the file from the database
+                $stmt = $conn->prepare("DELETE FROM task_location_photos WHERE url = :url");
+                $stmt->execute([':url' => $url]);
+
+                return createResponse(200, "A kép sikeresen törölve lett.", ['url' => $url, 'taskLocationsId' => $file['task_locations_id']]);
+            }
+        } else {
+            return createResponse(404, "A fájl nem található az adatbázisban.");
+        }
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }

@@ -1,13 +1,17 @@
 <?php
-//header('Content-Type: application/json');
+header('Content-Type: application/json');
 
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
+require('../../vendor/autoload.php');
+
 
 $response = [];
+$jsonData = file_get_contents("php://input");
+$newTask = json_decode($jsonData, true);
 
-class DownloadTig
+class CreateTask
 {
     private $conn;
     private $response;
@@ -20,19 +24,17 @@ class DownloadTig
         $this->auth = $auth;
     }
 
-
-    public function downloadTigFunction($conn, $newItems)
+    public function createTask($newTask)
     {
-
         $userId = null;
-        $isAccess = $this->auth->authenticate(21);
+        $isAccess = $this->auth->authenticate(14);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
         }
 
-        $result = downloadTig($conn);
+        $result = addTask($this->conn, $newTask, $userId);
         $this->response = $result;
     }
 }
@@ -43,6 +45,7 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$downloadTig = new DownloadTig($conn, $response, $auth);
-$downloadTig->downloadTigFunction($conn, $newItems);
+$createTask = new CreateTask($conn, $response, $auth);
+$createTask->createTask($newTask);
+
 echo json_encode($response);

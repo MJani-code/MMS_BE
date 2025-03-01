@@ -61,32 +61,35 @@ class CheckLocker
         //locker adatok lekérdezése
         try {
             $token = $this->token;
-            $page = $lockerData['page'];
+            $page = $lockerData['pageNumber'];
             $pageSize = $lockerData['pageSize'];
             $url = $this->losGetLockerStationsForPortalUrl;
             $data = array('Countrycode' => 'HU', 'Filter' => null, 'IsActive' => true, 'PageNumber' => $page, 'PageSize' => $pageSize);
-            $options = array(
-                'http' => array(
-                    'header'  => "Content-type: application/json\r\n" .
-                        "Authorization: Bearer " . $token . "\r\n",
-                    'method'  => 'POST',
-                    'content' => json_encode($data)
-                )
-            );
-            $context  = stream_context_create($options);
-            $result = file_get_contents($url, false, $context);
-            if ($result === false) {
-                $headers = $http_response_header;
-                foreach ($headers as $header) {
-                    if (strpos($header, 'HTTP/1.1 401') !== false) {
-                        $loginResult = $this->login();
-                        return $this->getLockerDataFunction($lockerData);
-                    }
-                }
-            } else {
-                $result = json_decode($result, true);
-                $this->response = $result;
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $token
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($httpCode == 401) {
+                $loginResult = $this->login();
+                return $this->getLockerDataFunction($lockerData);
             }
+
+            if ($result === false) {
+                return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
+            }
+
+            curl_close($ch);
+            $result = json_decode($result, true);
+            $this->response = $result;
         } catch (Exception $e) {
             return $this->response = $this->createResponse(400, $e->getMessage());
         }
@@ -98,16 +101,25 @@ class CheckLocker
         try {
             $url = $this->losLoginUrl;
             $data = array('username' => $this->losUserName, 'password' => $this->losPassword);
-            $options = array(
-                'http' => array(
-                    'header'  => "Content-type: application/json\r\n",
-                    'method'  => 'POST',
-                    'content' => json_encode($data)
-                )
-            );
-            $context  = stream_context_create($options);
-            $result = file_get_contents($url, false, $context);
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json'
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+            $result = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($result === false) {
+                return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
+            }
+
+            curl_close($ch);
             $result = json_decode($result, true);
+
             if (isset($result['payload']['token'])) {
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);
