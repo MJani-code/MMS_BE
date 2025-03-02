@@ -425,7 +425,7 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
             // Ha a kép file mérete nagyobb, mint 1MB, akkor felezze a méretét
             if ($fileSize > 1000000) {
                 $image = imagecreatefromstring(file_get_contents($fileTmpName));
-                $newImage = imagescale($image, imagesx($image) / 2, imagesy($image) / 2);                
+                $newImage = imagescale($image, imagesx($image) / 2, imagesy($image) / 2);
                 if (function_exists('exif_read_data')) {
                     $exif = @exif_read_data($fileTmpName);
                     if ($exif && isset($exif['Orientation'])) {
@@ -444,11 +444,11 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
                     }
                 }
                 imagejpeg($newImage, $fileDestination);
+                // Eredeti kép törlése a memóriából
+                imagedestroy($image);
             } else {
                 move_uploaded_file($fileTmpName, $fileDestination);
             }
-            // Eredeti kép törlése a memóriából
-            imagedestroy($image);
 
             // Jogosultságok beállítása
             chmod($fileDestination, 0777);

@@ -10,7 +10,7 @@ $response = [];
 
 
 $isFileUpload = NULL;
-if ($_FILES['file']) {
+if (isset($_FILES['file'])) {
     $isFileUpload = true;
 } else {
     $isFileUpload = NULL;
@@ -39,10 +39,10 @@ class updateTask
         $jsonData = file_get_contents("php://input");
         $data = json_decode($jsonData, true);
 
-        $taskId = $data['task_id'];
+        $taskId = $data['taskId'] ?? null;
         $id = $data['id'] ?? null;
-        $dbTable = $data['dbTable'];
-        $dbColumn = $data['dbColumn'];
+        $dbTable = $data['dbTable'] ?? '';
+        $dbColumn = $data['dbColumn'] ?? '';
         $value = $data['value'] ?? '';
 
         //Update Engedély ellenőrzése
