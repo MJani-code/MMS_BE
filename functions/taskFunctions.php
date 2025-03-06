@@ -799,7 +799,7 @@ function downloadTig($conn)
         $stmt = $conn->query("SELECT tl.name, CONCAT(tl.zip,' ',tl.city,' ',tl.address)as helyszín ,td.delivery_date, f.name as díjtípus, tf.serial, tf.net_unit_price, tf.quantity, tf.total, tl.tof_shop_id
         FROM task_fees tf
         LEFT JOIN tasks t on t.id = tf.task_id
-        LEFT JOIN task_locations tl on tl.task_id = t.id
+        LEFT JOIN task_locations tl on tl.id = t.task_locations_id
         LEFT JOIN task_dates td on td.task_id = t.id
         LEFT JOIN fees f on f.id = tf.fee_id WHERE t.status_by_exohu_id = 9 AND tf.deleted = 0;");
         $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
