@@ -41,7 +41,7 @@ class GetAllTask
         $roleId = $this->userAuthData['data']->roleId;
         $companyId = $this->userAuthData['data']->companyId;
         $permissions = $this->userAuthData['data']->permissions;
-
+        
         if ($this->userAuthData['status'] !== 200) {
             return $this->response = array(
                 'status' => $this->userAuthData['status'],
@@ -91,7 +91,8 @@ class GetAllTask
                         LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
                         LEFT JOIN companies c on c.id = tr.company_id
                         ",
-                'conditions' => "tlp.deleted = 0 OR tlp.deleted is NULL " . (in_array(17, $permissions) ? "" : "AND tr.company_id = $companyId") . " ORDER BY id"
+
+                'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
             ];
             $fees = [
                 'table' => "fees f",
