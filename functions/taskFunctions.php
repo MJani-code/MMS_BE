@@ -16,7 +16,7 @@ function createResponse($status, $errorMessage = '', $data = null)
     ];
 }
 
-function dataManipulation($conn, $data, $userAuthData)
+function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
 {
     $manipulatedData = array(
         'status' => 200,
@@ -29,21 +29,21 @@ function dataManipulation($conn, $data, $userAuthData)
     }
     $userRoleId = $userAuthData['data']->roleId;
     //getData
-    function getData($conn, $manipulatedData, $data)
+    function getData($conn, $manipulatedData, $data, $tofShopIds)
     {
         // echo json_encode($data);
         if (isset($data['baseTaskData']['payload'])) {
             $groupedData = [];
             // Segédtömb az ismétlődések elkerülésére
             $uniqueTaskFees = [];
-            $uniqueLockers = [];
+            $uniqueLockers = [];            
 
             foreach ($data['baseTaskData']['payload'] as $task) {
                 $id = $task['id'];
-                //$tofShopId = $task['tof_shop_id'];
+                //$tofShopId = $task['tof_shop_id'];                
 
                 // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
-                $existingIndex = array_search($id, array_column($groupedData, 'id'));
+                $existingIndex = array_search($id, array_column($groupedData, 'id'));                
 
                 // Ha az objektum még nem létezik, hozzuk létre és inicializáljuk a szükséges kulcsokat
                 if ($existingIndex === false) {
@@ -52,6 +52,7 @@ function dataManipulation($conn, $data, $userAuthData)
                     $newTask['lockerSerials'] = [];
                     $newTask['responsibles'] = [];
                     $newTask['location_photos'] = [];
+                    $newTask['isActiveInAdmin'] = null;
                     unset($newTask['types'], $newTask['responsible'], $newTask['url']);
                     $groupedData[] = $newTask;
                     $existingIndex = array_key_last($groupedData); // Frissítjük az existingIndex-et az új elem indexével
@@ -59,7 +60,14 @@ function dataManipulation($conn, $data, $userAuthData)
 
                 // Feldolgozzuk az egyes mezőket
                 if (isset($task['url']) && !in_array(['url' => $task['url']], $groupedData[$existingIndex]['location_photos'])) {
-                    $groupedData[$existingIndex]['location_photos'][] = ['url' => $task['url']];
+                    $groupedData[$existingIndex]['location_photos'][] = ['url' => $task['url']];                    
+                }
+
+                //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
+                if (in_array($task['tof_shop_id'], $tofShopIds)) {
+                    $groupedData[$existingIndex]['isActiveInAdmin'] = true;
+                } else {
+                    $groupedData[$existingIndex]['isActiveInAdmin'] = false;
                 }
 
                 if (isset($task['types']) && $task['types'] !== null && !in_array($task['types'], $groupedData[$existingIndex]['taskTypes'])) {
@@ -349,7 +357,7 @@ function dataManipulation($conn, $data, $userAuthData)
         }
     }
 
-    $manipulatedData = getData($conn, $manipulatedData, $data);
+    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds);
     $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId);
@@ -1023,5 +1031,23 @@ function deleteImage($conn, $url, $DOC_ROOT)
         }
     } catch (Exception $e) {
         return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function getTofShopId($url)
+{
+    try {
+        //API hívás és eredményének feldolgozása
+        $response = file_get_contents($url);
+        $data = json_decode($response, true);
+        //$data['points'] körbejárása és az ID értékek kigyűjtése
+        $tofShopIds = [];
+        foreach ($data['points'] as $point) {
+            $tofShopIds[] = $point['id'];
+        }
+        return createResponse(200, "success", $tofShopIds);
+        
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());            
     }
 }

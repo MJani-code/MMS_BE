@@ -5,23 +5,26 @@ require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 
-
 $response = [];
 
 
 class GetAllTask
 {
     private $conn;
+    private $tofShopIdUrl;
+    private $tofShopIds;
     private $response;
     private $taskData = [];
     private $auth;
     private $userAuthData;
 
-    public function __construct($conn, &$response, $auth)
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds = [])
     {
         $this->conn = $conn;
+        $this->tofShopIdUrl = $tofShopIdUrl;
         $this->response = &$response;
         $this->auth = $auth;
+        $this->tofShopIds = $tofShopIds;
     }
 
 
@@ -41,7 +44,7 @@ class GetAllTask
         $roleId = $this->userAuthData['data']->roleId;
         $companyId = $this->userAuthData['data']->companyId;
         $permissions = $this->userAuthData['data']->permissions;
-        
+
         if ($this->userAuthData['status'] !== 200) {
             return $this->response = array(
                 'status' => $this->userAuthData['status'],
@@ -51,6 +54,9 @@ class GetAllTask
         }
 
         //Data gathering
+        $tofShopIds = getTofShopId($this->tofShopIdUrl);
+        $this->tofShopIds = $tofShopIds['payload'];
+        //print_r($tofShopIds);
         try {
             $baseTaskData = [
                 'table' => "tasks t",
@@ -201,8 +207,8 @@ class GetAllTask
     {
         $rowData = $this->taskData;
         if ($rowData) {
-            $result = dataManipulation($this->conn, $rowData, $this->userAuthData);
-            $response = $result;            
+            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds);
+            $response = $result;
         }
     }
 }
@@ -213,7 +219,7 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth);
+$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);
