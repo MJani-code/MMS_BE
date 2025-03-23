@@ -56,7 +56,7 @@ class GetAllTask
         //Data gathering
         $tofShopIds = getTofShopId($this->tofShopIdUrl);
         $this->tofShopIds = $tofShopIds['payload'];
-        //print_r($tofShopIds);
+        $restrictionOfCompanyId = !in_array(17, $permissions) ? true : false;        
         try {
             $baseTaskData = [
                 'table' => "tasks t",
@@ -92,14 +92,20 @@ class GetAllTask
                         LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts2.id
                         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
                         LEFT JOIN location_types lt on lt.id = tl.location_type_id
-                        LEFT JOIN task_location_photos tlp on tlp.task_locations_id = tl.id
+                        LEFT JOIN task_location_photos tlp on tlp.task_locations_id = tl.id AND tlp.deleted in (0,null)
                         LEFT JOIN task_dates td on td.task_id = t.id
-                        LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0
+                        LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0                        
                         LEFT JOIN companies c on c.id = tr.company_id
                         ",
 
-                'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
+                //'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
+                // 'conditions' => (!in_array(17, $permissions) ? "tr.company_id = $companyId ORDER BY id" : "tr.company_id in (1,2,3)"),
+                //'order' => "ORDER BY id"                            
             ];
+            if (!in_array(17, $permissions)) {
+                $baseTaskData['conditions'] .= " tr.company_id = $companyId";
+            }
+            
             $fees = [
                 'table' => "fees f",
                 'method' => "get",

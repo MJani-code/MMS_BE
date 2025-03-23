@@ -39,7 +39,7 @@ class updateTask
         $jsonData = file_get_contents("php://input");
         $data = json_decode($jsonData, true);
 
-        $taskId = $data['taskId'] ?? null;
+        $taskId = $data['task_id'] ?? null;
         $id = $data['id'] ?? null;
         $dbTable = $data['dbTable'] ?? '';
         $dbColumn = $data['dbColumn'] ?? '';
@@ -300,7 +300,7 @@ class updateTask
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                         break;
                     case 'task_lockers':
-                        $taskId = $data['id'];
+                        $id = $data['id'];
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",
@@ -308,7 +308,7 @@ class updateTask
                             'values' => [$value, $userId],
                             'others' => "",
                             'order' => "",
-                            'conditions' => ['id' => $taskId]
+                            'conditions' => ['id' => $id]
                         ];
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                         break;

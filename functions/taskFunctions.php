@@ -886,17 +886,19 @@ function addTask($conn, $newTask, $userId)
 
     //Ha a typeId egyenlő 1-el vagy 2-vel és a newTask['lockers'] tömb üres akkor hibaüzenetet kell visszaadni
     if (($typeId == 1 || $typeId == 2)) {
+        if (empty($newTask['lockers'])) {
+            return createResponse(400, "A lockers mező nincsen kitöltve");
+        }
         foreach ($newTask['lockers'] as $locker) {
             if (empty($locker['uuid'])) {
                 return createResponse(400, "A uuid mező nincsen kitöltve");
             }
             foreach ($locker['issues'] as $issue) {
-                if (empty($issue['type']) || empty($issue['compartmentNumber'])) {
+                if (!isset($issue['type']) || !isset($issue['compartmentNumber'])) {
                     return createResponse(400, "A locker hibamező nincsen kitöltve");
                 }
             }
         }
-        return createResponse(400, "A lockers mező nincsen kitöltve");
     }
 
     try {
