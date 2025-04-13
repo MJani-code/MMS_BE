@@ -56,7 +56,7 @@ class GetAllTask
         //Data gathering
         $tofShopIds = getTofShopId($this->tofShopIdUrl);
         $this->tofShopIds = $tofShopIds['payload'];
-        $restrictionOfCompanyId = !in_array(17, $permissions) ? true : false;        
+        $restrictionOfCompanyId = !in_array(17, $permissions) ? true : false;
         try {
             $baseTaskData = [
                 'table' => "tasks t",
@@ -105,17 +105,22 @@ class GetAllTask
             if (!in_array(17, $permissions)) {
                 $baseTaskData['conditions'] .= " tr.company_id = $companyId";
             }
-            
+
             $fees = [
                 'table' => "fees f",
                 'method' => "get",
                 'columns' => [
-                    'f.id as id',
-                    'f.name as name',
-                    'f.net_unit_price as value'
-                ],
-                'conditions' => "f.is_active = 1 ORDER BY f.id"
-            ];
+                    "f.id as id",
+                    'CONCAT(f.name,"(",f.net_unit_price ,")") as name',
+                    "f.net_unit_price as value"
+                ]
+            ];            
+            if (!in_array(23, $permissions)) {
+                $fees['conditions'] .= " f.company_id = $companyId AND f.is_active = 1 ORDER BY f.id";
+            } else {
+                $fees['conditions'] .= " f.is_active = 1 ORDER BY f.id";
+            }
+
             $taskFees = [
                 'table' => "task_fees tf",
                 'method' => "get",
