@@ -64,7 +64,9 @@ class CheckLocker
             $page = $lockerData['pageNumber'];
             $pageSize = $lockerData['pageSize'];
             $url = $this->losGetLockerStationsForPortalUrl;
-            $data = array('Countrycode' => 'HU', 'Filter' => null, 'IsActive' => true, 'PageNumber' => $page, 'PageSize' => $pageSize);
+            $LockerStationHistoryModel = [];
+            
+            $data = array('Countrycode' => 'HU', 'Filter' => null, 'LockerStationHistoryModel' => $LockerStationHistoryModel, 'maxResultCount' => 500, 'skipCount' => 0);
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -89,6 +91,10 @@ class CheckLocker
 
             curl_close($ch);
             $result = json_decode($result, true);
+            //A result list items nevű tömb átnevezése resultList-re
+            $result['payload']['resultList'] = $result['payload']['items'];
+            unset($result['payload']['items']);
+
             $this->response = $result;
         } catch (Exception $e) {
             return $this->response = $this->createResponse(400, $e->getMessage());
