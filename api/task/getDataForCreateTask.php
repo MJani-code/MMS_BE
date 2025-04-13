@@ -43,9 +43,9 @@ class GetData
             $locationsStmt = [
                 'table' => "task_locations tl",
                 'method' => "get",
-                'columns' => ['tl.id', 'tl.tof_shop_id', 'tl.name', 'CONCAT(tl.city, " ", tl.address) as address', 'CONCAT(tl.name, " - ",tl.city," ",tl.address) as nameAndAddress'],
+                'columns' => ['tl.id', 'tl.tof_shop_id as tofShopId', 'tl.name', 'CONCAT(tl.city, " ", tl.address) as address', 'CONCAT(tl.name, " - ",tl.city," ",tl.address) as nameAndAddress'],
                 'others' => "",
-                'conditions' => "tl.deleted = 0"
+                'conditions' => "tl.deleted = 0 GROUP BY tl.tof_shop_id"
             ];
             $result = dataToHandleInDb($this->conn, $locationsStmt);
             $locations = $result['payload'];
@@ -87,7 +87,7 @@ class GetData
             $lockerStmt = [
                 'table' => "task_lockers tl",
                 'method' => "get",
-                'columns' => ['tl.id', 'tl.tof_shop_id as tofShopId' ,'tl.task_locations_id as locationId', 'tl.serial'],
+                'columns' => ['tl.id', 'tl.tof_shop_id as tofShopId' ,'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
                 'others' => "",
                 'conditions' => "tl.deleted = 0"
             ];
