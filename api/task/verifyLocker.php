@@ -64,7 +64,9 @@ class CheckLocker
         try {
             $token = $this->token;
             $url = $this->losGetLockerStationsForPortalUrl;
-            $data = array('Countrycode' => 'HU', 'Filter' => $lockerData['serial'], 'IsActive' => true, 'Page' => 1, 'PageNumber' => 1, 'PageSize' => 50);
+            $LockerStationHistoryModel = [array('LockerStationFilterType' => 'Uuid', 'Filter' => $lockerData['serial'])];
+            
+            $data = array('Countrycode' => 'HU', 'Filter' => null, 'LockerStationHistoryModel' => $LockerStationHistoryModel, 'maxResultCount' => 10, 'skipCount' => 0);
 
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -89,15 +91,16 @@ class CheckLocker
 
             curl_close($ch);
             $result = json_decode($result, true);
-            if (!isset($result['payload']['resultList'][0])) {
+
+            if (!isset($result['payload']['items'][0])) {
                 return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
             }
-            $isLockerAdded = isset($result['payload']['resultList'][0]['lockerStationId']) ? 1 : 0;
-            $isActive = $result['payload']['resultList'][0]['lockerList'][0]['isPassive'] ? 0 : 1;
-            $privateKey1Error = $result['payload']['resultList'][0]['lockerList'][0]['privateKey1Error'] ? 1 : 0;
-            $batteryLevel = $result['payload']['resultList'][0]['lockerList'][0]['batteryLevel'];
-            $currentVersion = $result['payload']['resultList'][0]['lockerList'][0]['currentVersion'];
-            $lastConnectionTimestamp = $result['payload']['resultList'][0]['lockerList'][0]['lastConnectionTimestamp'];
+            $isLockerAdded = isset($result['payload']['items'][0]['lockerStationId']) ? 1 : 0;
+            $isActive = $result['payload']['items'][0]['lockerList'][0]['isPassive'] ? 0 : 1;
+            $privateKey1Error = $result['payload']['items'][0]['lockerList'][0]['privateKey1Error'] ? 1 : 0;
+            $batteryLevel = $result['payload']['items'][0]['lockerList'][0]['batteryLevel'];
+            $currentVersion = $result['payload']['items'][0]['lockerList'][0]['currentVersion'];
+            $lastConnectionTimestamp = $result['payload']['items'][0]['lockerList'][0]['lastConnectionTimestamp'];
 
             $arrayToStoreResult = array(
                 'id' => $lockerData['id'],
