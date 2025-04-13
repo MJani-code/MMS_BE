@@ -36,14 +36,14 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
             $groupedData = [];
             // Segédtömb az ismétlődések elkerülésére
             $uniqueTaskFees = [];
-            $uniqueLockers = [];            
+            $uniqueLockers = [];
 
             foreach ($data['baseTaskData']['payload'] as $task) {
                 $id = $task['id'];
                 //$tofShopId = $task['tof_shop_id'];                
 
                 // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
-                $existingIndex = array_search($id, array_column($groupedData, 'id'));                
+                $existingIndex = array_search($id, array_column($groupedData, 'id'));
 
                 // Ha az objektum még nem létezik, hozzuk létre és inicializáljuk a szükséges kulcsokat
                 if ($existingIndex === false) {
@@ -60,7 +60,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
 
                 // Feldolgozzuk az egyes mezőket
                 if (isset($task['url']) && !in_array(['url' => $task['url']], $groupedData[$existingIndex]['location_photos'])) {
-                    $groupedData[$existingIndex]['location_photos'][] = ['url' => $task['url']];                    
+                    $groupedData[$existingIndex]['location_photos'][] = ['url' => $task['url']];
                 }
 
                 //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
@@ -877,10 +877,12 @@ function addTask($conn, $newTask, $userId)
     $typeId = $newTask['taskType'];
     $responsible = $newTask['responsible'];
     $plannedDeliveryDate = $newTask['plannedDeliveryDate'];
-    $tofShopId = $newTask['tofShopId'];
+    $tofShopId = $newTask['selectedLocation']['tofShopId'];
+    $taskLocationsId = $newTask['selectedLocation']['id'];
+
 
     //ha a fenti adatok üresek akkor hibaüzenetet kell visszaadni
-    if (empty($typeId) || empty($responsible) || empty($plannedDeliveryDate) || empty($tofShopId)) {
+    if (empty($typeId) || empty($tofShopId)) {
         return createResponse(400, "A kötelező mezők nincsenek kitöltve");
     }
 
@@ -890,7 +892,7 @@ function addTask($conn, $newTask, $userId)
             return createResponse(400, "A lockers mező nincsen kitöltve");
         }
         foreach ($newTask['lockers'] as $locker) {
-            if (empty($locker['uuid'])) {
+            if (empty($locker['serial'])) {
                 return createResponse(400, "A uuid mező nincsen kitöltve");
             }
             foreach ($locker['issues'] as $issue) {
@@ -913,8 +915,8 @@ function addTask($conn, $newTask, $userId)
             'others' => "",
             'conditions' => "tof_shop_id = $tofShopId"
         ];
+
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
-        $tofShopId = $result['payload'][0]['tof_shop_id'];
         $boxId = $result['payload'][0]['box_id'];
         $locationTypeId = $result['payload'][0]['location_type_id'];
         $name = $result['payload'][0]['name'];
@@ -974,27 +976,38 @@ function addTask($conn, $newTask, $userId)
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         $taskId = $result['payload'][0]['MAX(id)'];
 
+        //task_lockers táblába beszúró lekérdezés        
+        if (isset($newTask['lockers'])) {
+            foreach ($newTask['lockers'] as $locker) {
+                $lockerSql = "INSERT INTO task_lockers (task_id, task_locations_id, tof_shop_id, brand, serial, type, created_by) VALUES (?,?,?,?,?,?,?)";
+                $lockerStmt = $conn->prepare($lockerSql);
+                $lockerStmt->execute([$taskId, $taskLocationsId, $tofShopId, $locker['brand'] , $locker['serial'], $locker['type'], $userId]);
+            }
+        }
+
         // `task_types` tábla beszúró lekérdezés
         $taskTypesSql = "INSERT INTO task_types (type_id, task_id, created_by) VALUES (?,?,?)";
         $taskTypesStmt = $conn->prepare($taskTypesSql);
         $taskTypesStmt->execute([$typeId, $taskId, $userId]);
 
         //task_dates táblába beszúró lekérdezés
-        $taskDatesSql = "INSERT INTO task_dates (task_id, planned_delivery_date, created_by) VALUES (?,?,?)";
+        $taskDatesSql = "INSERT INTO task_dates (task_id, created_by) VALUES (?,?)";
         $taskDatesStmt = $conn->prepare($taskDatesSql);
-        $taskDatesStmt->execute([$taskId, $plannedDeliveryDate, $userId]);
+        $taskDatesStmt->execute([$taskId, $userId]);
 
         //task_responsibels táblába beszúró lekérdezés
-        $taskResponsiblesSql = "INSERT INTO task_responsibles (company_id, task_id, created_by) VALUES (?,?,?)";
-        $taskResponsiblesStmt = $conn->prepare($taskResponsiblesSql);
-        $taskResponsiblesStmt->execute([$responsible, $taskId, $userId]);
+        if ($responsible) {
+            $taskResponsiblesSql = "INSERT INTO task_responsibles (company_id, task_id, created_by) VALUES (?,?,?)";
+            $taskResponsiblesStmt = $conn->prepare($taskResponsiblesSql);
+            $taskResponsiblesStmt->execute([$responsible, $taskId, $userId]);
+        }
 
         //newTask['lockers'] körbejárása és adatainak beszúrása a task_locker_issues táblába
         foreach ($newTask['lockers'] as $locker) {
             foreach ($locker['issues'] as $issue) {
-                $lockerSql = "INSERT INTO task_lockers_issues (task_id, tof_shop_id, uuid, issue_type, compartment_number, created_by) VALUES (?,?,?,?,?,?)";
+                $lockerSql = "INSERT INTO task_lockers_issues (task_lockers_id, task_id, tof_shop_id, uuid, issue_type, compartment_number, created_by) VALUES (?,?,?,?,?,?,?)";
                 $lockerStmt = $conn->prepare($lockerSql);
-                $lockerStmt->execute([$taskId, $newTask['tofShopId'], $locker['uuid'], $issue['type'], $issue['compartmentNumber'], $userId]);
+                $lockerStmt->execute([$locker['lockerId'], $taskId, $tofShopId, $locker['serial'], $issue['type'], $issue['compartmentNumber'], $userId]);
             }
         }
 
@@ -1048,8 +1061,7 @@ function getTofShopId($url)
             $tofShopIds[] = $point['id'];
         }
         return createResponse(200, "success", $tofShopIds);
-        
     } catch (Exception $e) {
-        return createResponse(400, "Hiba történt: " . $e->getMessage());            
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }
