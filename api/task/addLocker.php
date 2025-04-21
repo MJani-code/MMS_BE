@@ -34,6 +34,10 @@ class AddLocker
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($newItems['task_id'], null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+            if ($isTheTaskVisibleForUser['status'] !== 200) {
+                return $this->response = $isTheTaskVisibleForUser;
+            }
         }
 
         $result = addLocker($conn, $newItems, $userId);
