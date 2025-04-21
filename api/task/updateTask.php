@@ -52,6 +52,10 @@ class updateTask
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, $id, $isAccess['data']->companyId, $isAccess['data']->permissions);
+            if ($isTheTaskVisibleForUser['status'] !== 200) {
+                return $this->response = $isTheTaskVisibleForUser;
+            }
         }
 
         //File feltőltés
@@ -72,6 +76,14 @@ class updateTask
             $statusIdNeedAccess = [9];
             if ($data['dbColumn'] == 'status_by_exohu_id' && in_array($data['value'], $statusIdNeedAccess)) {
                 $isAccess = $this->auth->authenticate(8);
+                if ($isAccess['status'] !== 200) {
+                    return $this->response = $isAccess;
+                }
+            }
+
+            //Speciális engedély ellenőrzés a tofShopId-ra
+            if ($data['dbColumn'] == 'tof_shop_id') {
+                $isAccess = $this->auth->authenticate(16);
                 if ($isAccess['status'] !== 200) {
                     return $this->response = $isAccess;
                 }
@@ -212,8 +224,7 @@ class updateTask
                             $params = [$deleted_at, $deleted_by, $taskId];
                             $params = array_merge($params, $items_to_delete); // hozzáadjuk az `item_id`-kat
 
-                            $stmt->execute($params);
-                            if ($stmt->execute()) {
+                            if ($stmt->execute($params)) {
                                 $payload = array(
                                     'id' => intval($taskId),
                                     'column' => 'responsibles',
@@ -238,13 +249,13 @@ class updateTask
 
                             // Először végigmegyünk az új elemek listáján
                             foreach ($items_to_add as $item_id) {
+
                                 // Ha az elem már szerepel a $current_items listában, akkor UPDATE
                                 if (in_array($item_id, $all_items)) {
                                     $update_query = "UPDATE $dbTable SET deleted = ?, updated_at = ?, updated_by = ? WHERE task_id = ? AND company_id = ?";
                                     $stmt = $conn->prepare($update_query);
                                     $params = [0, $updated_at, $userId, $taskId, $item_id]; // Paraméterek a frissítéshez
-                                    $stmt->execute($params);
-                                    if ($stmt->execute()) {
+                                    if ($stmt->execute($params)) {
                                         $payload = array(
                                             'id' => intval($taskId),
                                             'column' => 'responsibles',
@@ -258,7 +269,6 @@ class updateTask
                                     }
                                 } else {
                                     // Ha az elem még nincs benne, akkor INSERT
-
                                     //Ellenőrizni, hogy a felhasználó adhat-e hozzá responsibles mezőt
                                     $isAccess = $this->auth->authenticate(19);
                                     if ($isAccess['status'] !== 200) {
@@ -268,8 +278,7 @@ class updateTask
                                     $insert_query = "INSERT INTO $dbTable (task_id, company_id, created_by) VALUES (?, ?, ?)";
                                     $stmt = $conn->prepare($insert_query);
                                     $params = [$taskId, $item_id, $userId];
-                                    $stmt->execute($params);
-                                    if ($stmt->execute()) {
+                                    if ($stmt->execute($params)) {
                                         $payload = array(
                                             'id' => intval($taskId),
                                             'column' => 'responsibles',
