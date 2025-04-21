@@ -37,6 +37,10 @@ class DeleteFee
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+            if ($isTheTaskVisibleForUser['status'] !== 200) {
+                return $this->response = $isTheTaskVisibleForUser;
+            }
         }
         $result = deleteFee($conn, $dbTable, $id, $taskId, $userId);
         $this->response = $result;
