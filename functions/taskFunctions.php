@@ -851,6 +851,63 @@ function downloadTig($conn)
     }
 }
 
+function downloadTasks($conn, $inputData)
+{
+    try {
+        $statuses = implode(',', $inputData[0]['statuses']);       
+        // SQL Lekérdezés
+        $stmt = $conn->query("SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.name as name, concat(tl.city,' ',tl.address) as address, tf.net_unit_price as NetUnitPrice, tf.quantity as quantity, tf.total as total, f.name as fee, td.delivery_date as deliveryDate from task_fees tf
+            LEFT JOIN tasks t on tf.task_id = t.id
+            LEFT JOIN task_dates td on td.task_id = t.id
+            LEFT JOIN task_locations tl on tl.id = t.task_locations_id AND t.status_by_exohu_id IN ($statuses)
+            LEFT JOIN (
+            SELECT MIN(id) as id, task_id
+            FROM task_responsibles tr_min
+            GROUP BY task_id
+            ) tr_min ON tr_min.task_id = t.id
+            LEFT JOIN fees f on f.id = tf.fee_id
+            where t.status_by_exohu_id IN ($statuses) AND tf.deleted = 0;");
+        $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Excel generálása
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Fejléc
+        $fejlec = ['taskId', 'TofShop ID', 'name', 'address', 'unitPrice(net)', 'quantity', 'total', 'fee', 'deliveryDate'];
+        $sheet->fromArray($fejlec, NULL, 'A1');
+
+        // Adatok beírása
+        $startRow = 2;
+        foreach ($adatok as $index => $sor) {
+            $sheet->fromArray(array_values($sor), NULL, 'A' . ($startRow + $index));
+        }
+
+        // Ideiglenes fájl létrehozása
+        $temp_file = tempnam(sys_get_temp_dir(), 'excel');
+        $temp_file_with_ext = $temp_file . '.xlsx';
+        rename($temp_file, $temp_file_with_ext);
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($temp_file_with_ext);
+
+        // Fájl letöltése
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="completedtasks.xlsx"');
+        header('Cache-Control: max-age=0');
+        readfile($temp_file_with_ext);
+
+        // Fájl törlése
+        unlink($temp_file_with_ext);
+        exit();
+    } catch (Exception $e) {
+        // Győződj meg róla, hogy nincs semmilyen extra kimenet a HTTP fejlécek előtt
+        header('Content-Type: application/json');
+        echo json_encode(createResponse(400, $e->getMessage()));
+        exit();
+    }
+}
+
 function updateCheckLockerResult($conn, $data, $userId)
 {
     try {
@@ -981,7 +1038,7 @@ function addTask($conn, $newTask, $userId)
             foreach ($newTask['lockers'] as $locker) {
                 $lockerSql = "INSERT INTO task_lockers (task_id, task_locations_id, tof_shop_id, brand, serial, type, created_by) VALUES (?,?,?,?,?,?,?)";
                 $lockerStmt = $conn->prepare($lockerSql);
-                $lockerStmt->execute([$taskId, $taskLocationsId, $tofShopId, $locker['brand'] , $locker['serial'], $locker['type'], $userId]);
+                $lockerStmt->execute([$taskId, $taskLocationsId, $tofShopId, $locker['brand'], $locker['serial'], $locker['type'], $userId]);
             }
         }
 
