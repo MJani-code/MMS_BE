@@ -95,6 +95,7 @@ class CheckLocker
             if (!isset($result['payload']['items'][0])) {
                 return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
             }
+
             $isLockerAdded = isset($result['payload']['items'][0]['lockerStationId']) ? 1 : 0;
             $isActive = $result['payload']['items'][0]['lockerList'][0]['isPassive'] ? 0 : 1;
             $privateKey1Error = $result['payload']['items'][0]['lockerList'][0]['privateKey1Error'] ? 1 : 0;
