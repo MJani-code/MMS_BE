@@ -79,6 +79,7 @@ class GetAllTask
                     'tl.fixing_method',
                     'tl.required_site_preparation',
                     'tl.comment',
+                    'tl.company_feedback as feedback',
                     'c.id as "responsible"',
                     'td.planned_delivery_date',
                     'td.delivery_date',
