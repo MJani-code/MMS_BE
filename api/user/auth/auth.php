@@ -84,8 +84,6 @@ class Auth
             } catch (\Throwable $th) {
                 return $this->createResponse(403, $th->getMessage(), null);
             }
-        } else{
-            return $this->createResponse(400, 'Hiányzó task id adat', null);
         }
         //Ha locationId értékünk van, a hozzá tartozó taskId-t előbb le kell kérdezni a task táblából, majd a taskId alapján a responsibles táblában ellenőrizni
         if ($locationId) {
