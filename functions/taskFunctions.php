@@ -854,7 +854,7 @@ function downloadTig($conn)
 function downloadTasks($conn, $inputData)
 {
     try {
-        $statuses = implode(',', $inputData[0]['statuses']);       
+        $statuses = implode(',', $inputData[0]['statuses']);
         // SQL Lekérdezés
         $stmt = $conn->query("SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.name as name, concat(tl.city,' ',tl.address) as address, tf.net_unit_price as NetUnitPrice, tf.quantity as quantity, tf.total as total, f.name as fee, td.delivery_date as deliveryDate from task_fees tf
             LEFT JOIN tasks t on tf.task_id = t.id
@@ -1120,5 +1120,54 @@ function getTofShopId($url)
         return createResponse(200, "success", $tofShopIds);
     } catch (Exception $e) {
         return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}
+
+function addIntervention($conn, $taskId, $newIntervention, $userId)
+{
+    try {
+        // Tranzakció indítása
+        $conn->beginTransaction();
+
+        // Beavatkozás beszúró lekérdezés
+        $taskLockersInterventionSql = "INSERT INTO task_lockers_interventions (task_id, uuid, performed_by, notes) VALUES (?,?,?,?)";
+        $taskLockersInterventionStmt = $conn->prepare($taskLockersInterventionSql);
+
+        // Beavatkozás és hiba összekapcsolása beszúró lekérdezés
+        $interventionIssuesSql = "INSERT INTO intervention_issues (intervention_id, issue_id) VALUES (?, ?)";
+        $interventionIssuesStmt = $conn->prepare($interventionIssuesSql);
+
+        //Alkatrész felhasználása a beavatkozásban beszúró lekérdezés
+        $taskTypesSql = "INSERT INTO task_types (type_id, task_id, created_by) VALUES (?,?,?)";
+        $taskTypesStmt = $conn->prepare($taskTypesSql);
+
+        //task_dates táblába beszúró lekérdezés
+        $taskLockerInterventionPartsSql = "INSERT INTO task_locker_intervention_parts (intervention_id, part_id, quantity) VALUES (?, ?, ?)";
+        $taskLockerInterventionPartsStmt = $conn->prepare($taskLockerInterventionPartsSql);
+
+        foreach ($newIntervention as $intervention) {
+
+            // Beavatkozás beszúrása
+            $taskLockersInterventionStmt->execute([$taskId, $intervention['uuid'], $userId, $intervention['notes']]);
+            $interventionId = $conn->lastInsertId();
+
+            // Beavatkozás és hiba összekapcsolása
+            foreach ($intervention['issues'] as $issue) {
+                $interventionIssuesStmt->execute([$interventionId, $issue['id']]);
+            }
+
+            // Alkatrész felhasználása a beavatkozásban
+            foreach ($intervention['parts'] as $part) {
+                $taskLockerInterventionPartsStmt->execute([$interventionId, $part['id'], $part['quantity']]);
+            }
+        }
+
+        // Tranzakció lezárása
+        $conn->commit();
+        return createResponse(200, "Sikeres betöltés");
+    } catch (Exception $e) {
+        // Hiba esetén rollback
+        $conn->rollBack();
+        return createResponse(400, $e->getMessage());
     }
 }
