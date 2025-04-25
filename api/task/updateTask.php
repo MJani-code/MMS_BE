@@ -52,10 +52,6 @@ class updateTask
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
-            $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, $id, $isAccess['data']->companyId, $isAccess['data']->permissions);
-            if ($isTheTaskVisibleForUser['status'] !== 200) {
-                return $this->response = $isTheTaskVisibleForUser;
-            }
         }
 
         //File feltőltés
@@ -93,6 +89,10 @@ class updateTask
                 switch ($dbTable) {
                     case 'task_types':
                         $taskId = $data['id'];
+                        $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+                        if ($isTheTaskVisibleForUser['status'] !== 200) {
+                            return $this->response = $isTheTaskVisibleForUser;
+                        }
                         $new_items = $value; // a felhasználó által kiválasztott új tételek
                         $deleted_by = $userId; // például azonos felhasználó végzi a "törlést"
                         $deleted_at = date('Y-m-d H:i:s'); // a frissítés ideje
@@ -186,6 +186,10 @@ class updateTask
                         break;
                     case 'task_responsibles':
                         $taskId = $data['id'];
+                        $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+                        if ($isTheTaskVisibleForUser['status'] !== 200) {
+                            return $this->response = $isTheTaskVisibleForUser;
+                        }
                         $new_items = $value; // a felhasználó által kiválasztott új tételek
                         $deleted_by = $userId; // például azonos felhasználó végzi a "törlést"
                         $deleted_at = date('Y-m-d H:i:s'); // a frissítés ideje
@@ -297,6 +301,12 @@ class updateTask
 
                     case 'tasks':
                         $taskId = $data['id'];
+
+                        $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+                        if ($isTheTaskVisibleForUser['status'] !== 200) {
+                            return $this->response = $isTheTaskVisibleForUser;
+                        }
+
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",
@@ -322,6 +332,10 @@ class updateTask
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                         break;
                     case 'task_locations':
+                        $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, $id, $isAccess['data']->companyId, $isAccess['data']->permissions);
+                        if ($isTheTaskVisibleForUser['status'] !== 200) {
+                            return $this->response = $isTheTaskVisibleForUser;
+                        }
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",
@@ -335,6 +349,10 @@ class updateTask
                         break;
                     default:
                         $taskId = $data['id'];
+                        $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+                        if ($isTheTaskVisibleForUser['status'] !== 200) {
+                            return $this->response = $isTheTaskVisibleForUser;
+                        }
                         $dataToHandleInDb = [
                             'table' => $dbTable,
                             'method' => "update",
