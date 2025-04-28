@@ -117,9 +117,9 @@ class GetAllTask
                 ]
             ];            
             if (!in_array(23, $permissions)) {
-                $fees['conditions'] .= " f.company_id = $companyId AND f.is_active = 1 ORDER BY f.id";
+                $fees['conditions'] .= " f.company_id = $companyId AND f.is_active = 1 ORDER BY f.name DESC";
             } else {
-                $fees['conditions'] .= " f.is_active = 1 ORDER BY f.id";
+                $fees['conditions'] .= " f.is_active = 1 ORDER BY f.name DESC";
             }
 
             $taskFees = [
