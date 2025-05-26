@@ -487,13 +487,13 @@ function addFee($conn, $dbTable, $newItems, $userId)
             'others' => "",
             'order' => ""
         ];
-        $getMaxId = dataToHandleInDb($conn, $dataToHandleInDb);
-        if ($getMaxId['status'] === 200) {
-            $newItems['id'] = $getMaxId['payload'][0]['MAX(id)'];
-        } else {
-            return createResponse($getMaxId['status'], $getMaxId['message'] . '. ' . $getMaxId['errorInfo']);
-        }
         if ($stmt->execute($params)) {
+            $getMaxId = dataToHandleInDb($conn, $dataToHandleInDb);
+            if ($getMaxId['status'] === 200) {
+                $newItems['id'] = $getMaxId['payload'][0]['MAX(id)'];
+            } else {
+                return createResponse($getMaxId['status'], $getMaxId['message'] . '. ' . $getMaxId['errorInfo']);
+            }
             return createResponse(200, "Item insertion success", $newItems);
         }
     } catch (Exception $e) {
