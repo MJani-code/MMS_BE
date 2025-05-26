@@ -800,16 +800,24 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
     }
 }
 
-function downloadTig($conn)
+function downloadTig($conn, $companyId)
 {
     try {
         // SQL Lekérdezés
-        $stmt = $conn->query("SELECT tl.name, CONCAT(tl.zip,' ',tl.city,' ',tl.address)as helyszín ,td.delivery_date, f.name as díjtípus, tf.serial, tf.net_unit_price, tf.quantity, tf.total, tl.tof_shop_id
+        $stmt = $conn->query("SELECT tl.name, CONCAT(tl.zip,' ',tl.city,' ',tl.address) as helyszín ,td.delivery_date, f.name as díjtípus, tf.serial, tf.net_unit_price, tf.quantity, tf.total, tl.tof_shop_id, c.name as companyName
         FROM task_fees tf
         LEFT JOIN tasks t on t.id = tf.task_id
         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
         LEFT JOIN task_dates td on td.task_id = t.id
-        LEFT JOIN fees f on f.id = tf.fee_id WHERE t.status_by_exohu_id = 9 AND tf.deleted = 0;");
+        LEFT JOIN (
+            SELECT MIN(id) as id, task_id
+            FROM task_responsibles tr_min
+            GROUP BY task_id
+            ) tr_min ON tr_min.task_id = t.id
+        LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.id = tr_min.id AND tr.deleted = 0
+        LEFT JOIN companies c on c.id = tr.company_id
+        LEFT JOIN fees f on f.id = tf.fee_id 
+        WHERE t.status_by_exohu_id = 9 AND tf.deleted = 0 AND tr.company_id = $companyId;");
         $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Excel generálása
@@ -817,7 +825,7 @@ function downloadTig($conn)
         $sheet = $spreadsheet->getActiveSheet();
 
         // Fejléc
-        $fejlec = ['Helyszín neve', 'Cím', 'Telepítés dátuma', 'Díjtípus', 'Sorozatszám', 'Nettó egységár', 'Mennyiség', 'Összesen', 'TofShop ID'];
+        $fejlec = ['Helyszín neve', 'Cím', 'Telepítés dátuma', 'Díjtípus', 'Sorozatszám', 'Nettó egységár', 'Mennyiség', 'Összesen', 'TofShop ID', 'Cég neve'];
         $sheet->fromArray($fejlec, NULL, 'A1');
 
         // Adatok beírása
@@ -856,7 +864,7 @@ function downloadTasks($conn, $inputData)
     try {
         $statuses = implode(',', $inputData[0]['statuses']);
         // SQL Lekérdezés
-        $stmt = $conn->query("SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.name as name, concat(tl.city,' ',tl.address) as address, tf.net_unit_price as NetUnitPrice, tf.quantity as quantity, tf.total as total, f.name as fee, td.delivery_date as deliveryDate from task_fees tf
+        $stmt = $conn->query("SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.name as name, concat(tl.city,' ',tl.address) as address, tf.net_unit_price as NetUnitPrice, tf.quantity as quantity, tf.total as total, f.name as fee, td.delivery_date as deliveryDate, c.name as companyName from task_fees tf
             LEFT JOIN tasks t on tf.task_id = t.id
             LEFT JOIN task_dates td on td.task_id = t.id
             LEFT JOIN task_locations tl on tl.id = t.task_locations_id AND t.status_by_exohu_id IN ($statuses)
@@ -866,6 +874,8 @@ function downloadTasks($conn, $inputData)
             GROUP BY task_id
             ) tr_min ON tr_min.task_id = t.id
             LEFT JOIN fees f on f.id = tf.fee_id
+            LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.id = tr_min.id where td.deleted = 0
+            LEFT JOIN companies c on c.id = tr.company_id
             where t.status_by_exohu_id IN ($statuses) AND tf.deleted = 0;");
         $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -874,7 +884,7 @@ function downloadTasks($conn, $inputData)
         $sheet = $spreadsheet->getActiveSheet();
 
         // Fejléc
-        $fejlec = ['taskId', 'TofShop ID', 'name', 'address', 'unitPrice(net)', 'quantity', 'total', 'fee', 'deliveryDate'];
+        $fejlec = ['taskId', 'TofShop ID', 'name', 'address', 'unitPrice(net)', 'quantity', 'total', 'fee', 'deliveryDate', 'companyName'];
         $sheet->fromArray($fejlec, NULL, 'A1');
 
         // Adatok beírása
