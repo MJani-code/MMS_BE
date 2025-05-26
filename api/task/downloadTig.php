@@ -25,14 +25,16 @@ class DownloadTig
     {
 
         $userId = null;
+        $companyId = null;
         $isAccess = $this->auth->authenticate(21);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $companyId = $isAccess['data']->companyId;
         }
 
-        $result = downloadTig($conn);
+        $result = downloadTig($conn, $companyId);
         $this->response = $result;
     }
 }
