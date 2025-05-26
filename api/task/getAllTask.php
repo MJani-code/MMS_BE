@@ -113,6 +113,7 @@ class GetAllTask
                 'columns' => [
                     "f.id as id",
                     'CONCAT(f.name,"(",f.net_unit_price ,")") as name',
+                    'f.fee_type as type',
                     "f.net_unit_price as value"
                 ]
             ];            
@@ -130,10 +131,12 @@ class GetAllTask
                     'tf.task_id as taskId',
                     'tf.fee_id as feeId',
                     'tf.other_items as otherItems',
+                    'f.fee_type as feeType',
                     'tf.quantity',
                     'tf.total',
                     'tf.serial as lockerSerial'
                 ],
+                'others' => "LEFT JOIN fees f on f.id = tf.fee_id",
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
             $lockers = [
