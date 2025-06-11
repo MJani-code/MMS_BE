@@ -874,10 +874,10 @@ function downloadTasks($conn, $inputData)
             GROUP BY task_id
             ) tr_min ON tr_min.task_id = t.id
             LEFT JOIN fees f on f.id = tf.fee_id
-            LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.id = tr_min.id where td.deleted = 0
+            LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.id = tr_min.id
             LEFT JOIN companies c on c.id = tr.company_id
-            where t.status_by_exohu_id IN ($statuses) AND tf.deleted = 0;");
-        $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            WHERE t.status_by_exohu_id IN ($statuses) AND tf.deleted = 0;");
+        $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);        
 
         // Excel generálása
         $spreadsheet = new Spreadsheet();
