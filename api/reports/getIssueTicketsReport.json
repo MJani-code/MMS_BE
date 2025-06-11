@@ -1,0 +1,2179 @@
+[
+    {
+        "date": "2025-05-21",
+        "issueType": "Cannot Connect BLE",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000245",
+        "compartmentNumber": "9",
+        "integrationCode": "644505020684000013608800",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000245",
+            "EXOHU-AR-S-000051",
+            "EXOHU-AR-S-000269",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Lid not Opening",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000093",
+        "compartmentNumber": "2",
+        "integrationCode": "627835548442000013607150",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000134"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Lid not Closing",
+        "count": 9,
+        "uuid": "EXOHU-AR-S-000208",
+        "compartmentNumber": "1",
+        "integrationCode": "397335042165000013603516",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000208",
+            "EXOHU-AR-E-000030",
+            "EXOHU-AR-E-000048",
+            "EXOHU-AR-S-000044",
+            "EXOHU-AR-E-000008",
+            "EXOHU-AR-S-000170",
+            "EXOHU-AR-E-000007",
+            "EXOHU-AR-E-000016",
+            "EXOHU-AR-E-000033"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000211",
+        "compartmentNumber": "0",
+        "integrationCode": "158271900433012573606000",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000211",
+            "EXOHU-AR-S-000214",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-27",
+        "issueType": "Lid not Opening",
+        "count": 15,
+        "uuid": "EXOHU-AR-S-000134",
+        "compartmentNumber": "2",
+        "integrationCode": "158271900432770233606000",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000245",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000103",
+            "EXOHU-AR-E-000026",
+            "EXOHU-AR-S-000165"
+        ]
+    },
+    {
+        "date": "2025-05-27",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-E-000030",
+        "compartmentNumber": "6",
+        "integrationCode": "394116851637000013601097",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-E-000030"
+        ]
+    },
+    {
+        "date": "2025-05-27",
+        "issueType": "Lid not Closing",
+        "count": 4,
+        "uuid": "EXOHU-AR-E-000017",
+        "compartmentNumber": "2",
+        "integrationCode": "631365356548000013602094",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000017",
+            "EXOHU-AR-E-000007",
+            "EXOHU-AR-S-000002",
+            "EXOHU-AR-S-000136"
+        ]
+    },
+    {
+        "date": "2025-05-27",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000211",
+        "compartmentNumber": "0",
+        "integrationCode": "158272700592403123606076",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000211",
+            "EXOHU-AR-S-000211",
+            "EXOHU-AR-S-000099"
+        ]
+    },
+    {
+        "date": "2025-05-26",
+        "issueType": "Compartment is Empty",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000197",
+        "compartmentNumber": "2",
+        "integrationCode": "158272700594439753601214",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000197",
+            "EXOHU-AR-S-000273",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-E-000044",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165"
+        ]
+    },
+    {
+        "date": "2025-05-26",
+        "issueType": "Lid not Opening",
+        "count": 13,
+        "uuid": "EXOHU-AR-S-000091",
+        "compartmentNumber": "3",
+        "integrationCode": "631365351070000013609700",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-E-000011",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000283"
+        ]
+    },
+    {
+        "date": "2025-05-26",
+        "issueType": "Lid not Closing",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000021",
+        "compartmentNumber": "2",
+        "integrationCode": "158272700592549153601088",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000021",
+            "EXOHU-AR-E-000044"
+        ]
+    },
+    {
+        "date": "2025-05-26",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000064",
+        "compartmentNumber": "6",
+        "integrationCode": "158271900432814873607020",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000064"
+        ]
+    },
+    {
+        "date": "2025-05-26",
+        "issueType": "Compartment is Dirty",
+        "count": 4,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "14",
+        "integrationCode": "TestDeliveryTask-2025052205",
+        "username": "cour.exohu",
+        "uuids": [
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-26",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000115",
+        "compartmentNumber": "0",
+        "integrationCode": "440897331933000013601157",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000115",
+            "EXOHU-AR-S-000211"
+        ]
+    },
+    {
+        "date": "2025-05-25",
+        "issueType": "Lid not Opening",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000142",
+        "compartmentNumber": "2",
+        "integrationCode": "600525205214000013601224",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000142"
+        ]
+    },
+    {
+        "date": "2025-05-24",
+        "issueType": "Lid not Opening",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000227",
+        "compartmentNumber": "5",
+        "integrationCode": "158271900431764223602536",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000054"
+        ]
+    },
+    {
+        "date": "2025-05-24",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000197",
+        "compartmentNumber": "2",
+        "integrationCode": "158272700594340863601214",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000197"
+        ]
+    },
+    {
+        "date": "2025-05-23",
+        "issueType": "Lid not Opening",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "14",
+        "integrationCode": "630875004102000013608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000110",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000193"
+        ]
+    },
+    {
+        "date": "2025-05-23",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000249",
+        "compartmentNumber": "3",
+        "integrationCode": "627835547012000013602234",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000249"
+        ]
+    },
+    {
+        "date": "2025-05-23",
+        "issueType": "Cannot Connect BLE",
+        "count": 5,
+        "uuid": "EXOHU-AR-S-000252",
+        "compartmentNumber": "10",
+        "integrationCode": "440897337047000013601116",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000252",
+            "EXOHU-AR-S-000140",
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000289",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-23",
+        "issueType": "Lid not Closing",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000042",
+        "compartmentNumber": "10",
+        "integrationCode": "614945020450000013602049",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000042",
+            "EXOHU-AR-S-000203",
+            "EXOHU-AR-S-000241",
+            "EXOHU-AR-S-000263"
+        ]
+    },
+    {
+        "date": "2025-05-23",
+        "issueType": "Compartment is Empty",
+        "count": 4,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "17",
+        "integrationCode": "TestDeliveryTask-2025052303",
+        "username": "consignee",
+        "uuids": [
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000202"
+        ]
+    },
+    {
+        "date": "2025-05-22",
+        "issueType": "Lid not Opening",
+        "count": 16,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "17",
+        "integrationCode": "158273000592318923608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000233",
+            "EXOHU-AR-S-000233",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000289",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000222"
+        ]
+    },
+    {
+        "date": "2025-05-22",
+        "issueType": "Cannot Connect BLE",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000209",
+        "compartmentNumber": "5",
+        "integrationCode": "645045041676000013602141",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000209"
+        ]
+    },
+    {
+        "date": "2025-05-22",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000246",
+        "compartmentNumber": "2",
+        "integrationCode": "662185000046000013605000",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000246",
+            "EXOHU-AR-S-000065",
+            "EXOHU-AR-S-000172"
+        ]
+    },
+    {
+        "date": "2025-05-22",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000152",
+        "compartmentNumber": "1",
+        "integrationCode": "480525055622000013602243",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000152",
+            "EXOHU-AR-S-000165"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Lid not Opening",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000134",
+        "compartmentNumber": "2",
+        "integrationCode": "461011009098000013606000",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000251",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000056"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Cannot Connect BLE",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000245",
+        "compartmentNumber": "9",
+        "integrationCode": "644505020684000013608800",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000245"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Compartment Dirty",
+        "count": 3,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "7",
+        "integrationCode": "CustomerReservation-2025052104",
+        "username": "consignee",
+        "uuids": [
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Lid not Opening",
+        "count": 6,
+        "uuid": "EXOHU-AR-S-000054",
+        "compartmentNumber": "3",
+        "integrationCode": "627835548563000013602337",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000049",
+            "EXOHU-AR-S-000003",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000134"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000245",
+        "compartmentNumber": "1",
+        "integrationCode": "600525205397000013608800",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000245"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Compartment is Dirty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000003",
+        "compartmentNumber": "8",
+        "integrationCode": "235265021127000013602370",
+        "username": "cour.exohu",
+        "uuids": [
+            "EXOHU-AR-S-000003"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Lid not Closing",
+        "count": 9,
+        "uuid": "EXOHU-AR-S-000208",
+        "compartmentNumber": "1",
+        "integrationCode": "397335042165000013603516",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000208",
+            "EXOHU-AR-E-000030",
+            "EXOHU-AR-E-000048",
+            "EXOHU-AR-S-000044",
+            "EXOHU-AR-E-000008",
+            "EXOHU-AR-S-000170",
+            "EXOHU-AR-E-000007",
+            "EXOHU-AR-E-000016",
+            "EXOHU-AR-E-000033"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000211",
+        "compartmentNumber": "0",
+        "integrationCode": "158271900433012573606000",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000211",
+            "EXOHU-AR-S-000214",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Lid not Opening",
+        "count": 12,
+        "uuid": "EXOHU-AR-S-000157",
+        "compartmentNumber": "1",
+        "integrationCode": "650695000798000013604501",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000157",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000081",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000091"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000225",
+        "compartmentNumber": "10",
+        "integrationCode": "657645017958000013607500",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000225",
+            "EXOHU-AR-E-000016"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000137",
+        "compartmentNumber": "2",
+        "integrationCode": "440897347951000013602030",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000137",
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000147"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000045",
+        "compartmentNumber": "0",
+        "integrationCode": "SK1H7EG59000011SLJ",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000045",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Lid not Opening",
+        "count": 6,
+        "uuid": "EXOHU-AR-S-000054",
+        "compartmentNumber": "3",
+        "integrationCode": "627835548563000013602337",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000049",
+            "EXOHU-AR-S-000003",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000134"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000245",
+        "compartmentNumber": "1",
+        "integrationCode": "600525205397000013608800",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000245"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Compartment is Dirty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000003",
+        "compartmentNumber": "8",
+        "integrationCode": "235265021127000013602370",
+        "username": "cour.exohu",
+        "uuids": [
+            "EXOHU-AR-S-000003"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Lid not Closing",
+        "count": 9,
+        "uuid": "EXOHU-AR-S-000208",
+        "compartmentNumber": "1",
+        "integrationCode": "397335042165000013603516",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000208",
+            "EXOHU-AR-E-000030",
+            "EXOHU-AR-E-000048",
+            "EXOHU-AR-S-000044",
+            "EXOHU-AR-E-000008",
+            "EXOHU-AR-S-000170",
+            "EXOHU-AR-E-000007",
+            "EXOHU-AR-E-000016",
+            "EXOHU-AR-E-000033"
+        ]
+    },
+    {
+        "date": "2025-05-28",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000211",
+        "compartmentNumber": "0",
+        "integrationCode": "158271900433012573606000",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000211",
+            "EXOHU-AR-S-000214",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-31",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000273",
+        "compartmentNumber": "3",
+        "integrationCode": "440897355153000013602119",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000273"
+        ]
+    },
+    {
+        "date": "2025-05-31",
+        "issueType": "Lid not Opening",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "7",
+        "integrationCode": "645045042297000013608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000049",
+            "EXOHU-AR-S-000123"
+        ]
+    },
+    {
+        "date": "2025-05-30",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000021",
+        "compartmentNumber": "3",
+        "integrationCode": "SK1H7EG59000017CUQ",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-E-000021",
+            "EXOHU-AR-S-000239"
+        ]
+    },
+    {
+        "date": "2025-05-30",
+        "issueType": "Lid not Opening",
+        "count": 22,
+        "uuid": "EXOHU-AR-S-000093",
+        "compartmentNumber": "11",
+        "integrationCode": "650695000909000013607150",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000081",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000227",
+            "DC:5c5b6979c20a",
+            "DC:5c5b6979c20a",
+            "DC:5c5b6979c20a",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000180"
+        ]
+    },
+    {
+        "date": "2025-05-30",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000143",
+        "compartmentNumber": "10",
+        "integrationCode": "655385030757000013608000",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000143",
+            "EXOHU-AR-S-000178",
+            "EXOHU-AR-S-000199"
+        ]
+    },
+    {
+        "date": "2025-05-30",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000045",
+        "compartmentNumber": "0",
+        "integrationCode": "627835550814000013605600",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000045",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Lid not Opening",
+        "count": 12,
+        "uuid": "EXOHU-AR-S-000157",
+        "compartmentNumber": "1",
+        "integrationCode": "650695000798000013604501",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000157",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000081",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000091"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000225",
+        "compartmentNumber": "10",
+        "integrationCode": "657645017958000013607500",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000225",
+            "EXOHU-AR-E-000016"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000137",
+        "compartmentNumber": "2",
+        "integrationCode": "440897347951000013602030",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000137",
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000147"
+        ]
+    },
+    {
+        "date": "2025-05-29",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000045",
+        "compartmentNumber": "0",
+        "integrationCode": "SK1H7EG59000011SLJ",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000045",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Lid not Opening",
+        "count": 13,
+        "uuid": "EXOHU-AR-S-000134",
+        "compartmentNumber": "2",
+        "integrationCode": "461011009098000013606000",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000251",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000040",
+            "EXOHU-AR-S-000193",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000123"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Cannot Connect BLE",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000245",
+        "compartmentNumber": "9",
+        "integrationCode": "644505020684000013608800",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000245",
+            "EXOHU-AR-S-000051",
+            "EXOHU-AR-S-000269",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Compartment Dirty",
+        "count": 3,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "7",
+        "integrationCode": "CustomerReservation-2025052104",
+        "username": "consignee",
+        "uuids": [
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000150",
+        "compartmentNumber": "4",
+        "integrationCode": "631365351727000013601044",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000150",
+            "EXOHU-AR-S-000057",
+            "EXOHU-AR-S-000104"
+        ]
+    },
+    {
+        "date": "2025-05-21",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "14",
+        "integrationCode": "TestDeliveryTask-2025052004",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-20",
+        "issueType": "Lid not Opening",
+        "count": 14,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "11",
+        "integrationCode": "655385028906000013608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000171",
+            "EXOHU-AR-S-000193",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000289",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000063"
+        ]
+    },
+    {
+        "date": "2025-05-20",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "0",
+        "integrationCode": "TestDeliveryTask-2025052003",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000226",
+            "EXOHU-AR-S-000227"
+        ]
+    },
+    {
+        "date": "2025-05-20",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "9",
+        "integrationCode": "TestDeliveryTask-2025051906",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-20",
+        "issueType": "Lid not Closing",
+        "count": 7,
+        "uuid": "EXOHU-AR-E-000011",
+        "compartmentNumber": "14",
+        "integrationCode": "158272700588930353601061",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000011",
+            "EXOHU-AR-S-000218",
+            "EXOHU-AR-E-000032",
+            "EXOHU-AR-E-000030",
+            "EXOHU-AR-S-000246",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000080"
+        ]
+    },
+    {
+        "date": "2025-05-20",
+        "issueType": "Damaged Compartment",
+        "count": 1,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "8",
+        "integrationCode": "TestDeliveryTask-2025051906",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-20",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "7",
+        "integrationCode": "TestDeliveryTask-2025051906",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-19",
+        "issueType": "Lid not Opening",
+        "count": 21,
+        "uuid": "EXOHU-AR-S-000089",
+        "compartmentNumber": "3",
+        "integrationCode": "158272700588924213601162",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000089",
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000089"
+        ]
+    },
+    {
+        "date": "2025-05-19",
+        "issueType": "Lid not Closing",
+        "count": 5,
+        "uuid": "EXOHU-AR-S-000272",
+        "compartmentNumber": "10",
+        "integrationCode": "158272700589394743601152",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000272",
+            "EXOHU-AR-E-000034",
+            "EXOHU-AR-S-000145",
+            "EXOHU-AR-S-000085",
+            "EXOHU-AR-S-000172"
+        ]
+    },
+    {
+        "date": "2025-05-19",
+        "issueType": "Compartment is Empty",
+        "count": 15,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "6",
+        "integrationCode": "TestDeliveryTask-2025051904",
+        "username": "consignee",
+        "uuids": [
+            "70003-Cainiao DEV",
+            "EXOHU-AR-S-000145",
+            "EXOHU-AR-S-000172",
+            "EXOHU-AR-S-000287",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000253",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000202"
+        ]
+    },
+    {
+        "date": "2025-05-19",
+        "issueType": "Damaged Compartment",
+        "count": 1,
+        "uuid": "70003-Cainiao DEV",
+        "compartmentNumber": "4",
+        "integrationCode": "TestDeliveryTask-2025051904",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "70003-Cainiao DEV"
+        ]
+    },
+    {
+        "date": "2025-05-19",
+        "issueType": "Cannot Connect BLE",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000115",
+        "compartmentNumber": "0",
+        "integrationCode": "158272700589856983601158",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-17",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000127",
+        "compartmentNumber": "4",
+        "integrationCode": "631365345260000013601091",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000127"
+        ]
+    },
+    {
+        "date": "2025-05-17",
+        "issueType": "Lid not Opening",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000093",
+        "compartmentNumber": "14",
+        "integrationCode": "630875003719000013607150",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000134"
+        ]
+    },
+    {
+        "date": "2025-05-16",
+        "issueType": "Lid not Opening",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000286",
+        "compartmentNumber": "1",
+        "integrationCode": "658245014549000013607300",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000286",
+            "EXOHU-AR-S-000063",
+            "EXOHU-AR-S-000217",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000063"
+        ]
+    },
+    {
+        "date": "2025-05-16",
+        "issueType": "Compartment is Empty",
+        "count": 6,
+        "uuid": "EXOHU-AR-S-000244",
+        "compartmentNumber": "5",
+        "integrationCode": "1028788149202853903486",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000244",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000274"
+        ]
+    },
+    {
+        "date": "2025-05-16",
+        "issueType": "Lid not Closing",
+        "count": 8,
+        "uuid": "EXOHU-AR-S-000277",
+        "compartmentNumber": "20",
+        "integrationCode": "607555407977000013601148",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000277",
+            "EXOHU-AR-S-000277",
+            "EXOHU-AR-S-000065",
+            "EXOHU-AR-S-000119",
+            "EXOHU-AR-S-000078",
+            "EXOHU-AR-S-000244",
+            "EXOHU-AR-S-000095",
+            "EXOHU-AR-S-000047"
+        ]
+    },
+    {
+        "date": "2025-05-16",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000002",
+        "compartmentNumber": "3",
+        "integrationCode": "158271900423593183607623",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000002"
+        ]
+    },
+    {
+        "date": "2025-05-16",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000267",
+        "compartmentNumber": "0",
+        "integrationCode": "158271900430000123602120",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000267",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-05-15",
+        "issueType": "Lid not Opening",
+        "count": 17,
+        "uuid": "EXOHU-AR-S-000142",
+        "compartmentNumber": "2",
+        "integrationCode": "158032600011261073601224",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000063",
+            "EXOHU-AR-S-000174",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000063",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000063"
+        ]
+    },
+    {
+        "date": "2025-05-15",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000142",
+        "compartmentNumber": "20",
+        "integrationCode": "158032600011261073601224",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000226",
+            "EXOHU-AR-S-000226"
+        ]
+    },
+    {
+        "date": "2025-05-15",
+        "issueType": "Compartment is Empty",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000183",
+        "compartmentNumber": "14",
+        "integrationCode": "010052000140587773604220",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183"
+        ]
+    },
+    {
+        "date": "2025-05-15",
+        "issueType": "Lid not Closing",
+        "count": 7,
+        "uuid": "EXOHU-AR-E-000036",
+        "compartmentNumber": "4",
+        "integrationCode": "158271900429148233601044",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000036",
+            "EXOHU-AR-S-000248",
+            "EXOHU-AR-S-000218",
+            "EXOHU-AR-S-000163",
+            "EXOHU-AR-S-000002",
+            "EXOHU-AR-S-000264",
+            "EXOHU-AR-S-000264"
+        ]
+    },
+    {
+        "date": "2025-05-14",
+        "issueType": "Lid not Opening",
+        "count": 11,
+        "uuid": "EXOHU-AR-S-000091",
+        "compartmentNumber": "6",
+        "integrationCode": "394116817306000013609700",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000040",
+            "EXOHU-AR-S-000193",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-E-000033",
+            "EXOHU-AR-S-000193",
+            "EXOHU-AR-S-000168",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000063",
+            "EXOHU-AR-S-000063"
+        ]
+    },
+    {
+        "date": "2025-05-14",
+        "issueType": "Cannot Connect BLE",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000207",
+        "compartmentNumber": "0",
+        "integrationCode": "641895014605000013602120",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000207",
+            "EXOHU-AR-S-000051",
+            "EXOHU-AR-S-000265",
+            "EXOHU-AR-S-000226",
+            "EXOHU-AR-S-000144",
+            "EXOHU-AR-S-000058",
+            "EXOHU-AR-S-000058"
+        ]
+    },
+    {
+        "date": "2025-05-14",
+        "issueType": "Lid not Closing",
+        "count": 5,
+        "uuid": "EXOHU-AR-E-000033",
+        "compartmentNumber": "4",
+        "integrationCode": "600525203989000013601043",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000033",
+            "EXOHU-AR-S-000088",
+            "EXOHU-AR-S-000216",
+            "EXOHU-AR-E-000019",
+            "EXOHU-AR-S-000087"
+        ]
+    },
+    {
+        "date": "2025-05-14",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000259",
+        "compartmentNumber": "3",
+        "integrationCode": "449068653628640333602151",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000259"
+        ]
+    },
+    {
+        "date": "2025-05-13",
+        "issueType": "Lid not Opening",
+        "count": 10,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "3",
+        "integrationCode": "645045041100000013608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000065",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000134"
+        ]
+    },
+    {
+        "date": "2025-05-13",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000008",
+        "compartmentNumber": "2",
+        "integrationCode": "600525203768000013601076",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-E-000008",
+            "EXOHU-AR-S-000058"
+        ]
+    },
+    {
+        "date": "2025-05-13",
+        "issueType": "Cannot Connect BLE",
+        "count": 8,
+        "uuid": "EXOHU-AR-S-000073",
+        "compartmentNumber": "0",
+        "integrationCode": "645045041379000013601118",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000073",
+            "EXOHU-AR-S-000168",
+            "EXOHU-AR-S-000045",
+            "EXOHU-AR-E-000053",
+            "EXOHU-AR-S-000038",
+            "EXOHU-AR-S-000063",
+            "EXOHU-AR-S-000188",
+            "EXOHU-AR-S-000056"
+        ]
+    },
+    {
+        "date": "2025-05-13",
+        "issueType": "Lid not Closing",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000129",
+        "compartmentNumber": "10",
+        "integrationCode": "655385027714000013602051",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-E-000029",
+            "EXOHU-AR-S-000271",
+            "EXOHU-AR-S-000058"
+        ]
+    },
+    {
+        "date": "2025-05-12",
+        "issueType": "Lid not Opening",
+        "count": 21,
+        "uuid": "EXOHU-AR-S-000091",
+        "compartmentNumber": "5",
+        "integrationCode": "158271900428923963609700",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000040",
+            "EXOHU-AR-S-000254",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219"
+        ]
+    },
+    {
+        "date": "2025-05-12",
+        "issueType": "Cannot Connect BLE",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000218",
+        "compartmentNumber": "3",
+        "integrationCode": "440897303908000013602092",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000218",
+            "EXOHU-AR-S-000143",
+            "EXOHU-AR-S-000178",
+            "EXOHU-AR-S-000081"
+        ]
+    },
+    {
+        "date": "2025-05-12",
+        "issueType": "Lid not Closing",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000136",
+        "compartmentNumber": "8",
+        "integrationCode": "645385036459000013602071",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000136",
+            "EXOHU-AR-S-000277"
+        ]
+    },
+    {
+        "date": "2025-05-12",
+        "issueType": "Compartment is Empty",
+        "count": 11,
+        "uuid": "EXOHU-AR-S-000183",
+        "compartmentNumber": "9",
+        "integrationCode": "601325636108000013604220",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000183",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000202",
+            "EXOHU-AR-S-000078",
+            "EXOHU-AR-S-000078",
+            "EXOHU-AR-S-000078",
+            "EXOHU-AR-S-000154",
+            "EXOHU-AR-S-000098"
+        ]
+    },
+    {
+        "date": "2025-05-11",
+        "issueType": "Lid not Opening",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000130",
+        "compartmentNumber": "3",
+        "integrationCode": "501391950980000013609082",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000205"
+        ]
+    },
+    {
+        "date": "2025-05-10",
+        "issueType": "Lid not Opening",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000142",
+        "compartmentNumber": "10",
+        "integrationCode": "379635020329000013601224",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000045"
+        ]
+    },
+    {
+        "date": "2025-05-09",
+        "issueType": "Lid not Opening",
+        "count": 6,
+        "uuid": "EXOHU-AR-S-000134",
+        "compartmentNumber": "10",
+        "integrationCode": "394116808854000013606000",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000173",
+            "EXOHU-AR-E-000044",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000065",
+            "EXOHU-AR-S-000142"
+        ]
+    },
+    {
+        "date": "2025-05-09",
+        "issueType": "Compartment is Empty",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000130",
+        "compartmentNumber": "4",
+        "integrationCode": "449065603948616823609083",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000257",
+            "EXOHU-AR-S-000202"
+        ]
+    },
+    {
+        "date": "2025-05-09",
+        "issueType": "Cannot Connect BLE",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000072",
+        "compartmentNumber": "0",
+        "integrationCode": "394116808877000013608000",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000072",
+            "EXOHU-AR-S-000248",
+            "EXOHU-AR-E-000053",
+            "EXOHU-AR-S-000248",
+            "EXOHU-AR-E-000045",
+            "EXOHU-AR-S-000178",
+            "EXOHU-AR-S-000178"
+        ]
+    },
+    {
+        "date": "2025-05-09",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-E-000030",
+        "compartmentNumber": "7",
+        "integrationCode": "663405000357000013601097",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000030",
+            "EXOHU-AR-S-000173",
+            "EXOHU-AR-S-000136"
+        ]
+    },
+    {
+        "date": "2025-05-08",
+        "issueType": "Lid not Opening",
+        "count": 11,
+        "uuid": "EXOHU-AR-S-000045",
+        "compartmentNumber": "1",
+        "integrationCode": "644505020273000013608638",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000045",
+            "EXOHU-AR-S-000063",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000116",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000093"
+        ]
+    },
+    {
+        "date": "2025-05-08",
+        "issueType": "Cannot Connect BLE",
+        "count": 7,
+        "uuid": "EXOHU-AR-S-000272",
+        "compartmentNumber": "0",
+        "integrationCode": "487355878683000013601152",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000272",
+            "EXOHU-AR-S-000272",
+            "EXOHU-AR-E-000053",
+            "EXOHU-AR-S-000168",
+            "EXOHU-AR-S-000224",
+            "EXOHU-AR-S-000039",
+            "EXOHU-AR-S-000241"
+        ]
+    },
+    {
+        "date": "2025-05-08",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000193",
+        "compartmentNumber": "20",
+        "integrationCode": "501396162723000013603526",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000193",
+            "EXOHU-AR-S-000193"
+        ]
+    },
+    {
+        "date": "2025-05-08",
+        "issueType": "Lid not Closing",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000087",
+        "compartmentNumber": "2",
+        "integrationCode": "440897269742000013601182",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000087"
+        ]
+    },
+    {
+        "date": "2025-05-07",
+        "issueType": "Lid not Opening",
+        "count": 9,
+        "uuid": "EXOHU-AR-S-000130",
+        "compartmentNumber": "15",
+        "integrationCode": "641415223540000013609082",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-S-000227",
+            "EXOHU-AR-E-000026",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000065",
+            "EXOHU-AR-S-000283",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000235"
+        ]
+    },
+    {
+        "date": "2025-05-07",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000173",
+        "compartmentNumber": "2",
+        "integrationCode": "659125005678000013602142",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000173",
+            "EXOHU-AR-S-000171"
+        ]
+    },
+    {
+        "date": "2025-05-07",
+        "issueType": "Cannot Connect BLE",
+        "count": 6,
+        "uuid": "EXOHU-AR-E-000008",
+        "compartmentNumber": "0",
+        "integrationCode": "652675001373000013601076",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000008",
+            "EXOHU-AR-S-000102",
+            "EXOHU-AR-S-000109",
+            "EXOHU-AR-S-000210",
+            "EXOHU-AR-S-000252",
+            "EXOHU-AR-S-000072"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-E-000007",
+        "compartmentNumber": "3",
+        "integrationCode": "158271900434655433601045",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-E-000007"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Lid not Closing",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000049",
+        "compartmentNumber": "1",
+        "integrationCode": "440897366737000013605700",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000049",
+            "EXOHU-AR-S-000131"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000178",
+        "compartmentNumber": "0",
+        "integrationCode": "440897347171000013601147",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000178",
+            "EXOHU-AR-S-000178"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Lid not Opening",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000046",
+        "compartmentNumber": "8",
+        "integrationCode": "631365361659000013601039",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000091"
+        ]
+    },
+    {
+        "date": "2025-06-03",
+        "issueType": "Lid not Opening",
+        "count": 12,
+        "uuid": "EXOHU-AR-S-000123",
+        "compartmentNumber": "3",
+        "integrationCode": "158272700597653323601239",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000081",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000203",
+            "EXOHU-AR-S-000090"
+        ]
+    },
+    {
+        "date": "2025-06-03",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000143",
+        "compartmentNumber": "3",
+        "integrationCode": "627835547351000013608000",
+        "username": "cour.exohu",
+        "uuids": [
+            "EXOHU-AR-S-000143",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-06-03",
+        "issueType": "Lid not Closing",
+        "count": 1,
+        "uuid": "EXOHU-AR-E-000050",
+        "compartmentNumber": "4",
+        "integrationCode": "SK1H7EG5400001KSEX",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000050"
+        ]
+    },
+    {
+        "date": "2025-06-03",
+        "issueType": "Cannot Connect BLE",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000149",
+        "compartmentNumber": "0",
+        "integrationCode": "641415249050000013601164",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000149",
+            "EXOHU-AR-S-000135",
+            "EXOHU-AR-S-000176",
+            "EXOHU-AR-S-000139"
+        ]
+    },
+    {
+        "date": "2025-06-03",
+        "issueType": "Compartment is Already Occupied",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000115",
+        "compartmentNumber": "10",
+        "integrationCode": "158271900422792883601153",
+        "username": "",
+        "uuids": [
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-06-02",
+        "issueType": "Lid not Opening",
+        "count": 10,
+        "uuid": "EXOHU-AR-S-000142",
+        "compartmentNumber": "2",
+        "integrationCode": "158271900434157843601224",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000121",
+            "EXOHU-AR-S-000123",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000090",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-E-000046"
+        ]
+    },
+    {
+        "date": "2025-06-02",
+        "issueType": "Lid not Closing",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000015",
+        "compartmentNumber": "10",
+        "integrationCode": "655385030926000013606750",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000015",
+            "EXOHU-AR-S-000270"
+        ]
+    },
+    {
+        "date": "2025-06-02",
+        "issueType": "Compartment is Empty",
+        "count": 6,
+        "uuid": "EXOHU-AR-S-000165",
+        "compartmentNumber": "13",
+        "integrationCode": "158272700595885903604031",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000165",
+            "EXOHU-AR-S-000202"
+        ]
+    },
+    {
+        "date": "2025-06-02",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000136",
+        "compartmentNumber": "1",
+        "integrationCode": "618145090018000013602071",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000136",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-06-01",
+        "issueType": "Lid not Opening",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000254",
+        "compartmentNumber": "4",
+        "integrationCode": "645385038764000013606726",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000254"
+        ]
+    },
+    {
+        "date": "2025-05-31",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-S-000273",
+        "compartmentNumber": "3",
+        "integrationCode": "440897355153000013602119",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000273"
+        ]
+    },
+    {
+        "date": "2025-05-31",
+        "issueType": "Lid not Opening",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "7",
+        "integrationCode": "645045042297000013608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000049",
+            "EXOHU-AR-S-000123"
+        ]
+    },
+    {
+        "date": "2025-06-10",
+        "issueType": "Compartment is Empty",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000244",
+        "compartmentNumber": "3",
+        "integrationCode": "394116885483000013602230",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000244",
+            "EXOHU-AR-E-000049",
+            "EXOHU-AR-S-000151",
+            "EXOHU-AR-S-000216"
+        ]
+    },
+    {
+        "date": "2025-06-10",
+        "issueType": "Lid not Opening",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000129",
+        "compartmentNumber": "5",
+        "integrationCode": "440897369378000013602051",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000091"
+        ]
+    },
+    {
+        "date": "2025-06-10",
+        "issueType": "Cannot Connect BLE",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000062",
+        "compartmentNumber": "0",
+        "integrationCode": "LR251894229NL",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000062",
+            "EXOHU-AR-E-000052",
+            "EXOHU-AR-S-000139",
+            "EXOHU-AR-S-000178"
+        ]
+    },
+    {
+        "date": "2025-06-10",
+        "issueType": "Lid not Closing",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000129",
+        "compartmentNumber": "9",
+        "integrationCode": "645385039578000013602051",
+        "username": "cour.exohu",
+        "uuids": [
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000244",
+            "EXOHU-AR-S-000156",
+            "EXOHU-AR-S-000098"
+        ]
+    },
+    {
+        "date": "2025-06-06",
+        "issueType": "Lid not Opening",
+        "count": 16,
+        "uuid": "EXOHU-AR-S-000093",
+        "compartmentNumber": "6",
+        "integrationCode": "183345059644000013607150",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000081",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000217",
+            "EXOHU-AR-S-000120",
+            "EXOHU-AR-S-000093",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-S-000054",
+            "EXOHU-AR-S-000054"
+        ]
+    },
+    {
+        "date": "2025-06-06",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000086",
+        "compartmentNumber": "1",
+        "integrationCode": "1028788151568683903481",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000086",
+            "EXOHU-AR-S-000070"
+        ]
+    },
+    {
+        "date": "2025-06-06",
+        "issueType": "Lid not Closing",
+        "count": 6,
+        "uuid": "EXOHU-AR-S-000129",
+        "compartmentNumber": "8",
+        "integrationCode": "440897369378000013602051",
+        "username": "cour.exohu",
+        "uuids": [
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000129",
+            "EXOHU-AR-S-000120"
+        ]
+    },
+    {
+        "date": "2025-06-06",
+        "issueType": "Cannot Connect BLE",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000229",
+        "compartmentNumber": "0",
+        "integrationCode": "644505021191000013606430",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000229",
+            "EXOHU-AR-S-000064",
+            "EXOHU-AR-S-000178",
+            "EXOHU-AR-S-000115"
+        ]
+    },
+    {
+        "date": "2025-06-05",
+        "issueType": "Lid not Opening",
+        "count": 20,
+        "uuid": "EXOHU-AR-S-000056",
+        "compartmentNumber": "2",
+        "integrationCode": "655385031567000013608220",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000056",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000151",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000130",
+            "EXOHU-AR-S-000142",
+            "EXOHU-AR-S-000091",
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000274",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219",
+            "EXOHU-AR-S-000219"
+        ]
+    },
+    {
+        "date": "2025-06-05",
+        "issueType": "Compartment is Empty",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000242",
+        "compartmentNumber": "1",
+        "integrationCode": "641905015695000013604625",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000242",
+            "EXOHU-AR-E-000046"
+        ]
+    },
+    {
+        "date": "2025-06-05",
+        "issueType": "Lid not Closing",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000232",
+        "compartmentNumber": "8",
+        "integrationCode": "158032600011475793601156",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000232",
+            "EXOHU-AR-S-000221",
+            "EXOHU-AR-S-000274"
+        ]
+    },
+    {
+        "date": "2025-06-05",
+        "issueType": "Cannot Connect BLE",
+        "count": 3,
+        "uuid": "EXOHU-AR-S-000210",
+        "compartmentNumber": "6",
+        "integrationCode": "645045043748000013602040",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000210",
+            "EXOHU-AR-S-000210",
+            "EXOHU-AR-S-000178"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Lid not Opening",
+        "count": 4,
+        "uuid": "EXOHU-AR-S-000089",
+        "compartmentNumber": "11",
+        "integrationCode": "158272700597118483601162",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-S-000089",
+            "EXOHU-AR-S-000134",
+            "EXOHU-AR-E-000046",
+            "EXOHU-AR-S-000091"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Compartment is Empty",
+        "count": 1,
+        "uuid": "EXOHU-AR-E-000007",
+        "compartmentNumber": "3",
+        "integrationCode": "158271900434655433601045",
+        "username": "consignee",
+        "uuids": [
+            "EXOHU-AR-E-000007"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Lid not Closing",
+        "count": 2,
+        "uuid": "EXOHU-AR-E-000049",
+        "compartmentNumber": "1",
+        "integrationCode": "440897366737000013605700",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-E-000049",
+            "EXOHU-AR-S-000131"
+        ]
+    },
+    {
+        "date": "2025-06-04",
+        "issueType": "Cannot Connect BLE",
+        "count": 2,
+        "uuid": "EXOHU-AR-S-000178",
+        "compartmentNumber": "0",
+        "integrationCode": "440897347171000013601147",
+        "username": "Exp Hu Courier",
+        "uuids": [
+            "EXOHU-AR-S-000178",
+            "EXOHU-AR-S-000178"
+        ]
+    }
+]
