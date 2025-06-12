@@ -117,7 +117,7 @@ class GetIssueTickets
             $faultyLockersByDate = []; // To store unique UUIDs grouped by date
 
             foreach ($allItems as $item) {
-                $issueType = $item['issueType'];
+                $issueType = $item['issueType'];                            
                 $date = $item['date'];
                 $uuid = $item['uuid'];
 
@@ -125,6 +125,11 @@ class GetIssueTickets
                     $faultyLockersByDate[$date] = [];
                 }
 
+                // check if the payload['issueType']  contains the issueType. If yes, then add the uuid to the faultyLockersByDate array otherwise skip it
+                if (isset($payload['issueType']) && !in_array($issueType, $payload['issueType'])) {
+                    continue; // Skip this item if the issueType does not match
+                }
+                
                 $faultyLockersByDate[$date][] = $uuid;
 
                 // // Check combined and separate conditions
