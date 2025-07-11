@@ -65,7 +65,7 @@ class CheckLocker
             $pageSize = $lockerData['pageSize'];
             $url = $this->losGetLockerStationsForPortalUrl;
             $LockerStationHistoryModel = [];
-            
+
             $data = array('Countrycode' => 'HU', 'Filter' => null, 'LockerStationHistoryModel' => $LockerStationHistoryModel, 'maxResultCount' => 500, 'skipCount' => 0);
 
             $ch = curl_init($url);
