@@ -1,6 +1,10 @@
 <?php
-require('../../inc/secretkey.php');
-require('../../vendor/autoload.php');
+require(DOC_ROOT . '/inc/secretkey.php');
+require(DOC_ROOT. '/vendor/autoload.php');
+
+// require('../../inc/secretkey.php');
+// require('../../vendor/autoload.php');
+
 
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
