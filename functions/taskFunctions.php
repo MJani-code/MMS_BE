@@ -1043,7 +1043,7 @@ function addTask($conn, $newTask, $userId)
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         $taskId = $result['payload'][0]['MAX(id)'];
 
-        //task_lockers táblába beszúró lekérdezés        
+        //task_lockers táblába beszúró lekérdezés
         if (isset($newTask['lockers'])) {
             foreach ($newTask['lockers'] as $locker) {
                 $lockerSql = "INSERT INTO task_lockers (task_id, task_locations_id, tof_shop_id, brand, serial, type, created_by) VALUES (?,?,?,?,?,?,?)";
@@ -1058,9 +1058,9 @@ function addTask($conn, $newTask, $userId)
         $taskTypesStmt->execute([$typeId, $taskId, $userId]);
 
         //task_dates táblába beszúró lekérdezés
-        $taskDatesSql = "INSERT INTO task_dates (task_id, created_by) VALUES (?,?)";
+        $taskDatesSql = "INSERT INTO task_dates (task_id, planned_delivery_date, created_by) VALUES (?,?,?)";
         $taskDatesStmt = $conn->prepare($taskDatesSql);
-        $taskDatesStmt->execute([$taskId, $userId]);
+        $taskDatesStmt->execute([$taskId, $plannedDeliveryDate, $userId]);
 
         //task_responsibels táblába beszúró lekérdezés
         if ($responsible) {
@@ -1072,9 +1072,9 @@ function addTask($conn, $newTask, $userId)
         //newTask['lockers'] körbejárása és adatainak beszúrása a task_locker_issues táblába
         foreach ($newTask['lockers'] as $locker) {
             foreach ($locker['issues'] as $issue) {
-                $lockerSql = "INSERT INTO task_lockers_issues (task_lockers_id, task_id, tof_shop_id, uuid, issue_type, compartment_number, created_by) VALUES (?,?,?,?,?,?,?)";
+                $lockerSql = "INSERT INTO task_lockers_issues (task_lockers_id, task_id, tof_shop_id, uuid, issue_type, description, compartment_number, created_by) VALUES (?,?,?,?,?,?,?,?)";
                 $lockerStmt = $conn->prepare($lockerSql);
-                $lockerStmt->execute([$locker['lockerId'], $taskId, $tofShopId, $locker['serial'], $issue['type'], $issue['compartmentNumber'], $userId]);
+                $lockerStmt->execute([$locker['lockerId'], $taskId, $tofShopId, $locker['serial'], $issue['type'], $locker['description'], $issue['compartmentNumber'], $userId]);
             }
         }
 
