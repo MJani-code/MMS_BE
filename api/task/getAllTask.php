@@ -78,7 +78,7 @@ class GetAllTask
                     'tl.id as location_id',
                     'tl.fixing_method',
                     'tl.required_site_preparation',
-                    'tl.comment',
+                    'CONCAT(tl.comment, " ", tli.description) as comment',
                     'tl.company_feedback as feedback',
                     'c.id as "responsible"',
                     'td.planned_delivery_date',
@@ -97,6 +97,7 @@ class GetAllTask
                         LEFT JOIN task_dates td on td.task_id = t.id
                         LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0                        
                         LEFT JOIN companies c on c.id = tr.company_id
+                        LEFT JOIN task_lockers_issues tli on tli.task_id = t.id
                         ",
 
                 //'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
