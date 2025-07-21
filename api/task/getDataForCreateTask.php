@@ -87,8 +87,8 @@ class GetData
             $lockerStmt = [
                 'table' => "task_lockers tl",
                 'method' => "get",
-                'columns' => ['tl.id', 'tl.tof_shop_id as tofShopId' ,'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
-                'others' => "",
+                'columns' => ['tl.id', 'tloc.tof_shop_id as tofShopId' ,'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
+                'others' => "LEFT JOIN task_locations tloc ON tloc.id = tl.task_locations_id",
                 'conditions' => "tl.deleted = 0"
             ];
             $result = dataToHandleInDb($this->conn, $lockerStmt);
