@@ -3,3 +3,5 @@ uploads/
 PHPMailer/
 .htaccess
 vendor/
+api/reports/logs/
+api/task/d4me/logs/
