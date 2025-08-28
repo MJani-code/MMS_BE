@@ -1133,6 +1133,19 @@ function getTofShopId($url)
     }
 }
 
+function getExoboxPoints($url)
+{
+    try {
+        //API hívás és eredményének feldolgozása
+        $response = file_get_contents($url);
+        $data = json_decode($response, true);
+
+        return createResponse(200, "success", $data);
+    } catch (Exception $e) {
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
+    }
+}
+
 function addIntervention($conn, $taskId, $newIntervention, $userId)
 {
     try {
