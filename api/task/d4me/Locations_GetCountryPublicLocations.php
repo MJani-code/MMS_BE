@@ -44,7 +44,7 @@ class getLocations
         ];
     }
 
-        private function callApi($url, $token)
+    private function callApi($url, $token)
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -98,7 +98,7 @@ class getLocations
 
 
         //Second API url with pageSize set to dataCount
-        $urlWithPageSize = $this->d4meApiUrl . 'pageSize=' . $dataCount;
+        $urlWithPageSize = $this->d4meApiUrl . '&pageSize=' . $dataCount;
         $apiResponse = $this->callApi($urlWithPageSize, $this->tokenD4Me);
 
         if (isset($apiResponse['error'])) {
