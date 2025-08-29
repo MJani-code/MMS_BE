@@ -28,11 +28,15 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
         return;
     }
     $userRoleId = $userAuthData['data']->roleId;
+
     //getData
     function getData($conn, $manipulatedData, $data, $tofShopIds)
     {
-        // echo json_encode($data);
+
         if (isset($data['baseTaskData']['payload'])) {
+            //getExoboxPoints
+            $exoboxPoints = getExoboxPoints('https://tracking.expressone.hu/pickup/get/?cond=all&&exobox=1&omv=0&packeta=0&alzabox=0', null);
+
             $groupedData = [];
             // Segédtömb az ismétlődések elkerülésére
             $uniqueTaskFees = [];
@@ -67,7 +71,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
                 //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
                 if (in_array($task['tof_shop_id'], $tofShopIds)) {
                     $groupedData[$existingIndex]['isActiveInAdmin'] = true;
-                    $groupedData[$existingIndex]['pointId'] = getExoboxPoints('https://tracking.expressone.hu/pickup/get/?cond=all&&exobox=1&omv=0&packeta=0&alzabox=0',$task['tof_shop_id']);
+                    //ha a tof_shop_id szerepel az exoPoints tömbb valamelyik objectének ID kulcsában, akkor az adott objektum point_id-ját el kell kapni
+                    foreach ($exoboxPoints['points'] as $point) {
+                        if ($point['id'] == $task['tof_shop_id']) {
+                            $groupedData[$existingIndex]['pointId'] = $point['point_id'];
+                            break;
+                        }
+                    }                    
                 } else {
                     $groupedData[$existingIndex]['isActiveInAdmin'] = false;
                 }
@@ -1142,13 +1152,13 @@ function getExoboxPoints($url, $id)
             //API hívás és eredményének feldolgozása
             $response = file_get_contents($url);
             $data = json_decode($response, true);
-
-            return createResponse(200, "success", $data);
+            
+            return $data;
         } catch (Exception $e) {
             return createResponse(400, "Hiba történt: " . $e->getMessage());
         }
-    } else {        
-        try {        
+    } else {
+        try {
             $response = file_get_contents($url);
             $data = json_decode($response, true);
             //echo json_encode($data);
