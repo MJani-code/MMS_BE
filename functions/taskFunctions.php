@@ -53,6 +53,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
                     $newTask['responsibles'] = [];
                     $newTask['location_photos'] = [];
                     $newTask['isActiveInAdmin'] = null;
+                    $newTask['pointId'] = null;
                     unset($newTask['types'], $newTask['responsible'], $newTask['url']);
                     $groupedData[] = $newTask;
                     $existingIndex = array_key_last($groupedData); // Frissítjük az existingIndex-et az új elem indexével
@@ -66,6 +67,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
                 //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
                 if (in_array($task['tof_shop_id'], $tofShopIds)) {
                     $groupedData[$existingIndex]['isActiveInAdmin'] = true;
+                    $groupedData[$existingIndex]['pointId'] = getExoboxPoints('https://tracking.expressone.hu/pickup/get/?cond=all&&exobox=1&omv=0&packeta=0&alzabox=0',$task['tof_shop_id']);
                 } else {
                     $groupedData[$existingIndex]['isActiveInAdmin'] = false;
                 }
@@ -877,7 +879,7 @@ function downloadTasks($conn, $inputData)
             LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.id = tr_min.id
             LEFT JOIN companies c on c.id = tr.company_id
             WHERE t.status_by_exohu_id IN ($statuses) AND tf.deleted = 0;");
-        $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);        
+        $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Excel generálása
         $spreadsheet = new Spreadsheet();
@@ -1133,16 +1135,35 @@ function getTofShopId($url)
     }
 }
 
-function getExoboxPoints($url)
+function getExoboxPoints($url, $id)
 {
-    try {
-        //API hívás és eredményének feldolgozása
-        $response = file_get_contents($url);
-        $data = json_decode($response, true);
+    if (!isset($id)) {
+        try {
+            //API hívás és eredményének feldolgozása
+            $response = file_get_contents($url);
+            $data = json_decode($response, true);
 
-        return createResponse(200, "success", $data);
-    } catch (Exception $e) {
-        return createResponse(400, "Hiba történt: " . $e->getMessage());
+            return createResponse(200, "success", $data);
+        } catch (Exception $e) {
+            return createResponse(400, "Hiba történt: " . $e->getMessage());
+        }
+    } else {        
+        try {        
+            $response = file_get_contents($url);
+            $data = json_decode($response, true);
+            //echo json_encode($data);
+            //visszadni az a $data['point_id']-t, ahol az $data['id'] = $id
+            foreach ($data['points'] as $point) {
+                if ($point['id'] == $id) {
+                    //echo $point['point_id'];
+
+                    return $point['point_id'];
+                }
+            }
+            return createResponse(404, "Nem található a megadott ID-hoz tartozó pont.");
+        } catch (Exception $e) {
+            return createResponse(400, "Hiba történt: " . $e->getMessage());
+        }
     }
 }
 
