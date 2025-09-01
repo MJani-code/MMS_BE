@@ -83,7 +83,9 @@ class GetAllTask
                     'c.id as "responsible"',
                     'td.planned_delivery_date',
                     'td.delivery_date',
-                    'tlp.url'
+                    'tlp.url',
+                    'CONCAT(UPPER(LEFT(u.last_name, 1)), UPPER(LEFT(u.first_name, 1))) as createdBy',
+                    't.created_at as createdAt'
                 ],
                 'others' => "
                         LEFT JOIN task_types tt on tt.task_id = t.id AND tt.deleted = 0
@@ -97,6 +99,7 @@ class GetAllTask
                         LEFT JOIN task_dates td on td.task_id = t.id
                         LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0                        
                         LEFT JOIN companies c on c.id = tr.company_id
+                        LEFT JOIN users u on u.id = t.created_by
                         ",
 
                 //'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
@@ -151,6 +154,7 @@ class GetAllTask
                     'tl.type',
                     'tl.fault',
                     'tl.tof_shop_id',
+                    'tl.controller_id as controllerId',
                     'tl.is_registered',
                     'tl.is_active',
                     'tl.private_key1_error as privateKey1Error',
