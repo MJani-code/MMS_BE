@@ -5,8 +5,7 @@ require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../vendor/autoload.php');
 
-
-//hibaüzenetek bekapcsolása
+//debug error
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -96,12 +95,13 @@ class GetIssueTickets
             }
 
             //get exoboxPoints
-            $result = getExoboxPoints($this->tofShopIdUrl);
-            if ($result['status'] !== 200) {
+            $result = getExoboxPoints($this->tofShopIdUrl, null);
+
+            if (empty($result)) {
                 $this->logger->error('Error fetching exobox points: ' . $result);
-                return $this->response = $this->createResponse($result['status'], $result['message']);
+                return $this->response = $this->createResponse($result, null, null);
             }
-            $exoboxPoints = $result['payload']['points'];
+            $exoboxPoints = $result['points'];
 
             // Filter data based on payload
             $filteredData = array_filter($storedData, function ($item) use ($payload) {
