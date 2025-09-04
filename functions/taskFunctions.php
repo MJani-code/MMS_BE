@@ -16,7 +16,7 @@ function createResponse($status, $errorMessage = '', $data = null)
     ];
 }
 
-function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
+function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActivePointsUrl, $user, $password)
 {
     $manipulatedData = array(
         'status' => 200,
@@ -30,12 +30,12 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
     $userRoleId = $userAuthData['data']->roleId;
 
     //getData
-    function getData($conn, $manipulatedData, $data, $tofShopIds)
+    function getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password)
     {
 
         if (isset($data['baseTaskData']['payload'])) {
             //getExoboxPoints
-            $exoboxPoints = getExoboxPoints('https://tracking.expressone.hu/pickup/get/?cond=all&&exobox=1&omv=0&packeta=0&alzabox=0', null);
+            $exoboxPoints = getExoboxPoints($getAllActivePointsUrl, $user, $password, null);
 
             $groupedData = [];
             // Segédtömb az ismétlődések elkerülésére
@@ -71,15 +71,16 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
                 //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
                 if (in_array($task['tof_shop_id'], $tofShopIds)) {
                     $groupedData[$existingIndex]['isActiveInAdmin'] = true;
-                    //ha a tof_shop_id szerepel az exoPoints tömbb valamelyik objectének ID kulcsában, akkor az adott objektum point_id-ját el kell kapni
-                    foreach ($exoboxPoints['points'] as $point) {
-                        if ($point['id'] == $task['tof_shop_id']) {
-                            $groupedData[$existingIndex]['pointId'] = $point['point_id'];
-                            break;
-                        }
-                    }                    
                 } else {
                     $groupedData[$existingIndex]['isActiveInAdmin'] = false;
+                }
+
+                foreach ($exoboxPoints['payload'] as $point) {
+                    //echo json_encode($point);
+                    if ($point['id'] == $task['tof_shop_id']) {
+                        $groupedData[$existingIndex]['pointId'] = $point['point_id'];
+                        break;
+                    }
                 }
 
                 if (isset($task['types']) && $task['types'] !== null && !in_array($task['types'], $groupedData[$existingIndex]['taskTypes'])) {
@@ -369,7 +370,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds)
         }
     }
 
-    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds);
+    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password);
     $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId);
@@ -1145,14 +1146,19 @@ function getTofShopId($url)
     }
 }
 
-function getExoboxPoints($url, $id)
+function getExoboxPoints($url, $user, $password, $id)
 {
     if (!isset($id)) {
         try {
             //API hívás és eredményének feldolgozása
-            $response = file_get_contents($url);
+            $context = stream_context_create([
+                'http' => [
+                    'header' => "Authorization: Basic " . base64_encode("$user:$password")
+                ]
+            ]);
+            $response = file_get_contents($url, false, $context);
             $data = json_decode($response, true);
-            
+
             return $data;
         } catch (Exception $e) {
             return createResponse(400, "Hiba történt: " . $e->getMessage());
