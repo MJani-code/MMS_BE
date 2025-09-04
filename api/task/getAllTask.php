@@ -12,19 +12,25 @@ class GetAllTask
 {
     private $conn;
     private $tofShopIdUrl;
+    private $getAllActivePointsUrl;
+    private $user;
+    private $password;
     private $tofShopIds;
     private $response;
     private $taskData = [];
     private $auth;
     private $userAuthData;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds = [])
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds = [], $getAllActivePointsUrl, $user, $password)
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
         $this->response = &$response;
         $this->auth = $auth;
         $this->tofShopIds = $tofShopIds;
+        $this->getAllActivePointsUrl = $getAllActivePointsUrl;
+        $this->user = $user;
+        $this->password = $password;
     }
 
 
@@ -226,7 +232,7 @@ class GetAllTask
     {
         $rowData = $this->taskData;
         if ($rowData) {
-            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds);
+            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds, $this->getAllActivePointsUrl, $this->user, $this->password);
             $response = $result;
         }
     }
@@ -238,7 +244,7 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl);
+$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);
