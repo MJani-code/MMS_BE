@@ -26,14 +26,20 @@ class GetIssueTickets
     private $token;
     private $logger;
     private $tofShopIdUrl;
+    private $getAllActivePointsUrl;
+    private $user;
+    private $password;
 
-    public function __construct($conn, &$response, $token, $logger, $tofShopIdUrl)
+    public function __construct($conn, &$response, $token, $logger, $tofShopIdUrl, $getAllActivePointsUrl, $user, $password)
     {
         $this->conn = $conn;
         $this->response = &$response;
         $this->token = $token;
         $this->logger = $logger;
         $this->tofShopIdUrl = $tofShopIdUrl;
+        $this->getAllActivePointsUrl = $getAllActivePointsUrl;
+        $this->user = $user;
+        $this->password = $password;
     }
 
     private function createResponse($status, $message, $data = null)
@@ -95,13 +101,13 @@ class GetIssueTickets
             }
 
             //get exoboxPoints
-            $result = getExoboxPoints($this->tofShopIdUrl, null);
+            $result = getExoboxPoints($this->getAllActivePointsUrl, $this->user, $this->password, null);
 
             if (empty($result)) {
                 $this->logger->error('Error fetching exobox points: ' . $result);
                 return $this->response = $this->createResponse($result, null, null);
             }
-            $exoboxPoints = $result['points'];
+            $exoboxPoints = $result['payload'];
 
             // Filter data based on payload
             $filteredData = array_filter($storedData, function ($item) use ($payload) {
@@ -164,6 +170,6 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$getIssueTickets = new GetIssueTickets($conn, $response, $token, $logger, $tofShopIdUrl);
+$getIssueTickets = new GetIssueTickets($conn, $response, $token, $logger, $tofShopIdUrl, $getAllActivePointsUrl, $user, $password);
 $getIssueTickets->getIssueTicketsFunction($payload);
 echo json_encode($response);
