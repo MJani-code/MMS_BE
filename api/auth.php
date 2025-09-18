@@ -67,6 +67,11 @@ class AuthHandler
                         echo $this->createResponse(400, 'Hiányzik a token.');
                     } else {
                         //urlTo kikérdezése adatbázisból
+                        // Normalizáljuk az urlTo-t: ha nem csak '/', akkor távolítsuk el a végéről a '/' jelet
+                        if ($urlTo !== '/' && substr($urlTo, -1) === '/') {
+                            $urlTo = rtrim($urlTo, '/');
+                        }                        
+
                         $userId = $user['user_id'];
                         $query = "SELECT rr.is_visible, rr.role_id
                           FROM role_routes rr
