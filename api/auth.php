@@ -77,7 +77,7 @@ class AuthHandler
                           FROM role_routes rr
                           LEFT JOIN users u ON rr.role_id = u.role_id
                           JOIN routes r ON rr.route_id = r.id
-                          WHERE r.path = :urlTo AND u.id = :userId";
+                          WHERE :urlTo LIKE CONCAT(r.path, '%') AND u.id = :userId";
                         $stmt = $this->conn->prepare($query);
                         $stmt->execute(['urlTo' => $urlTo, 'userId' => $userId]);
                         $isPathAccessible = $stmt->fetchColumn();
