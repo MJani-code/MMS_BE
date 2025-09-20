@@ -5,6 +5,7 @@ require('../../vendor/autoload.php');
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Cell\Hyperlink;
 
 // Alapértelmezett válasz formázása
 function createResponse($status, $errorMessage = '', $data = null)
@@ -1229,5 +1230,108 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
         // Hiba esetén rollback
         $conn->rollBack();
         return createResponse(400, $e->getMessage());
+    }
+}
+
+function downloadNewPoints($data)
+{
+    try {
+        $adatok = $data;
+
+        // Excel generálása
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Fejléc
+        $fejlec = ['tof_shop_id', 'box_id', 'status_exohu', 'latitude', 'longitude', 'location_photos', 'delivery_date'];
+        $sheet->fromArray($fejlec, NULL, 'A1');
+
+        $startRow = 2;
+        $currentRow = $startRow;
+
+        foreach ($adatok as $sor) {
+            // Ellenőrizzük, hogy van-e tömb típusú value
+            $hasArray = false;
+            $arrayCol = '';
+            foreach ($fejlec as $col) {
+                if (is_array($sor[$col] ?? null)) {
+                    $hasArray = true;
+                    $arrayCol = $col;
+                    break;
+                }
+            }
+
+            if ($hasArray && !empty($sor[$arrayCol])) {
+                foreach ($sor[$arrayCol] as $arrayElem) {
+                    $rowData = [];
+                    foreach ($fejlec as $col) {
+                        if ($col === $arrayCol) {
+                            // Ha a tömbelem asszociatív tömb és van benne 'url', csak azt írd ki
+                            if (is_array($arrayElem) && isset($arrayElem['url'])) {
+                                $rowData[] = $arrayElem['url'];
+                            }else {
+                                $rowData[] = is_array($arrayElem) ? json_encode($arrayElem, JSON_UNESCAPED_UNICODE) : $arrayElem;
+                            }
+                        } else {
+                            $value = $sor[$col] ?? '';
+                            if (is_array($value)) {
+                                $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+                            }
+                            $rowData[] = $value;
+                        }
+                    }
+                    $sheet->fromArray($rowData, NULL, 'A' . $currentRow);
+
+                    $cell = $sheet->getCell('F' . $currentRow);
+                    $cell->getHyperlink()->setUrl($rowData[5]);
+
+                    $currentRow++;
+                }
+            } else {
+                // Nincs tömb, sima sor
+                $rowData = [];
+                foreach ($fejlec as $col) {
+                    $value = $sor[$col] ?? '';
+                    if (is_array($value)) {
+                        // Ha asszociatív tömb és van benne 'url', csak azt írd ki
+                        if (isset($value['url'])) {
+                            $value = $value['url'];
+                        } else {
+                            $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+                        }
+                    }
+                    $rowData[] = $value;
+                }
+                $sheet->fromArray($rowData, NULL, 'A' . $currentRow);
+                $currentRow++;
+            }
+        }
+
+        // Ideiglenes fájl létrehozása
+        $temp_file = tempnam(sys_get_temp_dir(), 'excel');
+        $temp_file_with_ext = $temp_file . '.xlsx';
+        rename($temp_file, $temp_file_with_ext);
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($temp_file_with_ext);
+
+        // Fájl letöltése
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="newpoints.xlsx"');
+        header('Cache-Control: max-age=0');
+        readfile($temp_file_with_ext);
+
+        // Fájl törlése
+        unlink($temp_file_with_ext);
+        exit();
+    } catch (Throwable $e) {
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+        }
+        echo json_encode([
+            'status' => 400,
+            'message' => $e->getMessage()
+        ]);
+        exit();
     }
 }
