@@ -86,6 +86,7 @@ class GetAllTask
                     'tl.required_site_preparation',
                     'tl.comment',
                     'tl.company_feedback as feedback',
+                    'tl.locker_approach as lockerApproach',
                     'c.id as "responsible"',
                     'td.planned_delivery_date',
                     'td.delivery_date',
@@ -110,7 +111,7 @@ class GetAllTask
 
                 //'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
                 // 'conditions' => (!in_array(17, $permissions) ? "tr.company_id = $companyId ORDER BY id" : "tr.company_id in (1,2,3)"),
-                //'order' => "ORDER BY id"                            
+                'order' => "ORDER BY id DESC"
             ];
             if (!in_array(17, $permissions)) {
                 $baseTaskData['conditions'] .= " tr.company_id = $companyId";
@@ -125,7 +126,7 @@ class GetAllTask
                     'f.fee_type as type',
                     "f.net_unit_price as value"
                 ]
-            ];            
+            ];
             if (!in_array(23, $permissions)) {
                 $fees['conditions'] .= " f.company_id = $companyId AND f.is_active = 1 ORDER BY f.name DESC";
             } else {
