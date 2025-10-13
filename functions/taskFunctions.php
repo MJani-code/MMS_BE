@@ -1196,13 +1196,9 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
 
         // Beavatkozás és hiba összekapcsolása beszúró lekérdezés
         $interventionIssuesSql = "INSERT INTO intervention_issues (intervention_id, issue_id) VALUES (?, ?)";
-        $interventionIssuesStmt = $conn->prepare($interventionIssuesSql);
+        $interventionIssuesStmt = $conn->prepare($interventionIssuesSql);        
 
-        //Alkatrész felhasználása a beavatkozásban beszúró lekérdezés
-        $taskTypesSql = "INSERT INTO task_types (type_id, task_id, created_by) VALUES (?,?,?)";
-        $taskTypesStmt = $conn->prepare($taskTypesSql);
-
-        //task_dates táblába beszúró lekérdezés
+        // task_locker_intervention_parts táblába beszúró lekérdezés
         $taskLockerInterventionPartsSql = "INSERT INTO task_locker_intervention_parts (intervention_id, part_id, quantity) VALUES (?, ?, ?)";
         $taskLockerInterventionPartsStmt = $conn->prepare($taskLockerInterventionPartsSql);
 
