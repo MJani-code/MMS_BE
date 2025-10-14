@@ -8,7 +8,7 @@ require('../../api/user/auth/auth.php');
 
 $response = [];
 
-class GetAllInvoicedTask
+class getCompletedTasks
 {
     private $conn;
     private $response;
@@ -28,7 +28,7 @@ class GetAllInvoicedTask
             'data' => $data,
         ];
     }
-    public function getIvoicedTasksData($token)
+    public function getCompletedTasksData($token)
     {
         //token értékét kikérni közvetlenül db-ből
         try {
@@ -60,38 +60,45 @@ class GetAllInvoicedTask
             $placeholders = implode(',', array_fill(0, count($taskTypes), '?'));
 
             // Base query
-            $query = "SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tl.name, concat(tl.city,' ',tl.address) as address, sum(DISTINCT tf.total) as total, td.delivery_date as deliveryDate
-            FROM task_fees tf
-            LEFT JOIN tasks t on t.id = tf.task_id
-            LEFT JOIN task_locations tl on tl.id = t.task_locations_id
-            LEFT JOIN task_dates td on td.task_id = t.id
-            LEFT JOIN (
-                SELECT DISTINCT task_id, type_id
-                FROM task_types
-                WHERE deleted = 0
-            ) tt ON tt.task_id = t.id            
-            WHERE t.status_by_exohu_id = 10 AND tf.deleted = 0";
+            $query = "SELECT
+                t.id as taskId, GROUP_CONCAT(ttd.name) as taskType, ts.name as status, td.delivery_date as deliveryDate
+                FROM `tasks` t
+                LEFT JOIN task_dates td on td.task_id = t.id
+                LEFT JOIN task_locations tl on tl.id = t.task_locations_id
+                LEFT JOIN task_statuses ts on ts.id = t.status_by_exohu_id
+                LEFT JOIN(
+                    SELECT DISTINCT
+                        task_id,
+                        type_id
+                    FROM
+                        task_types
+                    WHERE
+                        deleted = 0
+                ) tt
+                ON
+                    tt.task_id = t.id
+                LEFT JOIN task_type_details ttd ON ttd.id = tt.type_id
+                WHERE
+                    t.status_by_exohu_id = 10";
 
-            // Append the IN clause if there are task statuses
+            // Append the IN clause if there are task types
             if (count($taskTypes) > 0) {
                 $query .= " AND tt.type_id IN ($placeholders)";
             }
 
             // Complete the query
-            $query .= " GROUP BY tl.tof_shop_id;";
+            $query .= " GROUP BY t.id;";
 
             $stmt = $this->conn->prepare($query);
-            
+
             // Bind the values to the placeholders
             if (count($taskTypes) > 0) {
                 $stmt->execute($taskTypes);
             } else {
                 $stmt->execute();
             }
-            
-            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // $result['postedData'] = $taskStatuses;
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             return $this->response = $result;
         } catch (Exception $e) {
@@ -110,7 +117,7 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$getAllTask = new GetAllInvoicedTask($conn, $response, $auth);
-$getAllTask->getIvoicedTasksData($token);
+$getCompletedTasks = new getCompletedTasks($conn, $response, $auth);
+$getCompletedTasks->getCompletedTasksData($token);
 
 echo json_encode($response);
