@@ -1239,7 +1239,7 @@ function downloadNewPoints($data)
         $sheet = $spreadsheet->getActiveSheet();
 
         // Fejléc
-        $fejlec = ['tof_shop_id', 'box_id', 'status_exohu', 'latitude', 'longitude', 'location_photos', 'delivery_date'];
+        $fejlec = ['tof_shop_id', 'box_id', 'status_exohu', 'latitude', 'longitude', 'location_photos', 'delivery_date', 'lockerApproach'];
         $sheet->fromArray($fejlec, NULL, 'A1');
 
         $startRow = 2;
