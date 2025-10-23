@@ -654,12 +654,13 @@ function xlsFileRead($filePath)
         $highestRow = $sheet->getHighestRow('A');
 
         // 2. Az érdekes fejlécek meghatározása
-        $wantedHeaders = ['Name', 'Serial Number', 'TofShop ID', 'ZIP code', 'City', 'Address', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
+        $wantedHeaders = ['Name', 'Serial Number', 'TofShop ID', 'Box ID', 'ZIP code', 'City', 'Address', 'External / Internal', 'Fixing', 'Site Preparation required', 'Comment'];
         $requiredFields = ['TofShop ID', 'External / Internal'];
         $headerIndexes = [];
         $keyMapping = [
             'Name' => 'name',
             'TofShop ID' => 'tof_shop_id',
+            'Box ID' => 'box_id',
             'ZIP code' => 'zip',
             'City' => 'city',
             'Address' => 'address',
@@ -761,7 +762,7 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
         $taskStmt = $conn->prepare($taskSql);
 
         // `task_locations` tábla beszúró lekérdezés
-        $taskLocationSql = "INSERT INTO task_locations (name, tof_shop_id, zip, city, address, created_by, location_type_id, fixing_method, required_site_preparation, comment) VALUES (?,?,?,?,?,?,?,?,?,?)";
+        $taskLocationSql = "INSERT INTO task_locations (name, tof_shop_id, box_id, zip, city, address, created_by, location_type_id, fixing_method, required_site_preparation, comment) VALUES (?,?,?,?,?,?,?,?,?,?,?)";
         $taskLocationStmt = $conn->prepare($taskLocationSql);
 
         //task_types táblába beszúró lekérdezés
@@ -785,7 +786,7 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
             // }
 
             // Location adatok bezsúrása a task_locations táblába
-            $taskLocationStmt->execute([$newLocation['name'], $newLocation['tof_shop_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
+            $taskLocationStmt->execute([$newLocation['name'], $newLocation['tof_shop_id'], $newLocation['box_id'], $newLocation['zip'], $newLocation['city'], $newLocation['address'], $userId, $newLocation['location_type_id'], $newLocation['fixing_method'], $newLocation['required_site_preparation'], $newLocation['comment']]);
             $taskLocationId = $conn->lastInsertId();
 
             // Task beszúrása a `tasks` táblába
@@ -1196,7 +1197,7 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
 
         // Beavatkozás és hiba összekapcsolása beszúró lekérdezés
         $interventionIssuesSql = "INSERT INTO intervention_issues (intervention_id, issue_id) VALUES (?, ?)";
-        $interventionIssuesStmt = $conn->prepare($interventionIssuesSql);        
+        $interventionIssuesStmt = $conn->prepare($interventionIssuesSql);
 
         // task_locker_intervention_parts táblába beszúró lekérdezés
         $taskLockerInterventionPartsSql = "INSERT INTO task_locker_intervention_parts (intervention_id, part_id, quantity) VALUES (?, ?, ?)";
@@ -1265,7 +1266,7 @@ function downloadNewPoints($data)
                             // Ha a tömbelem asszociatív tömb és van benne 'url', csak azt írd ki
                             if (is_array($arrayElem) && isset($arrayElem['url'])) {
                                 $rowData[] = $arrayElem['url'];
-                            }else {
+                            } else {
                                 $rowData[] = is_array($arrayElem) ? json_encode($arrayElem, JSON_UNESCAPED_UNICODE) : $arrayElem;
                             }
                         } else {
