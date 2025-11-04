@@ -1192,31 +1192,50 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
         $conn->beginTransaction();
 
         // Beavatkozás beszúró lekérdezés
-        $taskLockersInterventionSql = "INSERT INTO task_lockers_interventions (task_id, uuid, performed_by, notes) VALUES (?,?,?,?)";
+        $taskLockersInterventionSql = "INSERT INTO task_lockers_interventions (task_id, intervention_id, uuid, performed_by, notes) VALUES (?,?,?,?,?)";
         $taskLockersInterventionStmt = $conn->prepare($taskLockersInterventionSql);
 
         // Beavatkozás és hiba összekapcsolása beszúró lekérdezés
         $interventionIssuesSql = "INSERT INTO intervention_issues (intervention_id, issue_id) VALUES (?, ?)";
         $interventionIssuesStmt = $conn->prepare($interventionIssuesSql);
 
+        // task_locker_issues update lekérdezés az issue solved érték alapján
+        $taskLockerIssuesUpdateSql = "UPDATE task_lockers_issues SET is_solved = ?, updated_at = NOW(), updated_by = ? WHERE id = ?";
+        $taskLockerIssuesUpdateStmt = $conn->prepare($taskLockerIssuesUpdateSql);
+
         // task_locker_intervention_parts táblába beszúró lekérdezés
-        $taskLockerInterventionPartsSql = "INSERT INTO task_locker_intervention_parts (intervention_id, part_id, quantity) VALUES (?, ?, ?)";
+        $taskLockerInterventionPartsSql = "INSERT INTO task_locker_intervention_parts (intervention_id, part_id, quantity, created_by) VALUES (?, ?, ?, ?)";
         $taskLockerInterventionPartsStmt = $conn->prepare($taskLockerInterventionPartsSql);
 
+        //stock_movements táblába beszúró lekérdezés
+        $stockMovementsSql = "INSERT INTO stock_movements (part_id, warehouse_id, task_locker_intervention_parts_id, change_amount, reason, created_by) VALUES (?, ?, ?, ?, ?, ?)";
+        $stockMovementsStmt = $conn->prepare($stockMovementsSql);
+
         foreach ($newIntervention as $intervention) {
-
             // Beavatkozás beszúrása
-            $taskLockersInterventionStmt->execute([$taskId, $intervention['uuid'], $userId, $intervention['notes']]);
-            $interventionId = $conn->lastInsertId();
+            $taskLockersInterventionStmt->execute([$taskId, $intervention['interventionId'], $intervention['uuid'], $userId, $intervention['notes']]);
+            $lastInsertedInterventionId = $conn->lastInsertId();
 
-            // Beavatkozás és hiba összekapcsolása
             foreach ($intervention['issues'] as $issue) {
-                $interventionIssuesStmt->execute([$interventionId, $issue['id']]);
+                // Beavatkozás és hiba összekapcsolása
+                $interventionIssuesStmt->execute([$lastInsertedInterventionId, $issue['id']]);
+                // task_locker_issues update az issue solved érték alapján
+                $taskLockerIssuesUpdateStmt->execute([$issue['solved'] ? 1 : 0, $userId, $issue['id']]);
             }
 
             // Alkatrész felhasználása a beavatkozásban
             foreach ($intervention['parts'] as $part) {
-                $taskLockerInterventionPartsStmt->execute([$interventionId, $part['id'], $part['quantity']]);
+                //part_id lekérdezése stockId alapján
+                $stmt = $conn->prepare("SELECT s.part_id, s.warehouse_id FROM stock s
+                WHERE s.id = ?");
+                $stmt->execute([$part['stockId']]);
+                $partData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                $taskLockerInterventionPartsStmt->execute([$lastInsertedInterventionId, $partData['part_id'], $part['quantity'], $userId]);
+
+                // Alkatrész készlet mozgás rögzítése
+                $taskLockerInterventionPartsId = $conn->lastInsertId();
+                $stockMovementsStmt->execute([$partData['part_id'], $partData['warehouse_id'], $taskLockerInterventionPartsId, -$part['quantity'], 'OUT', $userId]);
             }
         }
 
