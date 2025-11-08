@@ -35,7 +35,7 @@ class addIntervention
     public function addInterventionFunction($payload)
     {
         $userId = null;
-        $isAccess = $this->auth->authenticate(14);
+        $isAccess = $this->auth->authenticate(26);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {

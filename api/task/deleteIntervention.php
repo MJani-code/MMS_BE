@@ -36,7 +36,7 @@ class deleteIntervention
     {
         // Authenticate user (use same permission id as other actions)
         $userId = null;
-        $isAccess = $this->auth->authenticate(14);
+        $isAccess = $this->auth->authenticate(27);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {
