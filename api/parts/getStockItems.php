@@ -45,19 +45,20 @@ class StockItems
                     p.part_number AS partNumber,
                     p.name AS partName,
                     pc.name AS category,
-                    s.quantity,
+                    ifnull(s.quantity, 0) AS quantity,
                     w.id AS warehouseId,
                     w.name AS warehouseName,
+                    sup.id AS supplierId,
                     sup.name AS supplier,
                     m.name AS manufacturerName,
                     ps.price AS unitPrice,
                     p.min_stock AS minStock,
                     ps.currency AS currency
-                    FROM parts p
-                    LEFT JOIN stock s ON s.part_id = p.id
+                    FROM stock s
+                    LEFT JOIN parts p ON s.part_id = p.id
                     LEFT JOIN warehouses w ON w.id = s.warehouse_id
                     LEFT JOIN part_categories pc ON pc.id = p.part_category_id
-                    LEFT JOIN part_supplier ps ON ps.part_id = p.id
+                    LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
                     LEFT JOIN suppliers sup ON sup.id = ps.supplier_id
                     LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
                     ORDER BY p.id, w.name;";

@@ -82,10 +82,10 @@ class AddItemToStock
 
             // 3) stock (ha van warehouse és mennyiség)
             if ($newItem['warehouseId'] !== null) {
-                $sqlStock = "INSERT INTO stock_movements (part_id, warehouse_id, change_amount, unit_price, currency, reason, reference, note, created_at, created_by) VALUES (:part_id, :warehouse_id, :change_amount, :unit_price, :currency, :reason, :reference, :note, NOW(), :created_by)
+                $sqlStock = "INSERT INTO stock_movements (part_id, warehouse_id, supplier_id, change_amount, unit_price, currency, reason, reference, note, created_at, created_by) VALUES (:part_id, :warehouse_id, :supplier_id, :change_amount, :unit_price, :currency, :reason, :reference, :note, NOW(), :created_by)
                          ON DUPLICATE KEY UPDATE change_amount = change_amount + VALUES(change_amount), unit_price = VALUES(unit_price), currency = VALUES(currency), reason = VALUES(reason) , reference = VALUES(reference), note = VALUES(note) , created_at = NOW(), created_by = VALUES(created_by)";
                 $stmt = $this->conn->prepare($sqlStock);
-                $stmt->execute([':part_id' => $partId, ':warehouse_id' => $newItem['warehouseId'], ':change_amount' => $newItem['quantity'], ':unit_price' => $newItem['unitPrice'], ':currency' => $newItem['currency'], ':reason' => 'IN', ':reference' => $newItem['reference'], ':note' => $newItem['note'], ':created_by' => $userId]);
+                $stmt->execute([':part_id' => $partId, ':warehouse_id' => $newItem['warehouseId'], ':supplier_id' => $newItem['supplierId'], ':change_amount' => $newItem['quantity'], ':unit_price' => $newItem['unitPrice'], ':currency' => $newItem['currency'], ':reason' => 'IN', ':reference' => $newItem['reference'], ':note' => $newItem['note'], ':created_by' => $userId]);
             }
 
             $this->conn->commit();

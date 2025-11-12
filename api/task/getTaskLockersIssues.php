@@ -80,10 +80,16 @@ class getItems
                     p.id as partId,
                     p.part_number AS partNumber,
                     CONCAT(p.name, ' ', s.quantity, 'db', ' (', w.name, ')') AS name,
-                    w.id AS warehouseId
+                    w.id AS warehouseId,
+                    s.supplier_id as supplierId,
+                    ifnull(ps.price, 0) AS unitPrice,
+                    ps.currency AS currency
                 FROM stock s
                 LEFT JOIN parts p ON p.id = s.part_id
-                LEFT JOIN warehouses w ON w.id = s.warehouse_id;
+                LEFT JOIN warehouses w ON w.id = s.warehouse_id
+                LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
+                GROUP BY s.id, p.id, w.id, s.supplier_id, p.part_number, p.name, s.quantity
+                ORDER BY p.part_number ASC
                 "
             );
             $stmt->execute();
@@ -147,10 +153,11 @@ class getItems
 
                 // 3) fetch used spare parts linked to interventions
                 // assumed table task_lockers_intervention_parts (intervention_id, part_id, quantity) and parts table 'parts'
-                $sqlParts = "SELECT tlip.intervention_id as interventionId, p.part_number as partNumber, p.name, tlip.quantity
+                $sqlParts = "SELECT tlip.intervention_id as interventionId, p.part_number as partNumber, p.name, sm.supplier_id as supplierId, tlip.quantity
                              FROM task_locker_intervention_parts tlip
                              LEFT JOIN parts p ON p.id = tlip.part_id
                              LEFT JOIN interventions i ON i.id = tlip.intervention_id
+                             LEFT JOIN stock_movements sm ON sm.task_locker_intervention_parts_id = tlip.id
                              WHERE tlip.intervention_id IN ($placeholders)";
                 $stmt = $this->conn->prepare($sqlParts);
                 $stmt->execute($ids);
