@@ -1,8 +1,8 @@
 <?php
-header("Access-Control-Allow-Origin: http://192.168.76.68:3000"); // Változtasd meg a frontend URL-t, ha szükséges
-header("Access-Control-Allow-Methods: *"); // Engedélyezett HTTP metódusok (pl. POST)
-header("Access-Control-Allow-Headers: *"); // Engedélyezett fejlécek
-header("Content-Type: application/json"); // Példa: JSON válasz küldése
+// header("Access-Control-Allow-Origin: http://192.168.76.68:3000"); // Változtasd meg a frontend URL-t, ha szükséges
+// header("Access-Control-Allow-Methods: *"); // Engedélyezett HTTP metódusok (pl. POST)
+// header("Access-Control-Allow-Headers: *"); // Engedélyezett fejlécek
+// header("Content-Type: application/json"); // Példa: JSON válasz küldése
 
 require('../inc/conn.php');
 require('../functions/db/dbFunctions.php');
@@ -70,7 +70,7 @@ class AuthHandler
                         // Normalizáljuk az urlTo-t: ha nem csak '/', akkor távolítsuk el a végéről a '/' jelet
                         if ($urlTo !== '/' && substr($urlTo, -1) === '/') {
                             $urlTo = rtrim($urlTo, '/');
-                        }                        
+                        }
 
                         $userId = $user['user_id'];
                         $query = "SELECT rr.is_visible, rr.role_id

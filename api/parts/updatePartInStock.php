@@ -68,6 +68,13 @@ class UpdatePart
                 }
             }
 
+            //ha a quantityDifference nem nulla, akkor a note és reference mezők kötelezőek
+            if (isset($data['quantityDifference']) && $data['quantityDifference'] != 0) {
+                if (empty($data['note']) || empty($data['reference'])) {
+                    return $this->response = $this->createResponse(400, 'A mennyiség változtatásához meg kell adni a megjegyzést és a hivatkozást.');
+                }
+            }
+
             $this->conn->beginTransaction();
 
             // 1) update parts (dinamikusan csak a megadott mezők)
@@ -128,9 +135,9 @@ class UpdatePart
             }
 
             // 3) stock movement (ha quantity és warehouseId meg van adva) - quantity itt változás (positive/negative)
-            if (isset($data['quantity']) && isset($data['warehouseId'])) {
+            if (isset($data['quantityDifference']) && isset($data['warehouseId'])) {
                 $supplierId = (int)$data['supplierId']['id'];
-                $changeAmount = (float)$data['quantity'];
+                $changeAmount = (float)$data['quantityDifference'];
                 $warehouseId = (int)$data['warehouseId']['id'];
                 $unitPrice = $data['unitPrice'] ?? null;
                 $currency = $data['currency'] ?? null;
