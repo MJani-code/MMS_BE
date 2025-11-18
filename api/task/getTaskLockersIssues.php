@@ -59,12 +59,10 @@ class getItems
                 "SELECT tli.id, lit.name
                 FROM task_lockers_issues tli
                 LEFT JOIN locker_issue_types lit ON lit.id = tli.issue_type
-                WHERE task_id = :task_id
-                AND uuid = :uuid
+                WHERE uuid = :uuid
                 "
             );
-            // task_id int, uuid string
-            $stmt->bindValue(':task_id', isset($payload['taskId']) ? (int)$payload['taskId'] : null, PDO::PARAM_INT);
+            // uuid string
             $stmt->bindValue(':uuid', isset($payload['uuid']) ? $payload['uuid'] : null, PDO::PARAM_STR);
             $stmt->execute();
             $issues = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -112,15 +110,14 @@ class getItems
 
         //Fetch issues, interventions and booked spare parts
         try {
-            // 1) fetch interventions for task+uuid
+            // 1) fetch interventions for uuid
             $stmt = $this->conn->prepare(
                 "SELECT tli.id, i.name, tli.performed_by as performedBy, tli.created_at as createdAt, tli.notes
                  FROM task_lockers_interventions tli
                  LEFT JOIN interventions i ON i.id = tli.intervention_id
-                 WHERE task_id = :task_id AND uuid = :uuid
+                 WHERE uuid = :uuid
                  ORDER BY tli.created_at DESC"
             );
-            $stmt->bindValue(':task_id', isset($payload['taskId']) ? (int)$payload['taskId'] : null, PDO::PARAM_INT);
             $stmt->bindValue(':uuid', isset($payload['uuid']) ? $payload['uuid'] : null, PDO::PARAM_STR);
             $stmt->execute();
             $interventions = $stmt->fetchAll(PDO::FETCH_ASSOC);
