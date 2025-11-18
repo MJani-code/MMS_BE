@@ -121,7 +121,7 @@ class deleteIntervention
 
             // Restore stock for each part
             foreach ($partsData as $part) {
-                $updateStockSql = "INSERT INTO stock_movements (part_id, warehouse_id, supplier_id, task_locker_intervention_parts_id, change_amount, reason, created_by) VALUES (:part_id, :warehouse_id, :supplier_id, :task_locker_intervention_parts_id, :change_amount, :reason, :created_by)";
+                $updateStockSql = "INSERT INTO stock_movements (part_id, warehouse_id, supplier_id, task_locker_intervention_parts_id, change_amount, reason, note, created_by) VALUES (:part_id, :warehouse_id, :supplier_id, :task_locker_intervention_parts_id, :change_amount, :reason, :note, :created_by)";
                 $stmt = $this->conn->prepare($updateStockSql);
                 $stmt->bindValue(':change_amount', $part['quantity'], PDO::PARAM_INT);
                 $stmt->bindValue(':part_id', $part['part_id'], PDO::PARAM_INT);
@@ -129,6 +129,7 @@ class deleteIntervention
                 $stmt->bindValue(':supplier_id', $part['supplier_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':task_locker_intervention_parts_id', $part['task_locker_intervention_parts_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':reason', 'IN', PDO::PARAM_STR);
+                $stmt->bindValue(':note', 'vissza készletre', PDO::PARAM_STR);
                 $stmt->bindValue(':created_by', $userId, PDO::PARAM_INT);
                 $stmt->execute();
             }

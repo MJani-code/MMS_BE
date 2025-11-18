@@ -40,12 +40,14 @@ class StockItems
 
         //Data gathering
         try {
-            $stmt = "SELECT 
+            $stmt = "SELECT
+                    s.id as stockId,
                     p.id AS partId,
                     p.part_number AS partNumber,
                     p.name AS partName,
                     pc.name AS category,
                     ifnull(s.quantity, 0) AS quantity,
+                    ifnull(bs.quantity, 0) AS badQuantity,
                     w.id AS warehouseId,
                     w.name AS warehouseName,
                     sup.id AS supplierId,
@@ -61,6 +63,7 @@ class StockItems
                     LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
                     LEFT JOIN suppliers sup ON sup.id = ps.supplier_id
                     LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
+                    LEFT JOIN bad_stock bs ON bs.part_id = s.part_id AND bs.warehouse_id = s.warehouse_id AND bs.supplier_id = s.supplier_id
                     ORDER BY p.id, w.name;";
             $query = $this->conn->prepare($stmt);
             $query->execute();
