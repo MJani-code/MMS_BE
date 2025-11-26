@@ -59,7 +59,7 @@ class getItems
                 "SELECT tli.id, lit.name
                 FROM task_lockers_issues tli
                 LEFT JOIN locker_issue_types lit ON lit.id = tli.issue_type
-                WHERE uuid = :uuid
+                WHERE uuid = :uuid AND tli.is_solved = 0
                 "
             );
             // uuid string
