@@ -31,17 +31,21 @@ class StockItems
     public function getStockItems()
     {
         //User validation here
-        $isAccess = $this->auth->authenticate(14);
+        $isAccess = $this->auth->authenticate(28);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $companyId = $isAccess['data']->companyId;
+            $canViewAllOwnersItems = in_array(29, $isAccess['data']->permissions);
         }
 
         //Data gathering
         try {
             $stmt = "SELECT
                     s.id as stockId,
+                    s.owner_id as ownerId,
+                    c.name AS ownerName,
                     p.id AS partId,
                     p.part_number AS partNumber,
                     p.name AS partName,
@@ -64,8 +68,18 @@ class StockItems
                     LEFT JOIN suppliers sup ON sup.id = ps.supplier_id
                     LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
                     LEFT JOIN bad_stock bs ON bs.part_id = s.part_id AND bs.warehouse_id = s.warehouse_id AND bs.supplier_id = s.supplier_id
-                    ORDER BY p.id, w.name;";
+                    LEFT JOIN companies c ON c.id = s.owner_id";
+            if (!$canViewAllOwnersItems) {
+                $stmt .= " WHERE s.owner_id = :companyId ORDER BY p.id, w.name;";
+            } else {
+                $stmt .= " ORDER BY p.id, w.name;";
+            }
+
             $query = $this->conn->prepare($stmt);
+            if (!$canViewAllOwnersItems) {
+                $query->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            }
+            
             $query->execute();
             $stockItems = $query->fetchAll(PDO::FETCH_ASSOC);
 
