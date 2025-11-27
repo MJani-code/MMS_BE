@@ -99,7 +99,7 @@ class deleteIntervention
             //SELECT orignal data from stock_movements before delete
             $partsData = [];
             foreach ($interventionParts as $interventionPart) {
-                $selectStockSql = "SELECT part_id, warehouse_id, supplier_id, -change_amount as quantity, {$interventionPart['id']} as task_locker_intervention_parts_id
+                $selectStockSql = "SELECT part_id, owner_id, warehouse_id, supplier_id, -change_amount as quantity, {$interventionPart['id']} as task_locker_intervention_parts_id, unit_price
                                     FROM stock_movements
                                     WHERE task_locker_intervention_parts_id = :tlip_id";
                 $stmt = $this->conn->prepare($selectStockSql);
@@ -121,13 +121,15 @@ class deleteIntervention
 
             // Restore stock for each part
             foreach ($partsData as $part) {
-                $updateStockSql = "INSERT INTO stock_movements (part_id, warehouse_id, supplier_id, task_locker_intervention_parts_id, change_amount, reason, note, created_by) VALUES (:part_id, :warehouse_id, :supplier_id, :task_locker_intervention_parts_id, :change_amount, :reason, :note, :created_by)";
+                $updateStockSql = "INSERT INTO stock_movements (part_id, owner_id, warehouse_id, supplier_id, task_locker_intervention_parts_id, change_amount, unit_price, reason, note, created_by) VALUES (:part_id, :owner_id, :warehouse_id, :supplier_id, :task_locker_intervention_parts_id, :change_amount, :unit_price, :reason, :note, :created_by)";
                 $stmt = $this->conn->prepare($updateStockSql);
                 $stmt->bindValue(':change_amount', $part['quantity'], PDO::PARAM_INT);
                 $stmt->bindValue(':part_id', $part['part_id'], PDO::PARAM_INT);
+                $stmt->bindValue(':owner_id', $part['owner_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':warehouse_id', $part['warehouse_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', $part['supplier_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':task_locker_intervention_parts_id', $part['task_locker_intervention_parts_id'], PDO::PARAM_INT);
+                $stmt->bindValue(':unit_price', $part['unit_price'], PDO::PARAM_STR);
                 $stmt->bindValue(':reason', 'IN', PDO::PARAM_STR);
                 $stmt->bindValue(':note', 'vissza készletre', PDO::PARAM_STR);
                 $stmt->bindValue(':created_by', $userId, PDO::PARAM_INT);
