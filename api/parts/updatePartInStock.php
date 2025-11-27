@@ -36,11 +36,18 @@ class UpdatePart
     {
         // permission check
         $userId = null;
-        $isAccess = $this->auth->authenticate(14);
+        $isAccess = $this->auth->authenticate(33);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            if (in_array(34, $isAccess['data']->permissions)) {
+                // can update parts for any owner
+                $ownerId = $data['ownerId'] ?? null;
+            } else {
+                // can only update parts for own company
+                $ownerId = $isAccess['data']->companyId;
+            }
         }
 
         if (empty($data) || empty($data['partId'])) {
@@ -143,10 +150,11 @@ class UpdatePart
                 $currency = $data['currency'] ?? null;
                 $reference = $data['reference'] ?? null;
                 $note = $data['note'] ?? null;
-                $sqlStock = "INSERT INTO stock_movements (part_id, warehouse_id, supplier_id, change_amount, unit_price, currency, reason, reference, note, created_at, created_by)
-                             VALUES (:part_id, :warehouse_id, :supplier_id, :change_amount, :unit_price, :currency, :reason, :reference, :note, NOW(), :created_by)";
+                $sqlStock = "INSERT INTO stock_movements (part_id, owner_id, warehouse_id, supplier_id, change_amount, unit_price, currency, reason, reference, note, created_at, created_by)
+                             VALUES (:part_id, :owner_id, :warehouse_id, :supplier_id, :change_amount, :unit_price, :currency, :reason, :reference, :note, NOW(), :created_by)";
                 $stmt = $this->conn->prepare($sqlStock);
                 $stmt->bindValue(':part_id', $partId, PDO::PARAM_INT);
+                $stmt->bindValue(':owner_id', $ownerId, PDO::PARAM_INT);
                 $stmt->bindValue(':warehouse_id', $warehouseId, PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', $supplierId, PDO::PARAM_INT);
                 $stmt->bindValue(':change_amount', $changeAmount);
