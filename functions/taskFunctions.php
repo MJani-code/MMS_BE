@@ -1208,7 +1208,7 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
         $taskLockerInterventionPartsStmt = $conn->prepare($taskLockerInterventionPartsSql);
 
         //stock_movements táblába beszúró lekérdezés
-        $stockMovementsSql = "INSERT INTO stock_movements (part_id, warehouse_id, supplier_id, task_locker_intervention_parts_id, change_amount, unit_price, reason, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stockMovementsSql = "INSERT INTO stock_movements (part_id, owner_id, warehouse_id, supplier_id, task_locker_intervention_parts_id, change_amount, unit_price, reason, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stockMovementsStmt = $conn->prepare($stockMovementsSql);
 
         foreach ($newIntervention as $intervention) {
@@ -1226,7 +1226,7 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
             // Alkatrész felhasználása a beavatkozásban
             foreach ($intervention['parts'] as $part) {
                 //part_id lekérdezése stockId alapján
-                $stmt = $conn->prepare("SELECT s.part_id, s.warehouse_id, s.supplier_id, ps.price AS unitPrice FROM stock s
+                $stmt = $conn->prepare("SELECT s.part_id, s.owner_id, s.warehouse_id, s.supplier_id, ps.price AS unitPrice FROM stock s
                 LEFT JOIN part_supplier ps on ps.part_id = s.part_id
                 WHERE s.id = ?");
                 $stmt->execute([$part['stockId']]);
@@ -1236,7 +1236,7 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
 
                 // Alkatrész készlet mozgás rögzítése
                 $taskLockerInterventionPartsId = $conn->lastInsertId();
-                $stockMovementsStmt->execute([$partData['part_id'], $partData['warehouse_id'], $partData['supplier_id'],  $taskLockerInterventionPartsId, -$part['quantity'], $part['unitPrice'], 'OUT', $userId]);
+                $stockMovementsStmt->execute([$partData['part_id'],  $partData['owner_id'], $partData['warehouse_id'], $partData['supplier_id'],  $taskLockerInterventionPartsId, -$part['quantity'], $part['unitPrice'], 'OUT', $userId]);
             }
         }
 
