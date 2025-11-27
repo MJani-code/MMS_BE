@@ -36,6 +36,13 @@ class StockMasterData
         $isAccess = $this->auth->authenticate(14);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
+        } else {
+            $companyId = $isAccess['data']->companyId;
+            if (in_array(32, $isAccess['data']->permissions)) {
+                $canAddForAllOwners = true;
+            } else {
+                $canAddForAllOwners = false;
+            }
         }
 
         try {
@@ -64,12 +71,23 @@ class StockMasterData
             $stmt->execute();
             $currencies = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            //companies
+            if ($canAddForAllOwners) {
+                $stmt = $this->conn->prepare("SELECT id, name FROM companies ORDER BY name");
+            } else {
+                $stmt = $this->conn->prepare("SELECT id, name FROM companies WHERE id = :companyId ORDER BY name");
+                $stmt->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            }
+            $stmt->execute();
+            $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
             $payload = [
                 'categories' => $categories ?: [],
                 'warehouses' => $warehouses ?: [],
                 'suppliers' => $suppliers ?: [],
                 'manufacturers' => $manufacturers ?: [],
                 'currencies' => $currencies ?: [],
+                'companies' => $companies ?: [],
             ];
 
 
