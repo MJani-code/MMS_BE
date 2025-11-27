@@ -76,6 +76,7 @@ class getItems
                 "SELECT
                     s.id as stockId,
                     p.id as partId,
+                    s.owner_id as ownerId,
                     p.part_number AS partNumber,
                     CONCAT(p.name, ' ', s.quantity, 'db', ' (', w.name, ')') AS name,
                     w.id AS warehouseId,
