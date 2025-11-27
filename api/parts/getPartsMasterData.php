@@ -33,7 +33,7 @@ class StockMasterData
     public function getMasterData()
     {
         // User validation (use same permission id as stock list)
-        $isAccess = $this->auth->authenticate(14);
+        $isAccess = $this->auth->authenticate(28);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {

@@ -36,7 +36,7 @@ class PartHistory
     public function getHistory($data)
     {
         // Permission check (use same permission as stock list)
-        $isAccess = $this->auth->authenticate(14);
+        $isAccess = $this->auth->authenticate(35);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         }
