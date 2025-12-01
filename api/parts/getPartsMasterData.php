@@ -52,12 +52,35 @@ class StockMasterData
             $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // warehouses
-            $stmt = $this->conn->prepare("SELECT id, name FROM warehouses ORDER BY name");
+            if ($canAddForAllOwners) {
+                $stmt = $this->conn->prepare("SELECT id, name FROM warehouses ORDER BY name");
+            } else {
+                $stmt = $this->conn->prepare(
+                    "SELECT w.id, w.name
+                    FROM company_warehouses cw
+                    LEFT JOIN warehouses w ON cw.warehouse_id = w.id
+                    WHERE cw.company_id = :companyId ORDER BY w.name"
+                );
+                $stmt->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            }
             $stmt->execute();
             $warehouses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // suppliers
-            $stmt = $this->conn->prepare("SELECT id, name FROM suppliers ORDER BY name");
+            if ($canAddForAllOwners) {
+                $stmt = $this->conn->prepare(
+                    "SELECT s.id, s.name
+                    FROM suppliers s ORDER BY s.name"
+                );
+            } else {
+                $stmt = $this->conn->prepare(
+                    "SELECT s.id, s.name
+                    FROM company_suppliers cs
+                    LEFT JOIN suppliers s ON cs.supplier_id = s.id
+                    WHERE cs.company_id = :companyId ORDER BY s.name"
+                );
+                $stmt->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            }
             $stmt->execute();
             $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
