@@ -98,7 +98,7 @@ class CCTVDownloader
             $response = curl_exec($ch);
             $responseData = json_decode($response, true);
 
-            $this->logger->info('CCTV download response', ['response' => $responseData]);
+            $this->logger->info('CCTV download', ['event' => $event, 'request' => $postData, 'response' => $responseData]);
             echo json_encode($responseData, JSON_PRETTY_PRINT) . "\n";
         }
         curl_close($ch);
