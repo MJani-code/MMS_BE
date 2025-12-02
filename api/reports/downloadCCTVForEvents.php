@@ -53,8 +53,7 @@ class CCTVDownloader
 
         #2. szűrés
 
-        // $today = date('Y-m-d');
-        $today = '2025-11-01';
+        $today = date('Y-m-d');
         $allData = json_decode($rawData, true);
         $usernameFilter = ['consignee', 'Exp Hu Courier'];
         $issueTypeFilter = [2, 3, 5];
