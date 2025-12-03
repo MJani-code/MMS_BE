@@ -56,7 +56,7 @@ class CCTVDownloader
         $today = date('Y-m-d');
         $allData = json_decode($rawData, true);
         $usernameFilter = ['consignee', 'Exp Hu Courier', 'cour.exohu'];
-        $issueTypeFilter = [2, 3, 5];
+        $issueTypeFilter = [2, 3, 5, 6];
         $filteredData = [];
 
         foreach ($allData as $event) {
