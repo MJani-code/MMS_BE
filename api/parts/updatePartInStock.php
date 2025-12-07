@@ -82,6 +82,19 @@ class UpdatePart
                 }
             }
 
+            //Ellenőrizni, hogy az adott beszállító szállítja-e az adott alkatrészt (ha supplierId meg van adva)
+            if (isset($data['supplierId']) && !empty($data['supplierId'])) {
+                $supplierId = (int)$data['supplierId'];
+                $stmt = $this->conn->prepare("SELECT COUNT(*) FROM part_supplier WHERE part_id = :part_id AND supplier_id = :supplier_id");
+                $stmt->bindValue(':part_id', $partId, PDO::PARAM_INT);
+                $stmt->bindValue(':supplier_id', $supplierId, PDO::PARAM_INT);
+                $stmt->execute();
+                $count = $stmt->fetchColumn();
+                if ($count == 0) {
+                    return $this->response = $this->createResponse(400, 'A megadott beszállító nem szállítja az alkatrészt.');
+                }
+            }
+
             $this->conn->beginTransaction();
 
             // 1) update parts (dinamikusan csak a megadott mezők)
@@ -126,13 +139,13 @@ class UpdatePart
                 if (empty($data['supplierId'])) {
                     // ha supplierId nincs, töröljük a kapcsolódó rekordot (opcionális)
                 } else {
-                    $supplierId = (int)$data['supplierId']['id'];
+                    $supplierId = (int)$data['supplierId'];
                     $unitPrice = $data['unitPrice'] ?? null;
                     $currency = $data['currency'] ?? null;
-                    $sqlSupplier = "UPDATE part_supplier
+                    $sqlPartSupplier = "UPDATE part_supplier
                                     SET price = :price, currency = :currency 
                                     WHERE part_id = :part_id AND supplier_id = :supplier_id";
-                    $stmt = $this->conn->prepare($sqlSupplier);
+                    $stmt = $this->conn->prepare($sqlPartSupplier);
                     $stmt->bindValue(':part_id', $partId, PDO::PARAM_INT);
                     $stmt->bindValue(':supplier_id', $supplierId, PDO::PARAM_INT);
                     $stmt->bindValue(':price', $unitPrice, $unitPrice === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
@@ -143,9 +156,9 @@ class UpdatePart
 
             // 3) stock movement (ha quantity és warehouseId meg van adva) - quantity itt változás (positive/negative)
             if (isset($data['quantityDifference']) && isset($data['warehouseId'])) {
-                $supplierId = (int)$data['supplierId']['id'];
+                $supplierId = (int)$data['supplierId'];
                 $changeAmount = (float)$data['quantityDifference'];
-                $warehouseId = (int)$data['warehouseId']['id'];
+                $warehouseId = (int)$data['warehouseId'];
                 $unitPrice = $data['unitPrice'] ?? null;
                 $currency = $data['currency'] ?? null;
                 $reference = $data['reference'] ?? null;
@@ -166,6 +179,22 @@ class UpdatePart
                 $stmt->bindValue(':created_by', $userId, PDO::PARAM_INT);
                 $stmt->execute();
             }
+
+            //4) stock update a stock táblában
+            if (isset($data['ownerId']) || isset($data['warehouseId']) || isset($data['supplierId'])) {
+                $sqlUpdateStock = "UPDATE stock s
+                                    SET owner_id = :owner_id,
+                                        warehouse_id = :warehouse_id,
+                                        supplier_id = :supplier_id
+                                    WHERE s.id = :stock_id";
+                $stmt = $this->conn->prepare($sqlUpdateStock);
+                $stmt->bindValue(':owner_id', $data['ownerId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', $data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':supplier_id', $data['supplierId'], PDO::PARAM_INT);
+                $stmt->bindValue(':stock_id', $data['stockId'], PDO::PARAM_INT);
+                $stmt->execute();
+            }
+
 
             $this->conn->commit();
 
