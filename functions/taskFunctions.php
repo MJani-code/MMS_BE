@@ -1097,12 +1097,27 @@ function addTask($conn, $newTask, $userId)
         }
 
         //newTask['lockers'] körbejárása és adatainak beszúrása a task_locker_issues táblába
+        $allLockerDescriptions = "";
         foreach ($newTask['lockers'] as $locker) {
+            $allLockerDescriptions .= $locker['description'] . ", ";
             foreach ($locker['issues'] as $issue) {
                 $lockerSql = "INSERT INTO task_lockers_issues (task_lockers_id, task_id, tof_shop_id, uuid, issue_type, description, compartment_number, created_by) VALUES (?,?,?,?,?,?,?,?)";
                 $lockerStmt = $conn->prepare($lockerSql);
                 $lockerStmt->execute([$locker['lockerId'], $taskId, $tofShopId, $locker['serial'], $issue['type'], $locker['description'], $issue['compartmentNumber'], $userId]);
             }
+        }
+
+        //Frissítjük a task_locations comment mezőjét az összes locker description összefűzésével
+        $dataToHandleInDb = [
+            'table' => "task_locations",
+            'method' => "update",
+            'columns' => ['comment'],
+            'values' => [trim($allLockerDescriptions)],
+            'conditions' => ['id' => $locationId]
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        if ($result['status'] !== 200) {
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
 
         // Tranzakció lezárása
