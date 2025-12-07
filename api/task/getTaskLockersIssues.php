@@ -43,11 +43,13 @@ class getItems
     {
         // Authenticate user
         $userId = null;
+        $companyId = null;
         $isAccess = $this->auth->authenticate(26);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $companyId = $isAccess['data']->companyId;
         }
 
         $issues = [];
@@ -60,6 +62,7 @@ class getItems
                 FROM task_lockers_issues tli
                 LEFT JOIN locker_issue_types lit ON lit.id = tli.issue_type
                 WHERE uuid = :uuid AND tli.is_solved = 0
+                GROUP BY tli.issue_type, tli.uuid
                 "
             );
             // uuid string
@@ -87,10 +90,14 @@ class getItems
                 LEFT JOIN parts p ON p.id = s.part_id
                 LEFT JOIN warehouses w ON w.id = s.warehouse_id
                 LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
+                LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
+                WHERE s.owner_id = :companyId AND s.quantity > 0 AND m.name = :brand
                 GROUP BY s.id, p.id, w.id, s.supplier_id, p.part_number, p.name, s.quantity
                 ORDER BY p.part_number ASC
                 "
             );
+            $stmt->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            $stmt->bindValue(':brand', isset($payload['brand']) ? $payload['brand'] : null, PDO::PARAM_STR);
             $stmt->execute();
             $spareParts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
