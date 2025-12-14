@@ -32,177 +32,211 @@ class UpdatePart
         ];
     }
 
-    public function updatePart($data)
+    private function permissionCheck($data)
     {
-        // permission check
-        $userId = null;
+        // implement permission check logic here
         $isAccess = $this->auth->authenticate(33);
         if ($isAccess['status'] !== 200) {
-            return $this->response = $isAccess;
+            return $isAccess;
+        }
+
+        $userId = $isAccess['data']->userId;
+        if (in_array(34, $isAccess['data']->permissions)) {
+            // can update parts for any owner
+            $ownerId = $data['ownerId'] ?? null;
         } else {
-            $userId = $isAccess['data']->userId;
-            if (in_array(34, $isAccess['data']->permissions)) {
-                // can update parts for any owner
-                $ownerId = $data['ownerId'] ?? null;
-            } else {
-                // can only update parts for own company
-                $ownerId = $isAccess['data']->companyId;
-            }
+            // can only update parts for own company
+            $ownerId = $isAccess['data']->companyId;
         }
 
-        if (empty($data) || empty($data['partId'])) {
-            return $this->response = $this->createResponse(400, 'Hiányzó partId');
+        return [
+            'status' => 200,
+            'userId' => $userId,
+            'ownerId' => $ownerId,
+        ];
+    }
+
+    private function validationError($data, $partToUpdate, $stockToUpdate, $partSupplierToUpdate)
+    {
+
+        if (empty($data) || empty($data['part']['partId'])) {
+            return $this->response = $this->createResponse(400, 'Hiányzó adatok a frissítéshez');
         }
-
-        $partId = (int)$data['partId'];
-
         try {
-            // létezik-e az alkatrész
-            $stmt = $this->conn->prepare("SELECT id, part_number FROM parts WHERE id = :id LIMIT 1");
-            $stmt->bindValue(':id', $partId, PDO::PARAM_INT);
-            $stmt->execute();
-            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$existing) {
-                return $this->response = $this->createResponse(404, 'Alkatrész nem található');
-            }
-
-            // ha partNumber változik, ellenőrizzük az ütközést
-            if (isset($data['partNumber']) && $data['partNumber'] !== $existing['part_number']) {
-                $stmt = $this->conn->prepare("SELECT id FROM parts WHERE part_number = :pn AND id != :id LIMIT 1");
-                $stmt->execute([':pn' => $data['partNumber'], ':id' => $partId]);
-                if ($stmt->fetchColumn()) {
-                    return $this->response = $this->createResponse(409, 'Már létezik ilyen cikkszámú alkatrész');
+            #1 parts tábla frissítés lehetőségének ellenőrzése          
+            if ($partToUpdate) {
+                //mandatory fields ellenőrzése
+                if (empty($data['part']['partName']) || empty($data['part']['partNumber']) || empty($data['part']['categoryId']) || empty($data['part']['manufacturerId'])) {
+                    return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a parts frissítéséhez');
                 }
-            }
+                // létezik-e az alkatrész
+                $partId = (int)$data['part']['partId'];
 
-            //ha a quantityDifference nem nulla, akkor a note és reference mezők kötelezőek
-            if (isset($data['quantityDifference']) && $data['quantityDifference'] != 0) {
-                if (empty($data['note']) || empty($data['reference'])) {
-                    return $this->response = $this->createResponse(400, 'A mennyiség változtatásához meg kell adni a megjegyzést és a hivatkozást.');
-                }
-            }
-
-            //Ellenőrizni, hogy az adott beszállító szállítja-e az adott alkatrészt (ha supplierId meg van adva)
-            if (isset($data['supplierId']) && !empty($data['supplierId'])) {
-                $supplierId = (int)$data['supplierId'];
-                $stmt = $this->conn->prepare("SELECT COUNT(*) FROM part_supplier WHERE part_id = :part_id AND supplier_id = :supplier_id");
-                $stmt->bindValue(':part_id', $partId, PDO::PARAM_INT);
-                $stmt->bindValue(':supplier_id', $supplierId, PDO::PARAM_INT);
+                $stmt = $this->conn->prepare("SELECT id, part_number FROM parts WHERE id = :id LIMIT 1");
+                $stmt->bindValue(':id', $partId, PDO::PARAM_INT);
                 $stmt->execute();
-                $count = $stmt->fetchColumn();
-                if ($count == 0) {
-                    return $this->response = $this->createResponse(400, 'A megadott beszállító nem szállítja az alkatrészt.');
+                $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$existing) {
+                    return $this->response = $this->createResponse(404, 'Alkatrész nem található');
                 }
             }
-
-            $this->conn->beginTransaction();
-
-            // 1) update parts (dinamikusan csak a megadott mezők)
-            $updateFields = [];
-            $params = [':id' => $partId];
-            if (isset($data['partNumber'])) {
-                $updateFields[] = 'part_number = :part_number';
-                $params[':part_number'] = $data['partNumber'];
-            }
-            if (isset($data['partName'])) {
-                $updateFields[] = 'name = :name';
-                $params[':name'] = $data['partName'];
-            }
-            if (array_key_exists('categoryId', $data)) {
-                $updateFields[] = 'part_category_id = :category_id';
-                $params[':category_id'] = $data['categoryId'] === null ? null : (int)$data['categoryId'];
-            }
-            // további mezők (pl. manufacturer_id) ha szükséges
-            if (!empty($updateFields)) {
-                $updateFields[] = 'updated_at = NOW()';
-                $updateFields[] = 'updated_by = :updated_by';
-                $updateFields[] = 'manufacturer_id = :manufacturer_id';
-                $params[':manufacturer_id'] = isset($data['manufacturerId']) ? (int)$data['manufacturerId'] : null;
-                $params[':updated_by'] = $userId;
-                $sql = "UPDATE parts SET " . implode(', ', $updateFields) . " WHERE id = :id";
-                $stmt = $this->conn->prepare($sql);
-                foreach ($params as $k => $v) {
-                    if ($v === null) {
-                        $stmt->bindValue($k, null, PDO::PARAM_NULL);
-                    } elseif (is_int($v)) {
-                        $stmt->bindValue($k, $v, PDO::PARAM_INT);
-                    } else {
-                        $stmt->bindValue($k, $v, PDO::PARAM_STR);
+            #2 stock tábla frissítés lehetőségének ellenőrzése
+            if ($stockToUpdate) {
+                //mandatory fields ellenőrzése
+                if (empty($data['stockId']) || empty($data['ownerId']) || empty($data['warehouseId']) || empty($data['supplierId'])) {
+                    return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a stock frissítéséhez');
+                }
+                // létezik-e a készlet
+                if (empty($data['stockId'])) {
+                    return $this->response = $this->createResponse(400, 'Hiányzó készlet azonosító a stock frissítéséhez');
+                }
+                //mennyiségi változás esetén ellenőrizni, hogy az összes mező megvan-e
+                if ($data['quantityDifference'] !== 0) {
+                    if (empty($data['part']['partId']) || empty($data['unitPrice']) || empty($data['currency']) || empty($data['reference']) || empty($data['note'])) {
+                        return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a mennyiség változtatásához');
                     }
                 }
+
+                $stockId = (int)$data['stockId'];
+                $stmt = $this->conn->prepare("SELECT id FROM stock WHERE id = :id LIMIT 1");
+                $stmt->bindValue(':id', $stockId, PDO::PARAM_INT);
                 $stmt->execute();
-            }
-
-
-            // 2) part_supplier upsert (ha supplierId vagy ár/currency meg van adva)
-            if (isset($data['supplierId']) || isset($data['unitPrice']) || isset($data['currency'])) {
-                if (empty($data['supplierId'])) {
-                    // ha supplierId nincs, töröljük a kapcsolódó rekordot (opcionális)
-                } else {
-                    $supplierId = (int)$data['supplierId'];
-                    $unitPrice = $data['unitPrice'] ?? null;
-                    $currency = $data['currency'] ?? null;
-                    $sqlPartSupplier = "UPDATE part_supplier
-                                    SET price = :price, currency = :currency 
-                                    WHERE part_id = :part_id AND supplier_id = :supplier_id";
-                    $stmt = $this->conn->prepare($sqlPartSupplier);
-                    $stmt->bindValue(':part_id', $partId, PDO::PARAM_INT);
-                    $stmt->bindValue(':supplier_id', $supplierId, PDO::PARAM_INT);
-                    $stmt->bindValue(':price', $unitPrice, $unitPrice === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                    $stmt->bindValue(':currency', $currency, $currency === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                    $stmt->execute();
+                $existingStock = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$existingStock) {
+                    return $this->response = $this->createResponse(404, 'Készlet nem található');
                 }
             }
-
-            // 3) stock movement (ha quantity és warehouseId meg van adva) - quantity itt változás (positive/negative)
-            if (isset($data['quantityDifference']) && isset($data['warehouseId'])) {
+            #3 part_supplier tábla frissítés lehetőségének ellenőrzése
+            if ($partSupplierToUpdate) {
+                //mandatory fields ellenőrzése
+                if (empty($data['supplierId']) || empty($data['part']['partId'])) {
+                    return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a part_supplier frissítéséhez');
+                }
+                // létezik-e a part_supplier rekord
+                $partId = (int)$data['part']['partId'];
                 $supplierId = (int)$data['supplierId'];
-                $changeAmount = (float)$data['quantityDifference'];
-                $warehouseId = (int)$data['warehouseId'];
-                $unitPrice = $data['unitPrice'] ?? null;
-                $currency = $data['currency'] ?? null;
-                $reference = $data['reference'] ?? null;
-                $note = $data['note'] ?? null;
-                $sqlStock = "INSERT INTO stock_movements (part_id, owner_id, warehouse_id, supplier_id, change_amount, unit_price, currency, reason, reference, note, created_at, created_by)
-                             VALUES (:part_id, :owner_id, :warehouse_id, :supplier_id, :change_amount, :unit_price, :currency, :reason, :reference, :note, NOW(), :created_by)";
-                $stmt = $this->conn->prepare($sqlStock);
+                $stmt = $this->conn->prepare("SELECT part_id, supplier_id FROM part_supplier WHERE part_id = :part_id AND supplier_id = :supplier_id LIMIT 1");
                 $stmt->bindValue(':part_id', $partId, PDO::PARAM_INT);
-                $stmt->bindValue(':owner_id', $ownerId, PDO::PARAM_INT);
-                $stmt->bindValue(':warehouse_id', $warehouseId, PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', $supplierId, PDO::PARAM_INT);
-                $stmt->bindValue(':change_amount', $changeAmount);
-                $stmt->bindValue(':unit_price', $unitPrice, $unitPrice === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                $stmt->bindValue(':currency', $currency, $currency === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                $stmt->bindValue(':reason', $data['reason'] ?? 'ADJUSTMENT', PDO::PARAM_STR);
-                $stmt->bindValue(':reference', $reference, $reference === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                $stmt->bindValue(':note', $note, $note === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
-                $stmt->bindValue(':created_by', $userId, PDO::PARAM_INT);
                 $stmt->execute();
+                $existingPartSupplier = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$existingPartSupplier) {
+                    return $this->response = $this->createResponse(404, 'Ez a beszállító nem szállítja ezt az alkatrészt');
+                }
             }
-
-            //4) stock update a stock táblában
-            if (isset($data['ownerId']) || isset($data['warehouseId']) || isset($data['supplierId'])) {
-                $sqlUpdateStock = "UPDATE stock s
-                                    SET owner_id = :owner_id,
-                                        warehouse_id = :warehouse_id,
-                                        supplier_id = :supplier_id
-                                    WHERE s.id = :stock_id";
-                $stmt = $this->conn->prepare($sqlUpdateStock);
-                $stmt->bindValue(':owner_id', $data['ownerId'], PDO::PARAM_INT);
-                $stmt->bindValue(':warehouse_id', $data['warehouseId'], PDO::PARAM_INT);
-                $stmt->bindValue(':supplier_id', $data['supplierId'], PDO::PARAM_INT);
-                $stmt->bindValue(':stock_id', $data['stockId'], PDO::PARAM_INT);
-                $stmt->execute();
-            }
-
-
-            $this->conn->commit();
-
-            return $this->response = $this->createResponse(200, 'Alkatrész frissítve', ['partId' => $partId]);
         } catch (Exception $e) {
-            if ($this->conn->inTransaction()) $this->conn->rollBack();
             return $this->response = $this->createResponse(500, $e->getMessage());
         }
+        return null;
+    }
+
+    public function updatePart($data)
+    {
+        #1 Persmission check
+        $perm = $this->permissionCheck($data);
+        if ($perm['status'] !== 200) {
+            return $this->response = $perm;
+        }
+
+        #2 Validation
+        $partToUpdate = false;
+        $stockToUpdate = false;
+        $partSupplierToUpdate = false;
+
+        if ($data['part']['partNameChanged'] || $data['part']['partNumberChanged'] || $data['part']['categoryIdChanged'] || $data['part']['manufacturerIdChanged']) {
+            $partToUpdate = true;
+        }
+        if ($data['ownerIdChanged'] || $data['warehouseIdChanged'] || $data['supplierIdChanged'] || $data['quantityDifference'] !== 0) {
+            $stockToUpdate = true;
+        }
+        if ($data['unitPriceChanged'] || $data['currencyChanged'] || $data['supplierIdChanged']) {
+            $partSupplierToUpdate = true;
+        }
+
+        $validationError = $this->validationError($data, $partToUpdate, $stockToUpdate, $partSupplierToUpdate);
+        if ($validationError !== null) {
+            return $validationError;
+        }
+
+        #3 Update
+        try {
+            $this->conn->beginTransaction();
+
+            if ($partToUpdate) {
+                // parts tábla frissítése
+                $sql = "UPDATE parts
+                        SET name = :name,
+                            part_number = :part_number,
+                            part_category_id = :part_category_id,
+                            manufacturer_id = :manufacturer_id
+                        WHERE id = :id";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->bindValue(':name', $data['part']['partName'], PDO::PARAM_STR);
+                $stmt->bindValue(':part_number', $data['part']['partNumber'], PDO::PARAM_STR);
+                $stmt->bindValue(':part_category_id', (int)$data['part']['categoryId'], PDO::PARAM_INT);
+                $stmt->bindValue(':manufacturer_id', (int)$data['part']['manufacturerId'], PDO::PARAM_INT);
+                $stmt->bindValue(':id', (int)$data['part']['partId'], PDO::PARAM_INT);
+                $stmt->execute();
+            }
+            if ($stockToUpdate) {
+                // stock tábla frissítése
+                $sqlStock = "UPDATE stock
+                            SET owner_id = :owner_id,
+                                warehouse_id = :warehouse_id,
+                                supplier_id = :supplier_id
+                            WHERE id = :id";
+                $stmt = $this->conn->prepare($sqlStock);
+                $stmt->bindValue(':owner_id', (int)$data['ownerId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
+                $stmt->bindValue(':id', (int)$data['stockId'], PDO::PARAM_INT);
+                $stmt->execute();
+
+                // stock_movements tábla beszúrás
+                $reason = '';
+                $qty = (int)$data['quantityDifference'];
+                if ($qty < 0) {
+                    $reason = 'OUT';
+                } elseif ($qty === 0) {
+                    $reason = 'ADJUSTMENT';
+                } elseif ($qty > 0) {
+                    $reason = 'IN';
+                }
+                $sqlStockMovements = "INSERT INTO stock_movements (part_id, owner_id, warehouse_id, supplier_id, change_amount, unit_price, currency, reason, reference, note, created_at, created_by)
+                             VALUES (:part_id, :owner_id, :warehouse_id, :supplier_id, :change_amount, :unit_price, :currency, :reason, :reference, :note, NOW(), :created_by)";
+                $stmt = $this->conn->prepare($sqlStockMovements);
+                $stmt->bindValue(':part_id', (int)$data['part']['partId'], PDO::PARAM_INT);
+                $stmt->bindValue(':owner_id', (int)$data['ownerId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
+                $stmt->bindValue(':change_amount', (int)$data['quantityDifference'], PDO::PARAM_INT);
+                $stmt->bindValue(':unit_price', $data['unitPrice'], $data['unitPrice'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+                $stmt->bindValue(':currency', $data['currency'], $data['currency'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+                $stmt->bindValue(':reason', $reason, PDO::PARAM_STR);
+                $stmt->bindValue(':reference', $data['reference'], PDO::PARAM_STR);
+                $stmt->bindValue(':note', $data['note'], PDO::PARAM_STR);
+                $stmt->bindValue(':created_by', (int)$perm['userId'], PDO::PARAM_INT);
+                $stmt->execute();
+            }
+            if ($partSupplierToUpdate) {
+                // part_supplier tábla frissítése
+                $sql = "UPDATE part_supplier
+                        SET price = :price,
+                            currency = :currency
+                        WHERE part_id = :part_id AND supplier_id = :supplier_id";
+                $stmt = $this->conn->prepare($sql);
+                $stmt->bindValue(':price', $data['unitPrice'], $data['unitPrice'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+                $stmt->bindValue(':currency', $data['currency'], $data['currency'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
+                $stmt->bindValue(':part_id', (int)$data['part']['partId'], PDO::PARAM_INT);
+                $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
+                $stmt->execute();
+            }
+            $this->conn->commit();
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return $this->response = $this->createResponse(500, 'Frissítés sikertelen: ' . $e->getMessage());
+        }
+        return $this->response = $this->createResponse(200, 'Frissítés sikeres', $data);
     }
 }
 

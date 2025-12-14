@@ -47,7 +47,9 @@ class PartHistory
         }
 
         // optional filters
+        $ownerId = isset($data['ownerId']) ? (int)$data['ownerId'] : null;
         $warehouseId = isset($data['warehouseId']) ? (int)$data['warehouseId'] : null;
+        $supplierId = isset($data['supplierId']) ? (int)$data['supplierId'] : null;
         $from = isset($data['from']) ? $data['from'] : null; // expect 'YYYY-MM-DD' or full datetime
         $to = isset($data['to']) ? $data['to'] : null;
         $limit = isset($data['limit']) ? (int)$data['limit'] : 100;
@@ -90,15 +92,22 @@ class PartHistory
                 LEFT JOIN task_locations tlo ON tlo.id = t.task_locations_id
                 LEFT JOIN task_types tt ON tt.task_id = t.id AND tt.deleted = 0
                 LEFT JOIN task_type_details ttd ON ttd.id = tt.type_id
-                WHERE sm.part_id = :part_id
-                GROUP BY sm.id
+                WHERE sm.part_id = :part_id AND sm.owner_id = :owner_id AND sm.warehouse_id = :warehouse_id AND sm.supplier_id = :supplier_id
+                GROUP BY sm.id, sm.owner_id, sm.warehouse_id, sm.supplier_id
             ";
 
             $params = [':part_id' => $partId];
-
+            if ($ownerId !== null) {
+                $sql .= " AND sm.owner_id = :owner_id";
+                $params[':owner_id'] = $ownerId;
+            }
             if ($warehouseId !== null) {
                 $sql .= " AND sm.warehouse_id = :warehouse_id";
                 $params[':warehouse_id'] = $warehouseId;
+            }
+            if ($supplierId !== null) {
+                $sql .= " AND sm.supplier_id = :supplier_id";
+                $params[':supplier_id'] = $supplierId;
             }
             if ($from) {
                 $sql .= " AND sm.created_at >= :from";
