@@ -61,12 +61,13 @@ class getItems
                 "SELECT tli.id, lit.name
                 FROM task_lockers_issues tli
                 LEFT JOIN locker_issue_types lit ON lit.id = tli.issue_type
-                WHERE uuid = :uuid AND tli.is_solved = 0
+                WHERE uuid = :uuid AND tli.is_solved = 0 AND task_id = :taskId
                 GROUP BY tli.issue_type, tli.uuid
                 "
             );
             // uuid string
             $stmt->bindValue(':uuid', isset($payload['uuid']) ? $payload['uuid'] : null, PDO::PARAM_STR);
+            $stmt->bindValue(':taskId', isset($payload['taskId']) ? $payload['taskId'] : null, PDO::PARAM_STR);
             $stmt->execute();
             $issues = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -123,9 +124,10 @@ class getItems
                 "SELECT tli.id, i.name, tli.performed_by as performedBy, tli.created_at as createdAt, tli.notes
                  FROM task_lockers_interventions tli
                  LEFT JOIN interventions i ON i.id = tli.intervention_id
-                 WHERE uuid = :uuid
+                 WHERE task_id = :taskId AND uuid = :uuid
                  ORDER BY tli.created_at DESC"
             );
+            $stmt->bindValue(':taskId', isset($payload['taskId']) ? $payload['taskId'] : null, PDO::PARAM_STR);
             $stmt->bindValue(':uuid', isset($payload['uuid']) ? $payload['uuid'] : null, PDO::PARAM_STR);
             $stmt->execute();
             $interventions = $stmt->fetchAll(PDO::FETCH_ASSOC);
