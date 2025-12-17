@@ -92,7 +92,7 @@ class UpdatePart
                 }
                 //mennyiségi változás esetén ellenőrizni, hogy az összes mező megvan-e
                 if ($data['quantityDifference'] !== 0) {
-                    if (empty($data['part']['partId']) || empty($data['unitPrice']) || empty($data['currency']) || empty($data['reference']) || empty($data['note'])) {
+                    if (empty($data['part']['partId']) || empty($data['currency']) || empty($data['reference']) || empty($data['note'])) {
                         return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a mennyiség változtatásához');
                     }
                 }
