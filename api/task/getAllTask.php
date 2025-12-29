@@ -70,6 +70,7 @@ class GetAllTask
                 'columns' => [
                     't.id as id',
                     'ttd.id as types',
+                    'tp.priority_id as priorityId',
                     'ts1.id as "status_partner_id"',
                     'ts2.id as "status_exohu_id"',
                     'ts2.name as "status_exohu"',
@@ -101,6 +102,8 @@ class GetAllTask
                         LEFT JOIN task_statuses ts2 on ts2.id = t.status_by_exohu_id
                         LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts2.id
                         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
+                        LEFT JOIN task_priorities tp on tp.task_id = t.id
+                        LEFT JOIN priorities p on p.id = tp.priority_id
                         LEFT JOIN location_types lt on lt.id = tl.location_type_id
                         LEFT JOIN task_location_photos tlp on tlp.task_locations_id = tl.id AND tlp.deleted in (0,null)
                         LEFT JOIN task_dates td on td.task_id = t.id

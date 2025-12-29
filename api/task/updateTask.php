@@ -347,6 +347,11 @@ class updateTask
                         ];
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
                         break;
+                    case 'task_priorities':
+                        $isTheProcessAllowed = $this->auth->authenticate(36);
+                        if ($isTheProcessAllowed['status'] !== 200) {
+                            return $this->response = $isTheProcessAllowed;
+                        }
                     default:
                         $taskId = $data['id'];
                         $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);

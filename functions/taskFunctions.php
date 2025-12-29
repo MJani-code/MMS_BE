@@ -239,7 +239,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         }
     }
 
-    //getStatuses
+    //getAllowedStatuses
     function getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId)
     {
         if (isset($manipulatedData['data'])) {
@@ -371,6 +371,38 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         }
     }
 
+    //getPriorities
+    function getPriorities($conn, $manipulatedData, $data, $userRoleId)
+    {
+        if (isset($manipulatedData['data'])) {
+            try {
+                $dataToHandleInDb = [
+                    'table' => 'priorities p',
+                    'method' => "get",
+                    'columns' => ['id', 'name', 'color'],
+                    'others' => "",
+                    'conditions' => "p.is_active = 1"
+                ];
+                $result = dataToHandleInDb($conn, $dataToHandleInDb);
+                if ($result['status'] === 200) {
+                    $manipulatedData['priorities'] = $result['payload'];
+                    //return createResponse($result['status'], $result['message'], $result['payload']);
+                } else {
+                    return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
+                }
+            } catch (Exception $e) {
+                return createResponse(500, "Hiba történt: " . $e->getMessage());
+            }
+            return $manipulatedData;
+        } else {
+            $manipulatedData = array(
+                'status' => 500,
+                'message' => 'Nincsen megjeleníthető header'
+            );
+            return $manipulatedData;
+        }
+    }
+
     $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password);
     $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
@@ -378,6 +410,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId);
     $manipulatedData = getResponsibles($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getPriorities($conn, $manipulatedData, $data, $userRoleId);
 
     return $manipulatedData;
 }
