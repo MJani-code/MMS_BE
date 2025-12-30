@@ -16,6 +16,7 @@ class updateTaskInBatch
     private $response;
     private $auth;
     private $userAuthData;
+    private $userId;
 
     public function __construct($conn, &$response, $auth)
     {
@@ -32,6 +33,8 @@ class updateTaskInBatch
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
+            $this->userId = $userId;
+            return null;
         }
     }
 
@@ -66,14 +69,17 @@ class updateTaskInBatch
         return $this->response = ['status' => 200, 'message' => 'Validáció sikeres.', 'data' => $statusResult];
     }
 
-    private function executeUpdate($updateItem)
+    private function executeUpdate($updateItem, $userId)
     {
         try {
             $taskIds = implode(',', array_map('intval', $updateItem['taskIds']));
             $statusId = intval($updateItem['value']);
-            $sql = "UPDATE tasks SET status_by_exohu_id = :status_by_exohu_id WHERE id IN ($taskIds)";
+            $sql = "UPDATE tasks SET status_by_exohu_id = :status_by_exohu_id,
+            updated_by = :updated_by, updated_at = NOW()
+            WHERE id IN ($taskIds)";
             $stmt = $this->conn->prepare($sql);
             $stmt->bindValue(":status_by_exohu_id", $statusId);
+            $stmt->bindValue(":updated_by", $userId);
             $stmt->execute();
         } catch (\Throwable $th) {
             return throw new Exception("Adatbázis hiba: " . $th->getMessage());
@@ -102,7 +108,7 @@ class updateTaskInBatch
 
         //Adatok frissítése
         try {
-            $this->executeUpdate($updateItem);
+            $this->executeUpdate($updateItem, $this->userId);
             $this->response = [
                 'status' => 200,
                 'message' => "A feladatok sikeresen frissítve lettek.",
