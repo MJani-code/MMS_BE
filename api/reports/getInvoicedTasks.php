@@ -55,21 +55,23 @@ class GetAllInvoicedTask
             $jsonData = file_get_contents("php://input");
             $body = json_decode($jsonData, true);
             $taskTypes = $body['taskTypes'] ?? [];
+            $notToGroupByShop = $body['notToGroupByShop'] ?? false;
 
             // Create placeholders for the IN clause
             $placeholders = implode(',', array_fill(0, count($taskTypes), '?'));
 
             // Base query
-            $query = "SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tl.name, concat(tl.city,' ',tl.address) as address, sum(DISTINCT tf.total) as total, td.delivery_date as deliveryDate
+            $query = "SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tlo.brand, tl.name, concat(tl.city,' ',tl.address) as address, tf.total as total, td.delivery_date as deliveryDate
             FROM task_fees tf
             LEFT JOIN tasks t on t.id = tf.task_id
             LEFT JOIN task_locations tl on tl.id = t.task_locations_id
             LEFT JOIN task_dates td on td.task_id = t.id
+            LEFT JOIN task_lockers tlo ON. tlo.task_id = t.id
             LEFT JOIN (
                 SELECT DISTINCT task_id, type_id
                 FROM task_types
                 WHERE deleted = 0
-            ) tt ON tt.task_id = t.id            
+            ) tt ON tt.task_id = t.id
             WHERE t.status_by_exohu_id = 10 AND tf.deleted = 0";
 
             // Append the IN clause if there are task statuses
@@ -78,17 +80,22 @@ class GetAllInvoicedTask
             }
 
             // Complete the query
-            $query .= " GROUP BY tl.tof_shop_id;";
+            //$query .= " GROUP BY tl.tof_shop_id;";
+            if (!$notToGroupByShop) {
+                $query .= " GROUP BY tl.tof_shop_id;";
+            } else {
+                $query .= ";";
+            }
 
             $stmt = $this->conn->prepare($query);
-            
+
             // Bind the values to the placeholders
             if (count($taskTypes) > 0) {
                 $stmt->execute($taskTypes);
             } else {
                 $stmt->execute();
             }
-            
+
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // $result['postedData'] = $taskStatuses;
