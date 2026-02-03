@@ -58,11 +58,16 @@ class GetIssueTickets
 
     public function getStoredData()
     {
-        //getIssueTicketsReport.json fájl tartalmának lekérése
+        //getIssueTicketsReport2.json fájl tartalmának lekérése
         $filePath = 'getIssueTicketsReport2.json';
         if (file_exists($filePath)) {
             $jsonData = file_get_contents($filePath);
-            return json_decode($jsonData, true);
+            $data = json_decode($jsonData, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                $this->logger->error('JSON decode error in stored file', ['file' => $filePath, 'error' => json_last_error_msg()]);
+                return [];
+            }
+            return is_array($data) ? $data : [];
         } else {
             $this->logger->error('File not found', ['file' => $filePath]);
             return [];
@@ -71,15 +76,23 @@ class GetIssueTickets
 
     public function getHighestDate()
     {
-        // Lekéri a legnagyobb dátumot a getIssueTicketsReport.json fájlból
+        // Lekéri a legnagyobb dátumot a getIssueTicketsRe.json fájlból
         $data = $this->getStoredData();
         if (empty($data)) {
             $this->logger->info('No data found in getIssueTicketsReport2.json');
             return null; // Ha nincs adat, visszatér null-lal
         }
 
+        $highestTs = 0;
         $highestDate = null;
-        $highestDate = $data[0]['createdAt']; // Kezdőérték a legelső elem 'createdAt' mezője
+        foreach ($data as $item) {
+            if (!isset($item['createdAt'])) continue;
+            $ts = strtotime($item['createdAt']);
+            if ($ts > $highestTs) {
+                $highestTs = $ts;
+                $highestDate = $item['createdAt'];
+            }
+        }
         return $highestDate;
     }
 
@@ -177,25 +190,51 @@ class GetIssueTickets
                 $newItems = [];
             }
 
-            // Lekérjük a legmagasabb dátumot
+            // Lekérjük a legmagasabb dátumot és szűrjük az új elemeket helyes módon
             $highestDate = $this->getHighestDate();
-            $filteredNewItems = [];
+            $highestTs = $highestDate ? strtotime($highestDate) : 0;
 
-            // Ha nincs legmagasabb dátum, akkor az összes új elemet hozzáadjuk
+            // rendezzük az új elemeket csökkenő createdAt szerint (ha az API nem garantálja)
+            usort($newItems, function ($a, $b) {
+                $ta = isset($a['createdAt']) ? strtotime($a['createdAt']) : 0;
+                $tb = isset($b['createdAt']) ? strtotime($b['createdAt']) : 0;
+                return $tb <=> $ta;
+            });
+
+            $filteredNewItems = [];
             foreach ($newItems as $item) {
-                if (isset($item['createdAt']) && $item['createdAt'] > $highestDate) {
+                if (!isset($item['createdAt'])) continue;
+                $itemTs = strtotime($item['createdAt']);
+                if ($itemTs > $highestTs) {
                     $filteredNewItems[] = $item;
-                } else {
-                    break; // Ha már nem nagyobb, nincs értelme tovább menni
                 }
+                // ne break; — vizsgáljuk az összes elemet
             }
 
-            //Új elemek hozzáadása a getIssueTicketsReport2.json fájl elejéhez
+            // Új elemek hozzáadása a getIssueTicketsReport2.json fájl elejéhez (diagnosztika és hibakezelés)
+            $filePath = 'getIssueTicketsReport2.json';
             $existingData = $this->getStoredData();
+
+            $this->logger->info('Diagnostics before writing', [
+                'newItems_count' => count($newItems),
+                'highestDate' => $highestDate,
+                'filtered_count' => count($filteredNewItems),
+                'existing_count' => count($existingData),
+                'existing_filesize' => file_exists($filePath) ? filesize($filePath) : 0,
+            ]);
+
             $updatedData = array_merge($filteredNewItems, $existingData);
             $jsonData = json_encode($updatedData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-            file_put_contents('getIssueTicketsReport2.json', $jsonData);
-            $this->logger->info('New issue tickets added to getIssueTicketsReport2.json', ['count' => count($filteredNewItems)]);
+            if ($jsonData === false) {
+                $this->logger->error('json_encode failed', ['error' => json_last_error_msg()]);
+            } else {
+                $written = file_put_contents($filePath, $jsonData, LOCK_EX);
+                if ($written === false) {
+                    $this->logger->error('file_put_contents failed', ['file' => $filePath]);
+                } else {
+                    $this->logger->info('New issue tickets added to getIssueTicketsReport2.json', ['count' => count($filteredNewItems), 'bytes_written' => $written]);
+                }
+            }
 
             // Visszatérünk a válasszal
             return $this->response = $result;
