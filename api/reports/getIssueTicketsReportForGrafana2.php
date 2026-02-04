@@ -53,14 +53,23 @@ class GetIssueTickets
 
     public function getStoredData()
     {
-        //getIssueTicketsReport2.json fájl tartalmának lekérése
-        $filePath = 'getIssueTicketsReport2.json';
-        if (file_exists($filePath)) {
-            $jsonData = file_get_contents($filePath);
-            return json_decode($jsonData, true);
-        } else {
-            return [];
+        // Adatok lekérése adatbázisból
+        $stmt = "SELECT payload FROM los_issue_tickets ORDER BY created_at DESC";
+        $stmt = $this->conn->prepare($stmt);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $allData = [];
+        foreach ($results as $row) {
+            $data = json_decode($row['payload'], true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $allData[] = $data;
+            } else {
+                $this->logger->error('json_decode error for payload', ['error' => json_last_error_msg()]);
+            }
         }
+
+        return $allData;
     }
 
     public function isUserAuthorized()

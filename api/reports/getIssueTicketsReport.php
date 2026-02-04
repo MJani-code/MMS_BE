@@ -2,13 +2,14 @@
 header('Content-Type: application/json');
 
 require('../../inc/conn.php');
-require('getIssueTicketsReport.json');
-
-//hibaüzenetek bekapcsolása
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+require_once('../../vendor/autoload.php');
 
 
+use Monolog\Logger;
+use Monolog\Handler\RotatingFileHandler;
+
+$logger = new Logger('getIssueTicketsReport');
+$logger->pushHandler(new RotatingFileHandler('logs/getIssueTicketsReport.log', 5));
 
 $response = [];
 $jsonData = file_get_contents("php://input");
@@ -24,8 +25,9 @@ class GetIssueTickets
     private $losPassword;
     private $losLoginUrl;
     private $losGetIssueTicketsUrl;
-
-    public function __construct($conn, &$response, $losUserName, $losPassword, $losLoginUrl, $losGetIssueTicketsUrl, $tokenMMS)
+    private $losGetIssueTicketsDevUrl;
+    private $logger;
+    public function __construct($conn, &$response, $losUserName, $losPassword, $losLoginUrl, $losGetIssueTicketsUrl, $losGetIssueTicketsDevUrl, $tokenMMS, $logger)
     {
         $this->conn = $conn;
         $this->response = &$response;
@@ -33,8 +35,11 @@ class GetIssueTickets
         $this->losPassword = $losPassword;
         $this->losLoginUrl = $losLoginUrl;
         $this->losGetIssueTicketsUrl = $losGetIssueTicketsUrl;
+        $this->losGetIssueTicketsDevUrl = $losGetIssueTicketsDevUrl;
         $this->tokenMMS = $tokenMMS;
+        $this->logger = $logger;
     }
+
 
     private function createResponse($status, $message, $data = null)
     {
@@ -53,34 +58,18 @@ class GetIssueTickets
 
     public function getStoredData()
     {
-        //getIssueTicketsReport.json fájl tartalmának lekérése
-        $filePath = 'getIssueTicketsReport.json';
-        if (file_exists($filePath)) {
-            $jsonData = file_get_contents($filePath);
-            return json_decode($jsonData, true);
-        } else {
-            return [];
-        }
-    }
+        // Lekérni adatbázisból az előző napi adatokat
+        $stmt = "SELECT * FROM los_issue_tickets ORDER BY created_at DESC";
+        $stmt = $this->conn->prepare($stmt);
+        $stmt->execute();
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    public function getHighestDate()
-    {
-        // Lekéri a legnagyobb dátumot a getIssueTicketsReport.json fájlból
-        $data = $this->getStoredData();
-        if (empty($data)) {
-            return null; // Ha nincs adat, visszatér null-lal
-        }
+        $highestDate = $results ? $results[0]['created_at'] : null;
 
-        $highestDate = null;
-        foreach ($data as $item) {
-            if (isset($item['date'])) {
-                $date = $item['date'];
-                if ($highestDate === null || strtotime($date) > strtotime($highestDate)) {
-                    $highestDate = $date;
-                }
-            }
-        }
-        return $highestDate;
+        return [
+            'data' => $results,
+            'highestDate' => $highestDate
+        ];
     }
 
     public function isUserAuthorized()
@@ -92,13 +81,17 @@ class GetIssueTickets
             $tokenFromDb = $result ? $result['token'] : null;
         } catch (Exception $e) {
             $errorInfo = $e->getMessage();
+            $this->logger->error('Error fetching token from database', ['error' => $errorInfo]);
             return $this->createResponse(500, $errorInfo, null);
         }
 
         // Explicitly use $this->tokenMMS to access the token
         if ($tokenFromDb !== $this->tokenMMS) {
+            $this->logger->error('Unauthorized access attempt', ['token' => $this->tokenMMS]);
             return $this->createResponse(401, "Unauthorized", null);
         }
+        //logging
+        $this->logger->info('User authorized', ['token' => $this->tokenMMS]);
         return $this->createResponse(200, "Authorized", null);
     }
 
@@ -115,20 +108,73 @@ class GetIssueTickets
             return $token;
         } catch (Exception $e) {
             $errorInfo = $e->getMessage();
+            $this->logger->error('Error fetching token from database', ['error' => $errorInfo]);
             return $this->createResponse(500, $errorInfo, null);
         }
     }
 
-    public function getIssueTicketsFunction($payload)
+    public function storeDataToDatabase($data)
+    {
+        try {
+            // Prepare upsert statement
+            $sql = "INSERT INTO los_issue_tickets (`payload`, `created_at`, `inserted_at`) VALUES (:payload, :created_at, NOW())";
+            $stmt = $this->conn->prepare($sql);
+
+            // Data importálása
+            $this->conn->beginTransaction();
+            $count = 0;
+            foreach ($data as $item) {
+                // Determine external id
+                $externalId = null;
+                if (isset($item['id'])) $externalId = (string)$item['id'];
+                elseif (isset($item['externalId'])) $externalId = (string)$item['externalId'];
+                else {
+                    // skip items without id
+                    continue;
+                }
+
+                // createdAt -> MySQL DATETIME
+                $createdAt = null;
+                if (isset($item['createdAt'])) {
+                    $ts = strtotime($item['createdAt']);
+                    if ($ts !== false) $createdAt = date('Y-m-d H:i:s', $ts);
+                }
+
+                $payload = json_encode($item, JSON_UNESCAPED_UNICODE);
+
+                $stmt->bindValue(':payload', $payload, PDO::PARAM_STR);
+                $stmt->bindValue(':created_at', $createdAt, PDO::PARAM_STR);
+                $stmt->execute();
+
+                $count++;
+            }
+            $this->conn->commit();
+        } catch (Exception $e) {
+            if ($this->conn->inTransaction()) $this->conn->rollBack();
+            $this->logger->error('Error storing data to database', ['error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    public function getIssueTicketsFunction()
     {
         try {
             // Authorization check
             $isUserAuthorizedResult = $this->isUserAuthorized();
             if ($isUserAuthorizedResult['status'] !== 200) {
+                $this->logger->error('User not authorized', ['response' => $isUserAuthorizedResult]);
                 return $this->response = $isUserAuthorizedResult;
             }
 
-            $ch = curl_init('https://loswebapi.expressone.hu/Los/GetIssueTicketsForReport');
+            //Login
+            $loginResponse = $this->login();
+            if ($loginResponse['status'] !== 200) {
+                $this->logger->error('Login failed', ['response' => $loginResponse]);
+                return $this->response = $loginResponse;
+            }
+
+            //API hívás
+            $ch = curl_init($this->losGetIssueTicketsUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Content-Type: application/json',
@@ -139,100 +185,66 @@ class GetIssueTickets
 
             $result = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $result = json_decode($result, true);
+            curl_close($ch);
 
+            //API hívás ellenőrzése
             if ($result === false) {
+                $this->logger->error('Failed to get locker data', ['error' => curl_error($ch)]);
                 return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
             }
-
-            $loggedIn = 0;
-            if ($httpCode === 401 && $loggedIn === 0) {
-                // If unauthorized, attempt to log in
-                $loginResponse = $this->login();
-                if ($loginResponse['status'] !== 200) {
-                    return $this->response = $loginResponse;
-                }
-                // Retry the request after successful login
-                $loggedIn = 1;
-                return $this->getIssueTicketsFunction($payload);
+            // Ellenőrizzük a payload létezését
+            if (!isset($result['payload'])) {
+                $this->logger->error('Failed to get issue tickets', ['httpCode' => $httpCode, 'response' => $result, 'token' => $this->getToken()]);
+                return $this->response = $this->createResponse($httpCode, 'Failed to get issue tickets: ' . $result['payload']);
             }
-
-            curl_close($ch);
-            $result = json_decode($result, true);
-
-
+            // Ellenőrizzük, hogy van-e 'items' a payload-ban
             if (isset($result['payload']['items'])) {
-                $loggedIn = 1;
-                $allItems = $result['payload']['items'];
+                $this->logger->info('Issue tickets retrieved successfully', ['count' => count($result['payload']['items'])]);
+                $newItems = $result['payload']['items'];
+            }
+            // Ha nincs 'items', akkor üres tömböt adunk vissza
+            else {
+                $this->logger->info('No issue tickets found in payload');
+                $newItems = [];
             }
 
-            // Process the items to count issueType occurrences by day
-            $issueTickets = [];
-            foreach ($allItems as $item) {
-                $issueType = $item['ticketDetails']['category']['topicDisplay'];
+            // Lekérjük a legmagasabb dátumot és szűrjük az új elemeket helyes módon
+            $highestDate = $this->getStoredData()['highestDate'];
+            $highestTs = $highestDate ? strtotime($highestDate) : 0;
 
-                $highestDate = $this->getHighestDate();
-                if ($item['createdAt'] < $highestDate || $item['createdAt'] == $highestDate) {
-                    continue; // Skip items with a date earlier than the highest date
-                }
-                $date = date('Y-m-d', strtotime($item['createdAt'])); // Assuming 'createdAt' contains the date
+            // rendezzük az új elemeket csökkenő createdAt szerint (ha az API nem garantálja)
+            usort($newItems, function ($a, $b) {
+                $ta = isset($a['createdAt']) ? strtotime($a['createdAt']) : 0;
+                $tb = isset($b['createdAt']) ? strtotime($b['createdAt']) : 0;
+                return $tb <=> $ta;
+            });
 
-                if (isset($payload['username'])) {
-                    if ($item['username'] == $payload['username']) {
-                        if (!isset($issueTickets["$date-$issueType"])) {
-                            $issueTickets["$date-$issueType"] = [
-                                'date' => $date,
-                                'issueType' => $issueType,
-                                'count' => 0,
-                                'uuid' => $item['uuid'],
-                                'compartmentNumber' => $item['compartmentNumber'],
-                                'integrationCode' => $item['integrationCode'],
-                                'username' => $item['username']
-                            ];
-                        }
-                        $issueTickets["$date-$issueType"]['count']++;
-                        //a uuid értékeket egy tömbe a uuid kulcsban tárolja
-                        if (!isset($issueTickets["$date-$issueType"]['uuids'])) {
-                            $issueTickets["$date-$issueType"]['uuids'] = [];
-                        }
-
-                        $issueTickets["$date-$issueType"]['uuids'][] = $item['uuid'];
-                    }
-                } else {
-                    if (!isset($issueTickets["$date-$issueType"])) {
-                        $issueTickets["$date-$issueType"] = [
-                            'date' => $date,
-                            'issueType' => $issueType,
-                            'count' => 0,
-                            'uuid' => $item['uuid'],
-                            'compartmentNumber' => $item['compartmentNumber'],
-                            'integrationCode' => $item['integrationCode'],
-                            'username' => $item['username']
-                        ];
-                    }
-                    $issueTickets["$date-$issueType"]['count']++;
-                    //a uuid értékeket egy tömbe a uuid kulcsban tárolja
-                    if (!isset($issueTickets["$date-$issueType"]['uuids'])) {
-                        $issueTickets["$date-$issueType"]['uuids'] = [];
-                    }
-
-                    $issueTickets["$date-$issueType"]['uuids'][] = $item['uuid'];
+            $filteredNewItems = [];
+            foreach ($newItems as $item) {
+                if (!isset($item['createdAt'])) continue;
+                $itemTs = strtotime($item['createdAt']);
+                if ($itemTs > $highestTs) {
+                    $filteredNewItems[] = $item;
                 }
             }
 
-            // Re-index the array to remove keys
-            $issueTickets = array_values($issueTickets);
+            $existingData = $this->getStoredData()['data'];
 
-            //hozzáadni az $issueTickets-t a getIssueTicketsReport.json fájlhoz
-            $existingData = $this->getStoredData();
-            $existingData = array_merge($existingData, $issueTickets);
-            file_put_contents('getIssueTicketsReport.json', json_encode($existingData, JSON_PRETTY_PRINT));
-            // Visszatérés a getIssueTicketsReport.json fájl tartalmával
-            $issueTickets = $this->getStoredData();
-            //Visszatérés a lekért adatokkal
+            $this->logger->info('Diagnostics before writing', [
+                'newItems_count' => count($newItems),
+                'highestDate' => $highestDate,
+                'filtered_count' => count($filteredNewItems),
+                'existing_count' => count($existingData)
+            ]);
 
-            return $this->response = $issueTickets;
+            // Adatok tárolása az adatbázisban
+            $this->storeDataToDatabase($filteredNewItems);
+
+            // Logoljuk a sikeres műveletet
+            $this->logger->info('Data stored successfully', ['new_records' => count($filteredNewItems)]);
         } catch (Exception $e) {
-            return $this->response = $this->createResponse(400, $e->getMessage());
+            return $this->logger->error('Error in getIssueTicketsFunction', ['error' => $e->getMessage()]);
         }
     }
 
@@ -253,22 +265,26 @@ class GetIssueTickets
 
             $result = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $result = json_decode($result, true);
 
             if ($result === false) {
+                $this->logger->error('Login failed', ['curl_error' => curl_error($ch)], ['httpCode' => $httpCode], ['response' => $result]);
                 return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
             }
 
             curl_close($ch);
-            $result = json_decode($result, true);
 
             if (isset($result['payload']['token'])) {
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);
+                $this->logger->info('Login successful', ['token' => $this->token]);
                 return $this->createResponse(200, 'Login successful', $result);
             } else {
+                $this->logger->error('Login failed', ['response' => $result]);
                 return $this->createResponse(400, 'Login failed');
             }
         } catch (Exception $e) {
+            $this->logger->error('Error during login', ['error' => $e->getMessage()]);
             return $this->createResponse(400, $e->getMessage());
         }
     }
@@ -281,7 +297,6 @@ $tokenMMS = $matches[1];
 if (empty($tokenMMS)) {
     $tokenMMS = $_GET['token'] ?? null;
 }
-
-$getIssueTickets = new GetIssueTickets($conn, $response, $losUserName, $losPassword, $losLoginUrl, $losGetIssueTicketsUrl, $tokenMMS);
+$getIssueTickets = new GetIssueTickets($conn, $response, $losUserName, $losPassword, $losLoginUrl, $losGetIssueTicketsUrl, $losGetIssueTicketsDevUrl, $tokenMMS, $logger);
 $getIssueTickets->getIssueTicketsFunction($payload, $tokenMMS);
 echo json_encode($response);
