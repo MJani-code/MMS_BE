@@ -61,12 +61,24 @@ class GetAllInvoicedTask
             $placeholders = implode(',', array_fill(0, count($taskTypes), '?'));
 
             // Base query
-            $query = "SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tlo.brand, tl.name, concat(tl.city,' ',tl.address) as address, tf.total as total, td.delivery_date as deliveryDate
+            $query = "SELECT t.id as taskId, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tlo.brand, tl.name, concat(tl.city,' ',tl.address) as address, ";
+
+            if (!$notToGroupByShop) {
+                $query .= " sum(tf.total) as total, ";
+            } else {
+                $query .= " tf.total as total, ";
+            }
+
+            $query .= "td.delivery_date as deliveryDate
             FROM task_fees tf
             LEFT JOIN tasks t on t.id = tf.task_id
             LEFT JOIN task_locations tl on tl.id = t.task_locations_id
             LEFT JOIN task_dates td on td.task_id = t.id
-            LEFT JOIN task_lockers tlo ON. tlo.task_id = t.id
+            LEFT JOIN task_lockers tlo ON tlo.id = (
+                SELECT MAX(tlo2.id)
+                FROM task_lockers tlo2
+                WHERE tlo2.task_id = t.id
+            )
             LEFT JOIN (
                 SELECT DISTINCT task_id, type_id
                 FROM task_types
