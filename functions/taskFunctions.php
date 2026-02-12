@@ -1112,6 +1112,17 @@ function addTask($conn, $newTask, $userId)
             }
         }
 
+        //legutóbbi task_lockers_id lekérdezése
+        $dataToHandleInDb = [
+            'table' => "task_lockers",
+            'method' => "get",
+            'columns' => ['MAX(id)'],
+            'others' => "",
+            'conditions' => ""
+        ];
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        $taskLockersId = $result['payload'][0]['MAX(id)'];
+
         // `task_types` tábla beszúró lekérdezés
         $taskTypesSql = "INSERT INTO task_types (type_id, task_id, created_by) VALUES (?,?,?)";
         $taskTypesStmt = $conn->prepare($taskTypesSql);
@@ -1136,7 +1147,7 @@ function addTask($conn, $newTask, $userId)
             foreach ($locker['issues'] as $issue) {
                 $lockerSql = "INSERT INTO task_lockers_issues (task_lockers_id, task_id, tof_shop_id, uuid, issue_type, description, compartment_number, created_by) VALUES (?,?,?,?,?,?,?,?)";
                 $lockerStmt = $conn->prepare($lockerSql);
-                $lockerStmt->execute([$locker['lockerId'], $taskId, $tofShopId, $locker['serial'], $issue['type'], $locker['description'], $issue['compartmentNumber'], $userId]);
+                $lockerStmt->execute([$taskLockersId, $taskId, $tofShopId, $locker['serial'], $issue['type'], $locker['description'], $issue['compartmentNumber'], $userId]);
             }
         }
 
