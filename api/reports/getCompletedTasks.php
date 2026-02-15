@@ -61,13 +61,13 @@ class getCompletedTasks
 
             // Base query
             $query = "SELECT
-                t.id as taskId, GROUP_CONCAT(DISTINCT ttd.name) as taskType, ts.name as status, tlo.brand, lit.name as issueType, tli.description as issueDescription, td.delivery_date as deliveryDate
+                t.id as taskId, GROUP_CONCAT(DISTINCT ttd.name) as taskType, ts.name as status, tlo.brand, tlo.serial, tl.comment as orderDescription, lit.name as issueType, tli.description as issueDescription, td.delivery_date as deliveryDate
                 FROM `tasks` t
                 LEFT JOIN task_dates td on td.task_id = t.id
                 LEFT JOIN task_locations tl on tl.id = t.task_locations_id
                 LEFT JOIN task_lockers tlo ON. tlo.task_id = t.id
                 LEFT JOIN task_statuses ts on ts.id = t.status_by_exohu_id
-                LEFT JOIN task_lockers_issues tli ON tli.task_lockers_id = tlo.id
+                LEFT JOIN task_lockers_issues tli ON tli.uuid = tlo.serial AND tli.task_id = t.id
                 LEFT JOIN locker_issue_types lit ON lit.id = tli.issue_type
                 LEFT JOIN(
                     SELECT DISTINCT
