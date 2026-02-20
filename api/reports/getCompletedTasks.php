@@ -55,13 +55,15 @@ class getCompletedTasks
             $jsonData = file_get_contents("php://input");
             $body = json_decode($jsonData, true);
             $taskTypes = $body['taskTypes'] ?? [];
+            $brands = $body['brands'] ?? [];
 
             // Create placeholders for the IN clause
             $placeholders = implode(',', array_fill(0, count($taskTypes), '?'));
+            $brandPlaceholders = implode(',', array_fill(0, count($brands), '?'));
 
             // Base query
             $query = "SELECT
-                t.id as taskId, GROUP_CONCAT(DISTINCT ttd.name) as taskType, ts.name as status, tlo.brand, tlo.serial, tl.comment as orderDescription, lit.name as issueType, tli.description as issueDescription, td.delivery_date as deliveryDate
+                t.id as taskId, GROUP_CONCAT(DISTINCT ttd.name) as taskType, ts.name as status, tlo.brand, tlo.serial, tl.comment as orderDescription, lit.name as issueType, tli.description as issueDescription, sum(tf.total) as totalFees, t.created_at as createdAt, td.delivery_date as deliveryDate
                 FROM `tasks` t
                 LEFT JOIN task_dates td on td.task_id = t.id
                 LEFT JOIN task_locations tl on tl.id = t.task_locations_id
@@ -69,6 +71,7 @@ class getCompletedTasks
                 LEFT JOIN task_statuses ts on ts.id = t.status_by_exohu_id
                 LEFT JOIN task_lockers_issues tli ON tli.uuid = tlo.serial AND tli.task_id = t.id
                 LEFT JOIN locker_issue_types lit ON lit.id = tli.issue_type
+                LEFT JOIN task_fees tf ON tf.task_id = t.id AND tf.deleted = 0
                 LEFT JOIN(
                     SELECT DISTINCT
                         task_id,
@@ -89,14 +92,23 @@ class getCompletedTasks
                 $query .= " AND tt.type_id IN ($placeholders)";
             }
 
+            // Append the IN clause if there are brands
+            if (count($brands) > 0) {
+                $query .= " AND tlo.brand IN ($brandPlaceholders)";
+            }
+
             // Complete the query
             $query .= " GROUP BY t.id;";
 
             $stmt = $this->conn->prepare($query);
 
             // Bind the values to the placeholders
-            if (count($taskTypes) > 0) {
+            if (count($taskTypes) > 0 && count($brands) > 0) {
+                $stmt->execute(array_merge($taskTypes, $brands));
+            } elseif (count($taskTypes) > 0) {
                 $stmt->execute($taskTypes);
+            } elseif (count($brands) > 0) {
+                $stmt->execute($brands);
             } else {
                 $stmt->execute();
             }
