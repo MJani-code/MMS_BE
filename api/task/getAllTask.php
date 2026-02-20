@@ -4,6 +4,14 @@ header('Content-Type: application/json');
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
+require(__DIR__ . '/../../vendor/autoload.php');
+
+use Monolog\Logger;
+use Monolog\Handler\RotatingFileHandler;
+
+$logger = new Logger('getAllTask');
+$logger->pushHandler(new RotatingFileHandler('logs/getAllTask.log', 5));
+
 
 $response = [];
 
@@ -20,24 +28,21 @@ class GetAllTask
     private $taskData = [];
     private $auth;
     private $userAuthData;
+    private $logger;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds = [], $getAllActivePointsUrl, $user, $password)
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $logger)
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
         $this->response = &$response;
         $this->auth = $auth;
+        $this->logger = $logger;
         $this->tofShopIds = $tofShopIds;
         $this->getAllActivePointsUrl = $getAllActivePointsUrl;
         $this->user = $user;
         $this->password = $password;
     }
 
-
-    // public function Auth()
-    // {
-    //     return $this->auth->authenticate();
-    // }
 
     public function getTaskData()
     {
@@ -59,18 +64,24 @@ class GetAllTask
             );;
         }
 
-        //Data gathering
+        //Data gathering        
         $tofShopIds = getTofShopId($this->tofShopIdUrl);
+
         $this->tofShopIds = $tofShopIds['payload'];
         $restrictionOfCompanyId = !in_array(17, $permissions) ? true : false;
+
         try {
+            // TESZTELÉSHEZ: Állítsd át: $limitForTesting = "LIMIT 50";
+            // Így csak 50 taskot kérdez le, gyorsabb tesztelés
+            // PRODUCTION-ban: $limitForTesting = "";
+            $limitForTesting = ""; // <-- Itt állítsd át teszteléshez!
+
             $baseTaskData = [
                 'table' => "tasks t",
                 'method' => "get",
                 'columns' => [
                     't.id as id',
-                    'ttd.id as types',
-                    'tp.priority_id as priorityId',
+                    't.task_locations_id',
                     'ts1.id as "status_partner_id"',
                     'ts2.id as "status_exohu_id"',
                     'ts2.name as "status_exohu"',
@@ -88,36 +99,61 @@ class GetAllTask
                     'tl.comment',
                     'tl.company_feedback as feedback',
                     'tl.locker_approach as lockerApproach',
-                    'c.id as "responsible"',
                     'td.planned_delivery_date',
                     'td.delivery_date',
-                    'tlp.url',
                     'CONCAT(UPPER(LEFT(u.last_name, 1)), UPPER(LEFT(u.first_name, 1))) as createdBy',
                     't.created_at as createdAt'
                 ],
                 'others' => "
-                        LEFT JOIN task_types tt on tt.task_id = t.id AND tt.deleted = 0
-                        LEFT JOIN task_type_details ttd on ttd.id = tt.type_id
                         LEFT JOIN task_statuses ts1 on ts1.id = t.status_by_partner_id
                         LEFT JOIN task_statuses ts2 on ts2.id = t.status_by_exohu_id
-                        LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts2.id
                         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
-                        LEFT JOIN task_priorities tp on tp.task_id = t.id
-                        LEFT JOIN priorities p on p.id = tp.priority_id
-                        LEFT JOIN location_types lt on lt.id = tl.location_type_id
-                        LEFT JOIN task_location_photos tlp on tlp.task_locations_id = tl.id AND tlp.deleted in (0,null)
                         LEFT JOIN task_dates td on td.task_id = t.id
-                        LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.deleted = 0                        
-                        LEFT JOIN companies c on c.id = tr.company_id
                         LEFT JOIN users u on u.id = t.created_by
+                        " . (!in_array(17, $permissions) ? "LEFT JOIN task_responsibles tr_filter on tr_filter.task_id = t.id AND tr_filter.deleted = 0 AND tr_filter.company_id = $companyId" : "") . "
                         ",
 
                 //'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
                 // 'conditions' => (!in_array(17, $permissions) ? "tr.company_id = $companyId ORDER BY id" : "tr.company_id in (1,2,3)"),
-                'order' => "ORDER BY id DESC"
+                'conditions' => (!in_array(17, $permissions) ? "tr_filter.id IS NOT NULL" : ""),
+                'order' => "ORDER BY t.id DESC $limitForTesting"
+            ];
+            // Task types külön lekérdezése
+            $taskTypes = [
+                'table' => "task_types tt",
+                'method' => "get",
+                'columns' => [
+                    'tt.task_id',
+                    'ttd.id as type_id'
+                ],
+                'others' => "LEFT JOIN task_type_details ttd on ttd.id = tt.type_id",
+                'conditions' => "tt.deleted = 0"
+            ];
+
+            // Task priorities külön lekérdezése
+            $taskPriorities = [
+                'table' => "task_priorities tp",
+                'method' => "get",
+                'columns' => [
+                    'tp.task_id',
+                    'tp.priority_id'
+                ],
+                'conditions' => ""
+            ];
+
+            // Task responsibles külön lekérdezése
+            $taskResponsibles = [
+                'table' => "task_responsibles tr",
+                'method' => "get",
+                'columns' => [
+                    'tr.task_id',
+                    'c.id as company_id'
+                ],
+                'others' => "LEFT JOIN companies c on c.id = tr.company_id",
+                'conditions' => "tr.deleted = 0"
             ];
             if (!in_array(17, $permissions)) {
-                $baseTaskData['conditions'] .= " tr.company_id = $companyId";
+                $taskResponsibles['conditions'] .= " AND tr.company_id = $companyId";
             }
 
             $fees = [
@@ -128,7 +164,8 @@ class GetAllTask
                     'CONCAT(f.name,"(",f.net_unit_price ,")") as name',
                     'f.fee_type as type',
                     "f.net_unit_price as value"
-                ]
+                ],
+                'conditions' => ""
             ];
             if (!in_array(23, $permissions)) {
                 $fees['conditions'] .= " f.company_id = $companyId AND f.is_active = 1 ORDER BY f.name DESC";
@@ -152,6 +189,7 @@ class GetAllTask
                 'others' => "LEFT JOIN fees f on f.id = tf.fee_id",
                 'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
             ];
+
             $lockers = [
                 'table' => "task_lockers tl",
                 'method' => "get",
@@ -177,14 +215,56 @@ class GetAllTask
                 ",
                 'conditions' => "tl.deleted = 0"
             ];
+
+            $taskPhotos = [
+                'table' => "task_location_photos tlp",
+                'method' => "get",
+                'columns' => [
+                    'tlp.task_locations_id',
+                    'tlp.url as url'
+                ],
+                'conditions' => "tlp.deleted = 0 OR tlp.deleted IS NULL",
+                'order' => "ORDER BY tlp.task_locations_id"
+            ];
+
+            $start = microtime(true);
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
+            $end = microtime(true);
+            $this->logger->info('getTaskData function - Time taken to execute baseTaskData query: ' . ($end - $start) . ' seconds');
+
+            $start = microtime(true);
+            $resultOfTaskTypes = dataToHandleInDb($this->conn, $taskTypes);
+            $end = microtime(true);
+            $this->logger->info('getTaskData function - Time taken to execute taskTypes query: ' . ($end - $start) . ' seconds');
+
+            $start = microtime(true);
+            $resultOfTaskPriorities = dataToHandleInDb($this->conn, $taskPriorities);
+            $end = microtime(true);
+            $this->logger->info('getTaskData function - Time taken to execute taskPriorities query: ' . ($end - $start) . ' seconds');
+
+            $start = microtime(true);
+            $resultOfTaskResponsibles = dataToHandleInDb($this->conn, $taskResponsibles);
+            $end = microtime(true);
+            $this->logger->info('getTaskData function - Time taken to execute taskResponsibles query: ' . ($end - $start) . ' seconds');
+
+            $start = microtime(true);
             $resultOfLockers = dataToHandleInDb($this->conn, $lockers);
+            $end = microtime(true);
+            $this->logger->info('getTaskData function - Time taken to execute lockers query: ' . ($end - $start) . ' seconds');
+
+            $start = microtime(true);
+            $resultOfTaskPhotos = dataToHandleInDb($this->conn, $taskPhotos);
+            $end = microtime(true);
+            $this->logger->info('getTaskData function - Time taken to execute taskPhotos query: ' . ($end - $start) . ' seconds');
 
             $errorInfo = '';
             //Check if user has permission to taskFees
             $isAccessTotaskFees = $this->auth->authenticate(6);
             if ($isAccessTotaskFees['status'] !== 403) {
+                $start = microtime(true);
                 $resultOfTaskFees = dataToHandleInDb($this->conn, $taskFees);
+                $end = microtime(true);
+                $this->logger->info('getTaskData function - Time taken to execute taskFees query: ' . ($end - $start) . ' seconds');
                 $errorInfo .= isset($resultOfTaskFees['errorInfo']) ? $resultOfTaskFees['errorInfo'] : '';
             } else {
                 $resultOfTaskFees = $isAccessTotaskFees;
@@ -193,7 +273,10 @@ class GetAllTask
             //Check if user has permission to fees
             $isAccessTofees = $this->auth->authenticate(6);
             if ($isAccessTofees['status'] !== 403) {
+                $start = microtime(true);
                 $resultOffees = dataToHandleInDb($this->conn, $fees);
+                $end = microtime(true);
+                $this->logger->info('getTaskData function - Time taken to execute fees query: ' . ($end - $start) . ' seconds');
                 $errorInfo .= isset($resultOffees['errorInfo']) ? $resultOffees['errorInfo'] : '';
             } else {
                 $resultOffees = $isAccessTofees;
@@ -216,9 +299,13 @@ class GetAllTask
                 }
             } else {
                 $this->taskData['baseTaskData'] = $resultOfBaseTaskData;
+                $this->taskData['taskTypes'] = $resultOfTaskTypes;
+                $this->taskData['taskPriorities'] = $resultOfTaskPriorities;
+                $this->taskData['taskResponsibles'] = $resultOfTaskResponsibles;
                 $this->taskData['taskFees'] = $resultOfTaskFees;
                 $this->taskData['lockers'] = $resultOfLockers;
                 $this->taskData['fees'] = $resultOffees;
+                $this->taskData['taskPhotos'] = $resultOfTaskPhotos;
                 return $this->taskData;
             }
         } catch (Exception $e) {
@@ -246,9 +333,11 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
+$tofShopIds = [];
+
 $auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password);
+$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $logger);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

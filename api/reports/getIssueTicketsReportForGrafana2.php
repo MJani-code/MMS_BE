@@ -51,13 +51,22 @@ class GetIssueTickets
         ];
     }
 
-    public function getStoredData()
+    public function getStoredData($from, $to)
     {
         // Adatok lekérése adatbázisból
-        $stmt = "SELECT payload FROM los_issue_tickets ORDER BY created_at DESC";
+        $start = microtime(true);
+        $stmt = "SELECT payload FROM los_issue_tickets WHERE created_at BETWEEN :from AND :to ORDER BY created_at DESC";
         $stmt = $this->conn->prepare($stmt);
+        $stmt->bindParam(':from', $from);
+        $stmt->bindParam(':to', $to);
         $stmt->execute();
+        $end = microtime(true);
+        $this->logger->info('getStoredData function - Time taken to execute query on los_issue_tickets database: ' . ($end - $start) . ' seconds');
+
+        $start = microtime(true);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $end = microtime(true);
+        $this->logger->info('getStoredData function - Time taken to fetch data from los_issue_tickets database: ' . ($end - $start) . ' seconds', ['resultCount' => count($results)]);
 
         $allData = [];
         foreach ($results as $row) {
@@ -75,10 +84,13 @@ class GetIssueTickets
     public function isUserAuthorized()
     {
         try {
+            $start = microtime(true);
             $stmt = $this->conn->prepare("SELECT token FROM api_tokens where api='grafana/getInvoicedTasks' ORDER BY created_at DESC LIMIT 1");
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             $tokenFromDb = $result ? $result['token'] : null;
+            $end = microtime(true);
+            $this->logger->info('isUserAuthorized function - Time taken to fetch token from api_tokens database: ' . ($end - $start) . ' seconds');
         } catch (Exception $e) {
             $errorInfo = $e->getMessage();
             return $this->createResponse(500, $errorInfo, null);
@@ -103,14 +115,17 @@ class GetIssueTickets
             }
 
             // Get stored data from JSON file
-            $storedData = $this->getStoredData();
+            $storedData = $this->getStoredData($payload['from'], $payload['to']);
             if (empty($storedData)) {
-                $this->logger->error('No data found in getIssueTicketsReport2.json');
+                $this->logger->error('No data found in the database');
                 return $this->response = $this->createResponse(404, "No data found");
             }
 
             //get exoboxPoints
+            $start = microtime(true);
             $result = getExoboxPoints($this->getAllActivePointsUrl, $this->user, $this->password, null);
+            $end = microtime(true);
+            $this->logger->info('getIssueTicketsFunction - Time taken to fetch exobox points: ' . ($end - $start) . ' seconds');
 
             if (empty($result)) {
                 $this->logger->error('Error fetching exobox points: ' . $result);

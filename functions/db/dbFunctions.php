@@ -113,6 +113,8 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                     $results['status'] = 200;
                     $results['message'] = 'success';
                     $results['payload'] = $payload;
+                    $results['rowCount'] = $stmt->rowCount();
+                    $results['stmt'] = $query;
                 } else {
                     $errorInfo = $stmt->errorInfo();
                     $results['status'] = 500;

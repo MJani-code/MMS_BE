@@ -56,18 +56,52 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     $newTask['taskTypes'] = [];
                     $newTask['lockerSerials'] = [];
                     $newTask['responsibles'] = [];
+                    $newTask['priorityId'] = null;
                     $newTask['location_photos'] = [];
                     $newTask['isActiveInAdmin'] = null;
                     $newTask['pointId'] = null;
-                    unset($newTask['types'], $newTask['responsible'], $newTask['url']);
                     $groupedData[] = $newTask;
                     $existingIndex = array_key_last($groupedData); // Frissítjük az existingIndex-et az új elem indexével
                 }
 
-                // Feldolgozzuk az egyes mezőket
-                if (isset($task['url']) && !in_array(['url' => $task['url']], $groupedData[$existingIndex]['location_photos'])) {
-                    $groupedData[$existingIndex]['location_photos'][] = ['url' => $task['url']];
+                // Fotók hozzáadása a taskPhotos tömbből
+                if (!empty($data['taskPhotos']['payload'])) {
+                    foreach ($data['taskPhotos']['payload'] as $photo) {
+                        if ($photo['task_locations_id'] == $task['task_locations_id'] && !in_array(['url' => $photo['url']], $groupedData[$existingIndex]['location_photos'])) {
+                            $groupedData[$existingIndex]['location_photos'][] = ['url' => $photo['url']];
+                        }
+                    }
                 }
+
+                // Task types hozzáadása külön query-ből
+                if (!empty($data['taskTypes']['payload'])) {
+                    foreach ($data['taskTypes']['payload'] as $type) {
+                        if ($type['task_id'] == $id && $type['type_id'] !== null && !in_array($type['type_id'], $groupedData[$existingIndex]['taskTypes'])) {
+                            $groupedData[$existingIndex]['taskTypes'][] = $type['type_id'];
+                        }
+                    }
+                }
+
+                // Task priority hozzáadása külön query-ből
+                if (!empty($data['taskPriorities']['payload'])) {
+                    foreach ($data['taskPriorities']['payload'] as $priority) {
+                        if ($priority['task_id'] == $id && $priority['priority_id'] !== null) {
+                            $groupedData[$existingIndex]['priorityId'] = $priority['priority_id'];
+                            break; // Egy taskhoz egy priority tartozik
+                        }
+                    }
+                }
+
+                // Task responsibles hozzáadása külön query-ből
+                if (!empty($data['taskResponsibles']['payload'])) {
+                    foreach ($data['taskResponsibles']['payload'] as $responsible) {
+                        if ($responsible['task_id'] == $id && $responsible['company_id'] !== null && !in_array($responsible['company_id'], $groupedData[$existingIndex]['responsibles'])) {
+                            $groupedData[$existingIndex]['responsibles'][] = $responsible['company_id'];
+                        }
+                    }
+                }
+
+                // Feldolgozzuk az egyes mezőket
 
                 //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
                 if (in_array($task['tof_shop_id'], $tofShopIds)) {
@@ -77,21 +111,11 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                 }
 
                 foreach ($exoboxPoints['payload'] as $point) {
-                    //echo json_encode($point);
                     if ($point['id'] == $task['tof_shop_id']) {
                         $groupedData[$existingIndex]['pointId'] = $point['point_id'];
                         break;
                     }
                 }
-
-                if (isset($task['types']) && $task['types'] !== null && !in_array($task['types'], $groupedData[$existingIndex]['taskTypes'])) {
-                    $groupedData[$existingIndex]['taskTypes'][] = $task['types'];
-                }
-
-                if (isset($task['responsible']) && $task['responsible'] !== null && !in_array($task['responsible'], $groupedData[$existingIndex]['responsibles'])) {
-                    $groupedData[$existingIndex]['responsibles'][] = $task['responsible'];
-                }
-
 
                 // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
                 $taskFeesFound = false; // Flag a taskFees ellenőrzésére
@@ -1206,7 +1230,14 @@ function getTofShopId($url)
 {
     try {
         //API hívás és eredményének feldolgozása
-        $response = file_get_contents($url);
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+                'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
+            ]
+        ]);
+        $response = file_get_contents($url, false, $context);
         $data = json_decode($response, true);
         //$data['points'] körbejárása és az ID értékek kigyűjtése
         $tofShopIds = [];
@@ -1227,6 +1258,11 @@ function getExoboxPoints($url, $user, $password, $id)
             $context = stream_context_create([
                 'http' => [
                     'header' => "Authorization: Basic " . base64_encode("$user:$password")
+                ],
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true,
+                    'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
                 ]
             ]);
             $response = file_get_contents($url, false, $context);
@@ -1238,7 +1274,14 @@ function getExoboxPoints($url, $user, $password, $id)
         }
     } else {
         try {
-            $response = file_get_contents($url);
+            $context = stream_context_create([
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true,
+                    'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
+                ]
+            ]);
+            $response = file_get_contents($url, false, $context);
             $data = json_decode($response, true);
             //echo json_encode($data);
             //visszadni az a $data['point_id']-t, ahol az $data['id'] = $id
