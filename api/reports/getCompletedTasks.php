@@ -63,7 +63,7 @@ class getCompletedTasks
 
             // Base query
             $query = "SELECT
-                t.id as taskId, GROUP_CONCAT(DISTINCT ttd.name) as taskType, ts.name as status, tlo.brand, tlo.serial, tl.comment as orderDescription, lit.name as issueType, tli.description as issueDescription, sum(tf.total) as totalFees, t.created_at as createdAt, td.delivery_date as deliveryDate
+                t.id as taskId, tl.tof_shop_id as tofShopId, GROUP_CONCAT(DISTINCT ttd.name) as taskType, ts.name as status, tlo.brand, tlo.serial, tl.comment as orderDescription, lit.name as issueType, tli.description as issueDescription, sum(tf.total) as totalFees, t.created_at as createdAt, td.delivery_date as deliveryDate
                 FROM `tasks` t
                 LEFT JOIN task_dates td on td.task_id = t.id
                 LEFT JOIN task_locations tl on tl.id = t.task_locations_id
