@@ -884,6 +884,7 @@ function downloadTig($conn, $companyId)
         LEFT JOIN (
             SELECT MIN(id) as id, task_id
             FROM task_responsibles tr_min
+            WHERE tr_min.deleted = 0
             GROUP BY task_id
             ) tr_min ON tr_min.task_id = t.id
         LEFT JOIN task_responsibles tr on tr.task_id = t.id AND tr.id = tr_min.id AND tr.deleted = 0
