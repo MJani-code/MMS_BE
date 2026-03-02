@@ -39,6 +39,19 @@ class getItems
         ];
     }
 
+    public function getWarehouseIdsByCompanyId($companyId)
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT warehouse_id FROM company_warehouses WHERE company_id = :companyId");
+            $stmt->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            $stmt->execute();
+            $warehouses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return array_column($warehouses, 'warehouse_id');
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
     public function getIssues($payload)
     {
         // Authenticate user
@@ -54,6 +67,8 @@ class getItems
 
         $issues = [];
         $spareParts = [];
+
+        $warehouseIds = $this->getWarehouseIdsByCompanyId($companyId);
 
         // Fetch issues from database
         try {
@@ -92,13 +107,14 @@ class getItems
                 LEFT JOIN warehouses w ON w.id = s.warehouse_id
                 LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
                 LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
-                WHERE s.owner_id = :companyId AND s.quantity > 0 AND m.name = :brand
+                WHERE s.warehouse_id IN (:warehouseIds) AND s.quantity > 0 AND m.name = :brand
                 GROUP BY s.id, p.id, w.id, s.supplier_id, p.part_number, p.name, s.quantity
                 ORDER BY p.part_number ASC
                 "
-            );
-            $stmt->bindValue(':companyId', $companyId, PDO::PARAM_INT);
+            );            
             $stmt->bindValue(':brand', isset($payload['brand']) ? $payload['brand'] : null, PDO::PARAM_STR);
+            $warehouseIdsParam = implode(',', $warehouseIds);
+            $stmt->bindValue(':warehouseIds', $warehouseIdsParam, PDO::PARAM_STR);          
             $stmt->execute();
             $spareParts = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
