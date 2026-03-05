@@ -52,6 +52,19 @@ class getItems
         }
     }
 
+    public function getBrandByUuid($uuid)
+    {
+        try {
+            $stmt = $this->conn->prepare("SELECT brand FROM task_lockers WHERE serial = :uuid");
+            $stmt->bindValue(':uuid', $uuid, PDO::PARAM_STR);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $result['brand'] ?? null;
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
     public function getIssues($payload)
     {
         // Authenticate user
@@ -91,6 +104,7 @@ class getItems
 
         // Fetch spare parts from database
         try {
+            $brand = $payload['brand'] ?? $this->getBrandByUuid($payload['uuid']);
             $stmt = $this->conn->prepare(
                 "SELECT
                     s.id as stockId,
@@ -104,15 +118,16 @@ class getItems
                     ps.currency AS currency
                 FROM stock s
                 LEFT JOIN parts p ON p.id = s.part_id
-                LEFT JOIN warehouses w ON w.id = s.warehouse_id
+                LEFT JOIN company_warehouses cw ON cw.warehouse_id = s.warehouse_id
+                LEFT JOIN warehouses w ON w.id = cw.warehouse_id
                 LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
                 LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
-                WHERE s.warehouse_id IN (:warehouseIds) AND s.quantity > 0 AND m.name = :brand
+                WHERE cw.warehouse_id IN (:warehouseIds) AND s.quantity > 0 AND m.name = :brand
                 GROUP BY s.id, p.id, w.id, s.supplier_id, p.part_number, p.name, s.quantity
                 ORDER BY p.part_number ASC
                 "
             );            
-            $stmt->bindValue(':brand', isset($payload['brand']) ? $payload['brand'] : null, PDO::PARAM_STR);
+            $stmt->bindValue(':brand', $brand, PDO::PARAM_STR);
             $warehouseIdsParam = implode(',', $warehouseIds);
             $stmt->bindValue(':warehouseIds', $warehouseIdsParam, PDO::PARAM_STR);          
             $stmt->execute();
