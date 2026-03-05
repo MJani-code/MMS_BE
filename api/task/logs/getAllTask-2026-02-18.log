@@ -1,0 +1,8 @@
+[2026-02-18T10:40:03.734120+01:00] getAllTask.INFO: getTaskData function - Time taken to execute baseTaskData query: 0.010188102722168 seconds [] []
+[2026-02-18T10:40:03.742045+01:00] getAllTask.INFO: getTaskData function - Time taken to execute taskTypes query: 0.0020010471343994 seconds [] []
+[2026-02-18T10:40:03.743180+01:00] getAllTask.INFO: getTaskData function - Time taken to execute taskPriorities query: 0.0009920597076416 seconds [] []
+[2026-02-18T10:40:03.745987+01:00] getAllTask.INFO: getTaskData function - Time taken to execute taskResponsibles query: 0.0027229785919189 seconds [] []
+[2026-02-18T10:40:03.747219+01:00] getAllTask.INFO: getTaskData function - Time taken to execute lockers query: 0.00089192390441895 seconds [] []
+[2026-02-18T10:40:03.749272+01:00] getAllTask.INFO: getTaskData function - Time taken to execute taskPhotos query: 0.0019960403442383 seconds [] []
+[2026-02-18T10:40:03.752541+01:00] getAllTask.INFO: getTaskData function - Time taken to execute taskFees query: 0.0027759075164795 seconds [] []
+[2026-02-18T10:40:03.753595+01:00] getAllTask.INFO: getTaskData function - Time taken to execute fees query: 0.00063204765319824 seconds [] []
