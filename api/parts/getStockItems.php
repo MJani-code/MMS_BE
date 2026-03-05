@@ -52,7 +52,7 @@ class StockItems
                     pc.name AS category,
                     ifnull(s.quantity, 0) AS quantity,
                     ifnull(bs.quantity, 0) AS badQuantity,
-                    w.id AS warehouseId,
+                    cw.warehouse_id AS warehouseId,
                     w.name AS warehouseName,
                     sup.id AS supplierId,
                     sup.name AS supplier,
@@ -62,7 +62,8 @@ class StockItems
                     ps.currency AS currency
                     FROM stock s
                     LEFT JOIN parts p ON s.part_id = p.id
-                    LEFT JOIN warehouses w ON w.id = s.warehouse_id
+                    LEFT JOIN company_warehouses cw ON cw.warehouse_id = s.warehouse_id
+                    LEFT JOIN warehouses w ON w.id = cw.warehouse_id
                     LEFT JOIN part_categories pc ON pc.id = p.part_category_id
                     LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
                     LEFT JOIN suppliers sup ON sup.id = ps.supplier_id
@@ -70,9 +71,9 @@ class StockItems
                     LEFT JOIN bad_stock bs ON bs.part_id = s.part_id AND bs.warehouse_id = s.warehouse_id AND bs.supplier_id = s.supplier_id
                     LEFT JOIN companies c ON c.id = s.owner_id";
             if (!$canViewAllOwnersItems) {
-                $stmt .= " WHERE s.owner_id = :companyId ORDER BY p.id, w.name;";
+                $stmt .= " WHERE cw.company_id = :companyId ORDER BY p.id, c.name;";
             } else {
-                $stmt .= " ORDER BY p.id, w.name;";
+                $stmt .= " ORDER BY p.id, c.name;";
             }
 
             $query = $this->conn->prepare($stmt);
