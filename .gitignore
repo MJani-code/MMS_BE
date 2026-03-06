@@ -5,6 +5,3 @@ PHPMailer/
 vendor/
 api/reports/logs/
 api/task/d4me/logs/
-api/task/logs/
-.DS_Store
-**/.DS_Store

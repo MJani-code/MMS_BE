@@ -63,7 +63,7 @@ class PartHistory
                        GROUP_CONCAT(DISTINCT ttd.color SEPARATOR ',') AS taskTypesColors,
                        tlo.tof_shop_id AS tofShopId,
                        tlo.box_id AS boxId,
-                       tl.serial AS serial,
+                       tli.uuid AS serial,
                        sm.part_id AS partId,
                        p.part_number AS partNumber,
                        p.name AS partName,
