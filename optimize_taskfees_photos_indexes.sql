@@ -1,1 +1,0 @@
-CREATE INDEX idx_task_lockers_deleted ON task_lockers(deleted, task_id);
