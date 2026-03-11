@@ -156,6 +156,31 @@ class GetIssueTickets
         }
     }
 
+    public function storeWholeDataToDatabase($data)
+    {
+        try {
+            $sql = "UPDATE los_tickets SET `payload` = :payload WHERE `id` = :id";
+            $stmt = $this->conn->prepare($sql);
+
+            $this->conn->beginTransaction();
+
+            $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+
+            $stmt->bindValue(':payload', $payload, PDO::PARAM_STR);
+            $stmt->bindValue(':id', 1, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $this->conn->commit();
+
+            return true;
+        } catch (Exception $e) {
+            if ($this->conn->inTransaction()) $this->conn->rollBack();
+            $this->logger->error('Error storing whole data to database', ['error' => $e->getMessage()]);
+            throw $e;
+            return false;
+        }
+    }
+
     public function getIssueTicketsFunction()
     {
         try {
@@ -205,7 +230,7 @@ class GetIssueTickets
             }
             // Ha nincs 'items', akkor üres tömböt adunk vissza
             else {
-                $this->logger->info('No issue tickets found in payload');
+                $this->logger->info('No issue tickets found in payload', ['response' => $result]);
                 $newItems = [];
             }
 
@@ -243,6 +268,14 @@ class GetIssueTickets
 
             // Logoljuk a sikeres műveletet
             $this->logger->info('Data stored successfully', ['new_records' => count($filteredNewItems)]);
+
+            // Az összes adat tárolása
+            $isSuccess = $this->storeWholeDataToDatabase($result['payload']['items'] ?? []);
+            if ($isSuccess) {
+                $this->logger->info('Whole data stored successfully');
+            } else {
+                $this->logger->error('Failed to store whole data');
+            }
         } catch (Exception $e) {
             return $this->logger->error('Error in getIssueTicketsFunction', ['error' => $e->getMessage()]);
         }
