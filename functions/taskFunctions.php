@@ -1,6 +1,7 @@
 <?php
 require('db/dbFunctions.php');
-require('../../vendor/autoload.php');
+// require('../../vendor/autoload.php');
+require(DOC_ROOT.'/vendor/autoload.php');
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
