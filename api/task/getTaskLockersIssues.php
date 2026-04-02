@@ -18,11 +18,12 @@ class getItems
     private $auth;
     private $token;
 
-    public function __construct($conn, &$response, $auth)
+    public function __construct($conn, &$response, $auth, $token = null)
     {
         $this->conn = $conn;
         $this->response = &$response;
         $this->auth = $auth;
+        $this->token = $token;
     }
 
     public function createResponse($statusCode, $message, $data = null)
@@ -104,9 +105,18 @@ class getItems
 
         // Fetch spare parts from database
         try {
-            $brand = $payload['brand'] ?? $this->getBrandByUuid($payload['uuid']);
-            $stmt = $this->conn->prepare(
-                "SELECT
+            $brand = $payload['brand'] ?? $this->getBrandByUuid($payload['uuid'] ?? null);
+            $brand = is_string($brand) ? trim($brand) : $brand;
+
+            if (empty($brand)) {
+                $spareParts = [];
+            } elseif (empty($warehouseIds)) {
+                $spareParts = [];
+            } else {
+                $warehouseIds = array_values(array_map('intval', $warehouseIds));
+                $placeholders = implode(',', array_fill(0, count($warehouseIds), '?'));
+
+                $sql = "SELECT
                     s.id as stockId,
                     p.id as partId,
                     s.owner_id as ownerId,
@@ -122,16 +132,15 @@ class getItems
                 LEFT JOIN warehouses w ON w.id = cw.warehouse_id
                 LEFT JOIN part_supplier ps ON ps.part_id = p.id AND ps.supplier_id = s.supplier_id
                 LEFT JOIN manufacturers m ON m.id = p.manufacturer_id
-                WHERE cw.warehouse_id IN (:warehouseIds) AND s.quantity > 0 AND m.name = :brand
+                WHERE m.name = ? AND cw.warehouse_id IN ($placeholders) AND s.quantity > 0
                 GROUP BY s.id, p.id, w.id, s.supplier_id, p.part_number, p.name, s.quantity
-                ORDER BY p.part_number ASC
-                "
-            );            
-            $stmt->bindValue(':brand', $brand, PDO::PARAM_STR);
-            $warehouseIdsParam = implode(',', $warehouseIds);
-            $stmt->bindValue(':warehouseIds', $warehouseIdsParam, PDO::PARAM_STR);          
-            $stmt->execute();
-            $spareParts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                ORDER BY p.part_number ASC";
+
+                $stmt = $this->conn->prepare($sql);
+                $params = array_merge([$brand], $warehouseIds);
+                $stmt->execute($params);
+                $spareParts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         } catch (PDOException $e) {
             return $this->response = $this->createResponse(500, "Database error (spareParts): " . $e->getMessage());
         }

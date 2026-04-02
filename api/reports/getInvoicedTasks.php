@@ -80,9 +80,9 @@ class GetAllInvoicedTask
                 WHERE tlo2.task_id = t.id
             )
             LEFT JOIN (
-                SELECT DISTINCT task_id, type_id
+                SELECT MAX(id) task_id, type_id
                 FROM task_types
-                WHERE deleted = 0
+                WHERE deleted = 0" . (count($taskTypes) > 0 ? " AND type_id IN ($placeholders)" : "") . "                
             ) tt ON tt.task_id = t.id
             WHERE t.status_by_exohu_id = 10 AND tf.deleted = 0";
 
