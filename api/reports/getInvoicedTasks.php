@@ -80,16 +80,11 @@ class GetAllInvoicedTask
                 WHERE tlo2.task_id = t.id
             )
             LEFT JOIN (
-                SELECT DISTINCT task_id, type_id
+                SELECT MAX(id) task_id, type_id
                 FROM task_types
-                WHERE deleted = 0
+                WHERE deleted = 0".(count($taskTypes) > 0 ? " AND type_id IN ($placeholders)" : "")."                
             ) tt ON tt.task_id = t.id
-            WHERE t.status_by_exohu_id = 10 AND tf.deleted = 0";
-
-            // Append the IN clause if there are task statuses
-            if (count($taskTypes) > 0) {
-                $query .= " AND tt.type_id IN ($placeholders)";
-            }
+            WHERE t.status_by_exohu_id = 10 AND tf.deleted = 0";            
 
             // Complete the query
             //$query .= " GROUP BY tl.tof_shop_id;";
