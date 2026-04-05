@@ -124,9 +124,7 @@ class updateTask
                             // A frissítési értékek paraméterei
                             $params = [$deleted_at, $deleted_by, $taskId];
                             $params = array_merge($params, $items_to_delete); // hozzáadjuk az `item_id`-kat
-
-                            $stmt->execute($params);
-                            if ($stmt->execute()) {
+                            if ($stmt->execute($params)) {
                                 $payload = array(
                                     'id' => intval($taskId),
                                     'column' => 'taskTypes',
@@ -167,8 +165,7 @@ class updateTask
                                     $insert_query = "INSERT INTO $dbTable (task_id, type_id, created_by) VALUES (?, ?, ?)";
                                     $stmt = $conn->prepare($insert_query);
                                     $params = [$taskId, $item_id, $userId];
-                                    $stmt->execute($params);
-                                    if ($stmt->execute()) {
+                                    if ($stmt->execute($params)) {
                                         $payload = array(
                                             'id' => intval($taskId),
                                             'column' => 'taskTypes',
