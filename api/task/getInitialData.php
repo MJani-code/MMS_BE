@@ -1,14 +1,19 @@
 <?php
 header('Content-Type: application/json');
 
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 
 //error debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
 
 class GetInitialData
 {
@@ -42,7 +47,7 @@ class GetInitialData
     {
         $authentication = $this->auth->authenticate(4);
         if (($authentication['status'] ?? 500) === 200) {
-            $this->userRoleId = (int)($this->auth->roleId ?? 0);
+            $this->userRoleId = (int)($authentication['data']->roleId ?? 0);
         }
         return $authentication;
     }
@@ -148,11 +153,9 @@ class GetInitialData
 }
 
 // Authorization header kezelése biztonságosan
-$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
-$token = $matches[1];
-
-$token = $matches[1];
+$token = $matches[1] ?? '';
 $auth = new Auth($conn, $token, $secretkey);
 
 $service = new GetInitialData($conn, $auth);

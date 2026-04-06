@@ -1,7 +1,7 @@
 <?php
 require('db/dbFunctions.php');
 // require('../../vendor/autoload.php');
-require(DOC_ROOT.'/vendor/autoload.php');
+require(DOC_ROOT . '/vendor/autoload.php');
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -612,11 +612,11 @@ function addLocker($conn, $newItems, $userId)
             'method' => "get",
             'columns' => [
                 'tl.id',
-                'tl.task_id as taskId',
+                'tl.task_id',
                 'tl.brand',
                 'tl.serial',
                 'tl.task_locations_id',
-                'tl.is_active as isActive'
+                'tl.is_active as is_active'
             ],
             'others' => "",
             'conditions' => "tl.deleted = 0 AND tl.task_locations_id = $newItems[task_locations_id] AND tl.task_id = $newItems[task_id]"
@@ -634,7 +634,7 @@ function addLocker($conn, $newItems, $userId)
 function removeLocker($conn, $lockerToRemove)
 {
     try {
-        $serial = $lockerToRemove['value'];
+        $serial = $lockerToRemove['serial'];
 
         $dataToHandleInDb = [
             'table' => "task_lockers",
