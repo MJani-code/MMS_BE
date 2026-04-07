@@ -28,9 +28,10 @@ class FilterTask
     private $itemsPerPage;
     private $page;
     private $searchText;
+    private $filters = [];
     private $paginationMeta = [];
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null)
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [])
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
@@ -44,6 +45,73 @@ class FilterTask
         $this->itemsPerPage = $itemsPerPage;
         $this->page = $page;
         $this->searchText = $searchText;
+        $this->filters = is_array($filters) ? $filters : [];
+    }
+
+    private function escapeLike($value)
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], (string)$value);
+    }
+
+    private function applyClientFilters(array &$where, array &$params)
+    {
+        if (!is_array($this->filters) || empty($this->filters)) {
+            return;
+        }
+
+        if (isset($this->filters['statusIds']) && is_array($this->filters['statusIds'])) {
+            $statusIds = array_values(array_filter(array_map('intval', $this->filters['statusIds']), fn($id) => $id > 0));
+            if (!empty($statusIds)) {
+                $placeholders = [];
+                foreach ($statusIds as $idx => $id) {
+                    $key = ':f_status_' . $idx;
+                    $placeholders[] = $key;
+                    $params[$key] = $id;
+                }
+                $where[] = 't.status_by_exohu_id IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        if (isset($this->filters['city']) && trim((string)$this->filters['city']) !== '') {
+            $params[':f_city'] = '%' . $this->escapeLike(trim((string)$this->filters['city'])) . '%';
+            $where[] = "tl.city LIKE :f_city ESCAPE '\\\\'";
+        }
+
+        if (isset($this->filters['name']) && trim((string)$this->filters['name']) !== '') {
+            $params[':f_name'] = '%' . $this->escapeLike(trim((string)$this->filters['name'])) . '%';
+            $where[] = "tl.name LIKE :f_name ESCAPE '\\\\'";
+        }
+
+        if (isset($this->filters['boxId']) && trim((string)$this->filters['boxId']) !== '') {
+            $params[':f_box_id'] = '%' . $this->escapeLike(trim((string)$this->filters['boxId'])) . '%';
+            $where[] = "tl.box_id LIKE :f_box_id ESCAPE '\\\\'";
+        }
+
+        if (isset($this->filters['tofShopId']) && $this->filters['tofShopId'] !== '') {
+            $params[':f_tof_shop_id'] = (int)$this->filters['tofShopId'];
+            $where[] = 'tl.tof_shop_id = :f_tof_shop_id';
+        }
+
+        if (isset($this->filters['createdAtFrom']) && trim((string)$this->filters['createdAtFrom']) !== '') {
+            $params[':f_created_from'] = trim((string)$this->filters['createdAtFrom']) . ' 00:00:00';
+            $where[] = 't.created_at >= :f_created_from';
+        }
+
+        if (isset($this->filters['createdAtTo']) && trim((string)$this->filters['createdAtTo']) !== '') {
+            $params[':f_created_to'] = trim((string)$this->filters['createdAtTo']) . ' 23:59:59';
+            $where[] = 't.created_at <= :f_created_to';
+        }
+
+        if (isset($this->filters['responsibleCompanyId']) && $this->filters['responsibleCompanyId'] !== '') {
+            $params[':f_responsible_company_id'] = (int)$this->filters['responsibleCompanyId'];
+            $where[] = "EXISTS (
+                SELECT 1
+                FROM task_responsibles tr_client
+                WHERE tr_client.task_id = t.id
+                  AND tr_client.deleted = 0
+                  AND tr_client.company_id = :f_responsible_company_id
+            )";
+        }
     }
 
     private function buildSearchWhereClause($companyId, $permissions)
@@ -69,7 +137,7 @@ class FilterTask
 
         $searchText = trim((string)$this->searchText);
         if ($searchText !== '') {
-            $like = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $searchText) . '%';
+            $like = '%' . $this->escapeLike($searchText) . '%';
             $params[':searchText'] = $like;
 
             $where[] = "(
@@ -113,6 +181,8 @@ class FilterTask
                 )
             )";
         }
+
+        $this->applyClientFilters($where, $params);
 
         return [
             'where' => $where,
@@ -446,10 +516,11 @@ $statusId     = $body['statusId']     ?? null;
 $itemsPerPage = $body['itemsPerPage'] ?? null;
 $page         = $body['page']         ?? null;
 $searchText   = $body['searchText']   ?? null;
+$filters      = is_array($body['filters'] ?? null) ? $body['filters'] : [];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText);
+$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters);
 $filterTask->getTaskData();
 $filterTask->dataManipulation($response);
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
