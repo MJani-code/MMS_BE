@@ -68,12 +68,12 @@ class GetAllInvoicedTask
             $placeholders = implode(',', array_fill(0, count($taskTypes), '?'));
 
             // Base query
-            $query = "SELECT t.id as taskId, ttd.name as taskTypeName, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tl.name, concat(tl.city,' ',tl.address) as address, ";
+            $query = "SELECT t.id as taskId, c.name as companyName, ttd.name as taskTypeName, tl.tof_shop_id as tofShopId, tl.box_id as boxId, tl.name, concat(tl.city,' ',tl.address) as address, ";
 
             if (!$notToGroupByShop) {
-                $query .= " sum(tf.total) as total, GROUP_CONCAT(DISTINCT f.name) as feeNames, sum(tf.quantity) as totalQuantity, ";
+                $query .= " sum(tf.total) as total, GROUP_CONCAT(DISTINCT f.name) as feeNames, tf.other_items as otherItems ,sum(tf.quantity) as totalQuantity, ";
             } else {
-                $query .= " tf.total as total, f.name as feeNames, tf.quantity as totalQuantity, ";
+                $query .= " tf.total as total, f.name as feeNames, tf.other_items as otherItems ,tf.quantity as totalQuantity, ";
             }
 
             $query .= "td.delivery_date as deliveryDate
@@ -81,6 +81,7 @@ class GetAllInvoicedTask
             LEFT JOIN tasks t on t.id = tf.task_id
             LEFT JOIN fees f on f.id = tf.fee_id
             LEFT JOIN task_locations tl on tl.id = t.task_locations_id
+            LEFT JOIN companies c on c.id = f.company_id
             LEFT JOIN task_dates td on td.task_id = t.id
 --            LEFT JOIN task_lockers tlo ON tlo.id = (
 --                SELECT MAX(tlo2.id)
