@@ -77,14 +77,21 @@ class getCompartmentsAvailability
                     r.is_enabled AS isEnabled,
                     r.compartment_count AS compartmentCount,
                     r.uuid AS uuid,
-                    c.compartment_number AS compartmentNumber,
-                    c.issue_type AS issueType,
-                    c.fault_minutes AS faultTime,
-                    c.operating_minutes AS operatingTime
+--                    c.compartment_number AS compartmentNumber,
+--                    c.issue_type AS issueType,
+                    if(sum(c.fault_minutes) >= (r.compartment_count * 1440), (r.compartment_count * 1440), sum(c.fault_minutes)) AS faultTime,
+                    (r.compartment_count * 1440) AS operatingTime
                 FROM locker_daily_reports r
                 LEFT JOIN locker_daily_report_compartments c ON c.report_id = r.id
                 WHERE r.report_day BETWEEN :fromDate AND :toDate
-                ORDER BY r.report_day ASC, r.tof_shop_id ASC, c.compartment_number ASC");
+                AND EXISTS (
+                    SELECT 1
+                    FROM task_lockers tl
+                    WHERE tl.tof_shop_id = r.tof_shop_id
+                    AND tl.brand = 'ARKA'
+                )                
+                GROUP BY r.locker_display_name, r.report_day
+				ORDER BY `faultTime` DESC");
 
             $stmt->execute([
                 ':fromDate' => $fromDate,
@@ -100,32 +107,32 @@ class getCompartmentsAvailability
                 return $this->response = $this->createResponse(404, 'Nincs találat a megadott időszakra.', []);
             }
 
-            $flattened = [];
-            foreach ($rows as $row) {
-                if (($row['compartmentNumber'] ?? null) === null || (string)$row['compartmentNumber'] === '') {
-                    continue;
-                }
+            // $flattened = [];
+            // foreach ($rows as $row) {
+            //     if (($row['compartmentNumber'] ?? null) === null || (string)$row['compartmentNumber'] === '') {
+            //         continue;
+            //     }
 
-                $flattened[] = [
-                    'tofShopId' => (int)($row['tofShopId'] ?? 0),
-                    'lockerDisplayName' => (string)($row['lockerDisplayName'] ?? ''),
-                    'day' => (string)($row['day'] ?? ''),
-                    'reportCreatedDay' => (string)($row['reportCreatedDay'] ?? ''),
-                    'isEnabled' => (int)($row['isEnabled'] ?? 0),
-                    'compartmentCount' => (int)($row['compartmentCount'] ?? 0),
-                    'uuid' => (string)($row['uuid'] ?? ''),
-                    'compartmentNumber' => (string)$row['compartmentNumber'],
-                    'issueType' => $row['issueType'] ?? null,
-                    'faultTime' => max(0, min(1440, (int)($row['faultTime'] ?? 0))),
-                    'operatingTime' => max(0, min(1440, (int)($row['operatingTime'] ?? 0)))
-                ];
-            }
+            //     $flattened[] = [
+            //         'tofShopId' => (int)($row['tofShopId'] ?? 0),
+            //         'lockerDisplayName' => (string)($row['lockerDisplayName'] ?? ''),
+            //         'day' => (string)($row['day'] ?? ''),
+            //         'reportCreatedDay' => (string)($row['reportCreatedDay'] ?? ''),
+            //         'isEnabled' => (int)($row['isEnabled'] ?? 0),
+            //         'compartmentCount' => (int)($row['compartmentCount'] ?? 0),
+            //         'uuid' => (string)($row['uuid'] ?? ''),
+            //         'compartmentNumber' => (string)$row['compartmentNumber'],
+            //         'issueType' => $row['issueType'] ?? null,
+            //         'faultTime' => max(0, min(1440, (int)($row['faultTime'] ?? 0))),
+            //         'operatingTime' => max(0, min(1440, (int)($row['operatingTime'] ?? 0)))
+            //     ];
+            // }
 
-            if (empty($flattened)) {
-                return $this->response = $this->createResponse(404, 'Nincs compartment szintű találat a megadott időszakra.', []);
-            }
+            // if (empty($flattened)) {
+            //     return $this->response = $this->createResponse(404, 'Nincs compartment szintű találat a megadott időszakra.', []);
+            // }
 
-            $this->response = $flattened;
+            return $this->response = $rows;
         } catch (Throwable $th) {
             return $this->response = $this->createResponse(500, 'Hiba történt az adatok lekérése során: ' . $th->getMessage(), null);
         }

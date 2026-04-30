@@ -403,10 +403,10 @@ class CompartmentsAvailability
         $fromDate = $fromDate ?: date('Y-m-d');
         $toDate = $toDate ?: $fromDate;
 
-        $this->logInfo('getMergedData:start', [
-            'fromDate' => $fromDate,
-            'toDate' => $toDate
-        ]);
+        // $this->logInfo('getMergedData:start', [
+        //     'fromDate' => $fromDate,
+        //     'toDate' => $toDate
+        // ]);
 
         try {
             $periodStart = new DateTimeImmutable($fromDate, new DateTimeZone('UTC'));
@@ -460,10 +460,10 @@ class CompartmentsAvailability
         while ($cursor <= $periodEnd) {
             $day = $cursor->format('Y-m-d');
             $dailyFaults = $this->getFaultyCompartmentUnavailabilityMinutes($tickets, $day);
-            $this->logInfo('getMergedData:daily_faults', [
-                'day' => $day,
-                'rows' => count($dailyFaults)
-            ]);
+            // $this->logInfo('getMergedData:daily_faults', [
+            //     'day' => $day,
+            //     'rows' => count($dailyFaults)
+            // ]);
             foreach ($dailyFaults as $faulty) {
                 $key = ($faulty['lockerDisplayName'] ?? '') . '|' . ($faulty['createdDay'] ?? '');
                 $faultyByLockerAndDay[$key] = $faulty;
@@ -531,9 +531,9 @@ class CompartmentsAvailability
             $mergedResult[] = $locker;
         }
 
-        $this->logInfo('getMergedData:done', [
-            'mergedRows' => count($mergedResult)
-        ]);
+        // $this->logInfo('getMergedData:done', [
+        //     'mergedRows' => count($mergedResult)
+        // ]);
 
         return $this->createResponse(200, 'Adatok sikeresen lekérve és összevonva.', array_values($mergedResult));
     }
@@ -620,12 +620,12 @@ class CompartmentsAvailability
 
                 if ($tofShopId <= 0 || $reportDay === '' || $reportCreatedDay === '') {
                     $skippedReports++;
-                    $this->logInfo('saveMergedDataToDatabase:skip_row', [
-                        'tofShopId' => $tofShopId,
-                        'lockerDisplayName' => $lockerDisplayName,
-                        'reportDay' => $reportDay,
-                        'reportCreatedDay' => $reportCreatedDay
-                    ]);
+                    // $this->logInfo('saveMergedDataToDatabase:skip_row', [
+                    //     'tofShopId' => $tofShopId,
+                    //     'lockerDisplayName' => $lockerDisplayName,
+                    //     'reportDay' => $reportDay,
+                    //     'reportCreatedDay' => $reportCreatedDay
+                    // ]);
                     continue;
                 }
 
@@ -677,11 +677,11 @@ class CompartmentsAvailability
 
             $this->conn->commit();
 
-            $this->logInfo('saveMergedDataToDatabase:done', [
-                'savedReports' => $savedReports,
-                'savedCompartments' => $savedCompartments,
-                'skippedReports' => $skippedReports
-            ]);
+            // $this->logInfo('saveMergedDataToDatabase:done', [
+            //     'savedReports' => $savedReports,
+            //     'savedCompartments' => $savedCompartments,
+            //     'skippedReports' => $skippedReports
+            // ]);
 
             return $this->createResponse(200, 'Adatok sikeresen mentve.', [
                 'savedReports' => $savedReports,
