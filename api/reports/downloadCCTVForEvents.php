@@ -157,7 +157,7 @@ class CCTVDownloader
             }
 
             #3. CCTV file letöltése a fileterezett eseményekhez IntegrationCode alapján
-            $ch = curl_init($this->losCreateImageRequestToLockerTest);
+            $ch = curl_init($this->losCreateImageRequestToLocker);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $this->token,
