@@ -1,14 +1,16 @@
 <?php
+require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
+require('../../api/user/auth/auth.php');
+
 header('Content-Type: application/json');
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
 
-require('../../inc/conn.php');
-require('../../functions/taskFunctions.php');
-require('../../api/user/auth/auth.php');
 
 //error debugging
 // ini_set('display_errors', 1);
