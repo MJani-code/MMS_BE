@@ -1,14 +1,14 @@
 <?php
+require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
+require('../../api/user/auth/auth.php');
+
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-
-require('../../inc/conn.php');
-require('../../functions/taskFunctions.php');
-require('../../api/user/auth/auth.php');
 
 $response = [];
 
@@ -82,8 +82,8 @@ class FilterTask
             $where[] = "tl.name LIKE :f_name ESCAPE '\\\\'";
         }
 
-        if (isset($this->filters['boxId']) && trim((string)$this->filters['boxId']) !== '') {
-            $params[':f_box_id'] = '%' . $this->escapeLike(trim((string)$this->filters['boxId'])) . '%';
+        if (isset($this->filters['box_id']) && trim((string)$this->filters['box_id']) !== '') {
+            $params[':f_box_id'] = '%' . $this->escapeLike(trim((string)$this->filters['box_id'])) . '%';
             $where[] = "tl.box_id LIKE :f_box_id ESCAPE '\\\\'";
         }
 
@@ -515,7 +515,7 @@ $body = json_decode(file_get_contents('php://input'), true) ?? [];
 $statusId     = $body['statusId']     ?? null;
 $itemsPerPage = $body['itemsPerPage'] ?? null;
 $page         = $body['page']         ?? null;
-$searchText   = $body['searchText']   ?? null;
+$searchText   = $body['filters']['searchText']   ?? null;
 $filters      = is_array($body['filters'] ?? null) ? $body['filters'] : [];
 
 $auth = new Auth($conn, $token, $secretkey);
