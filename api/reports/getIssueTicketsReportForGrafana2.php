@@ -62,6 +62,7 @@ class GetIssueTickets
         $stmt->execute();
         $end = microtime(true);
         $this->logger->info('getStoredData function - Time taken to execute query on los_issue_tickets database: ' . ($end - $start) . ' seconds');
+        $this->logger->info('From and to values: ' . $from . ' - ' . $to);
 
         $start = microtime(true);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -167,9 +168,10 @@ class GetIssueTickets
 
             // enrichedData előállítása, gps adatok hozzáadásával
             $enrichedData = [];
-            foreach ($filteredData as $item) {
+            foreach ($filteredData as $key => $item) {
                 $id = isset($item['lockerDisplayName']) ? str_replace('EXP-', '', $item['lockerDisplayName']) : null;
                 if ($id && isset($exoboxIndex[$id])) {
+                    $item['index'] = $key + 1;
                     $item['latitude'] = $exoboxIndex[$id]['lat'] ?? null;
                     $item['longitude'] = $exoboxIndex[$id]['lng'] ?? null;
                 }
@@ -183,7 +185,10 @@ class GetIssueTickets
                 $this->logger->info('Enriched data created successfully', ['enrichedDataCount' => count($enrichedData)]);
             }
 
-            return $this->response = $enrichedData;
+            //return $this->response = $enrichedData;
+            $this->response = $enrichedData;
+            $this->logger->info('getIssueTicketsFunction completed successfully', ['response' => $this->response]);
+            return $this->response;
         } catch (Exception $e) {
             return $this->response = $this->createResponse(400, $e->getMessage());
         }
