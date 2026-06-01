@@ -1,7 +1,7 @@
 <?php
 require('db/dbFunctions.php');
 // require('../../vendor/autoload.php');
-require(DOC_ROOT.'/vendor/autoload.php');
+require(DOC_ROOT . '/vendor/autoload.php');
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -18,7 +18,7 @@ function createResponse($status, $errorMessage = '', $data = null)
     ];
 }
 
-function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActivePointsUrl, $user, $password)
+function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale = 'hu')
 {
     $manipulatedData = array(
         'status' => 200,
@@ -32,7 +32,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     $userRoleId = $userAuthData['data']->roleId;
 
     //getData
-    function getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password)
+    function getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale)
     {
 
         if (isset($data['baseTaskData']['payload'])) {
@@ -197,15 +197,15 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     }
 
     //getHeaders
-    function getHeaders($conn, $manipulatedData, $data, $userRoleId)
+    function getHeaders($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_columns tc',
                     'method' => "get",
-                    'columns' => ['text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
-                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id",
+                    'columns' => ['t.text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
+                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id LEFT JOIN translations t on t.task_columns_id = tc.id AND t.locale = '$locale'",
                     'conditions' => "tcp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -233,15 +233,15 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     }
 
     //getStatuses
-    function getStatuses($conn, $manipulatedData, $data, $userRoleId)
+    function getStatuses($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_statuses ts',
                     'method' => "get",
-                    'columns' => ['ts.id', 'name', 'color'],
-                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'columns' => ['ts.id', 't.text as name', 'color'],
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_statuses_id = ts.id AND t.locale = '$locale'",
                     'conditions' => "ts.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -258,22 +258,22 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => 'Nincsen megjeleníthető status'
             );
             return $manipulatedData;
         }
     }
 
     //getAllowedStatuses
-    function getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId)
+    function getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_statuses ts',
                     'method' => "get",
-                    'columns' => ['ts.id', 'name', 'color'],
-                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'columns' => ['ts.id', 't.text as name', 'color'],
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_statuses_id = ts.id AND t.locale = '$locale'",
                     'conditions' => "tsp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -301,15 +301,15 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     }
 
     //getLocationTypes
-    function getLocationTypes($conn, $manipulatedData, $data, $userRoleId)
+    function getLocationTypes($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'location_types lt',
                     'method' => "get",
-                    'columns' => ['id', 'name', 'color'],
-                    'others' => "",
+                    'columns' => ['lt.id', 't.text as name', 'lt.color'],
+                    'others' => "LEFT JOIN translations t on t.location_type_id = lt.id AND t.locale = '$locale'",
                     'conditions' => "lt.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -326,7 +326,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => 'Nincsen megjeleníthető location type'
             );
             return $manipulatedData;
         }
@@ -428,14 +428,14 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         }
     }
 
-    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password);
-    $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getResponsibles($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getPriorities($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale);
+    $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getResponsibles($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getPriorities($conn, $manipulatedData, $data, $userRoleId, $locale);
 
     return $manipulatedData;
 }
