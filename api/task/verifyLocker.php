@@ -86,14 +86,14 @@ class CheckLocker
             }
 
             if ($result === false) {
-                return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
+                return $this->response = $this->createResponse(400, localizeErrorMessage('errors.failed_to_get_locker_data', null, ['message' => curl_error($ch)]));
             }
 
             curl_close($ch);
             $result = json_decode($result, true);
 
             if (!isset($result['payload']['items'][0])) {
-                return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
+                return $this->response = createLocalizedErrorResponse(404, 'errors.point_not_found_by_id', null, [], 'locker not found');
             }
 
             $isLockerAdded = isset($result['payload']['items'][0]['lockerStationId']) ? 1 : 0;
@@ -124,10 +124,10 @@ class CheckLocker
             if ($result['status'] == 200) {
                 //put lockerData and arrayToStoreResult into one array
                 $lockerData = array_merge($lockerData, $arrayToStoreResult);
-                $this->response = $this->createResponse(200, 'Sikeres lekérdezés', $lockerData);
+                $this->response = $this->createResponse(200, localizeSuccessMessage('success.query_successful', null), $lockerData);
             }
         } catch (Exception $e) {
-            return $this->response = $this->createResponse(400, $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
         }
     }
 
@@ -150,7 +150,7 @@ class CheckLocker
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($result === false) {
-                return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
+                return $this->createResponse(400, localizeErrorMessage('errors.login_failed_with_reason', null, ['message' => curl_error($ch)]));
             }
 
             curl_close($ch);
@@ -159,12 +159,12 @@ class CheckLocker
             if (isset($result['payload']['token'])) {
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);
-                return $this->createResponse(200, 'Login successful', $result);
+                return $this->createResponse(200, localizeSuccessMessage('success.login_successful', null), $result);
             } else {
-                return $this->createResponse(400, 'Login failed');
+                return $this->createResponse(400, localizeErrorMessage('errors.login_failed', null));
             }
         } catch (Exception $e) {
-            return $this->createResponse(400, $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
         }
     }
 }

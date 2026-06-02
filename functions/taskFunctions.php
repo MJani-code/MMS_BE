@@ -18,6 +18,72 @@ function createResponse($status, $errorMessage = '', $data = null)
     ];
 }
 
+function normalizeLocale($locale)
+{
+    $allowedLocales = ['hu', 'en', 'sl'];
+    return in_array($locale, $allowedLocales, true) ? $locale : 'hu';
+}
+
+function getRequestLocale()
+{
+    $requestLocale = $_REQUEST['locale'] ?? null;
+    return normalizeLocale($requestLocale ?? 'hu');
+}
+
+function localizeErrorMessage($key, $locale = 'hu', $params = [])
+{
+    static $messages = null;
+    if ($messages === null) {
+        $messages = require __DIR__ . '/errorMessages.php';
+    }
+
+    $locale = ($locale === null || $locale === '') ? getRequestLocale() : normalizeLocale($locale);
+    $message = $messages[$key][$locale] ?? $messages[$key]['hu'] ?? $key;
+
+    foreach ($params as $paramKey => $paramValue) {
+        $message = str_replace(':' . $paramKey, (string) $paramValue, $message);
+    }
+
+    return $message;
+}
+
+function createLocalizedErrorResponse($status, $messageKey, $locale = null, $params = [], $debugMessage = '')
+{
+    return createLocalizedResponse($status, $messageKey, null, $locale, $params, $debugMessage);
+}
+
+function localizeSuccessMessage($key, $locale = null, $params = [])
+{
+    static $messages = null;
+    if ($messages === null) {
+        $messages = require __DIR__ . '/successMessages.php';
+    }
+
+    $locale = ($locale === null || $locale === '') ? getRequestLocale() : normalizeLocale($locale);
+    $message = $messages[$key][$locale] ?? $messages[$key]['hu'] ?? $key;
+
+    foreach ($params as $paramKey => $paramValue) {
+        $message = str_replace(':' . $paramKey, (string) $paramValue, $message);
+    }
+
+    return $message;
+}
+
+function createLocalizedResponse($status, $messageKey, $data = null, $locale = null, $params = [], $debugMessage = '')
+{
+    if ($status >= 200 && $status < 300) {
+        $message = localizeSuccessMessage($messageKey, $locale, $params);
+    } else {
+        $message = localizeErrorMessage($messageKey, $locale, $params);
+    }
+
+    if ($debugMessage !== '') {
+        $message .= ' [' . $debugMessage . ']';
+    }
+
+    return createResponse($status, $message, $data);
+}
+
 function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale = 'hu')
 {
     $manipulatedData = array(
@@ -190,7 +256,8 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető adat'
+                // 'message' => localizeErrorMessage('errors.no_displayable_data', $locale)
+                'message' => 'test message'
             );
             return $manipulatedData;
         }
@@ -220,13 +287,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_header', $locale)
             );
             return $manipulatedData;
         }
@@ -252,13 +319,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető status'
+                'message' => localizeErrorMessage('errors.no_displayable_status', $locale)
             );
             return $manipulatedData;
         }
@@ -288,13 +355,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_allowed_status', $locale)
             );
             return $manipulatedData;
         }
@@ -320,13 +387,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető location type'
+                'message' => localizeErrorMessage('errors.no_displayable_location_type', $locale)
             );
             return $manipulatedData;
         }
@@ -352,20 +419,20 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_task_type', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getLocationTypes
-    function getResponsibles($conn, $manipulatedData, $data, $userRoleId)
+    function getResponsibles($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
@@ -384,13 +451,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_companies', $locale)
             );
             return $manipulatedData;
         }
@@ -416,13 +483,13 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_priority', $locale)
             );
             return $manipulatedData;
         }
@@ -454,17 +521,17 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
         // Fájl kiterjesztés ellenőrzése
         $fileActualExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
         if (!in_array($fileActualExt, $allowedExtensions)) {
-            return createResponse(400, "Ez a fájltípus nem engedélyezett!");
+            return createLocalizedResponse(400, 'errors.file_type_not_allowed');
         }
 
         // Hibaellenőrzés
         if ($fileError !== 0) {
-            return createResponse(400, "Hiba történt a fájl feltöltése közben. Kérlek fordulj a rendszergazdához! Hiba: $fileError");
+            return createLocalizedResponse(400, 'errors.file_upload_error_with_code', null, null, ['errorCode' => $fileError]);
         }
 
         // Fájlméret ellenőrzése
         if ($fileSize > $maxFileSize) {
-            return createResponse(400, "A fájl mérete túl nagy!");
+            return createLocalizedResponse(400, 'errors.file_too_large');
         }
 
         // Útvonalak létrehozása
@@ -473,7 +540,7 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
 
         // Ellenőrzi, hogy létezik-e a fájl
         if (file_exists($fileDestination)) {
-            return createResponse(400, "A fájl már létezik");
+            return createLocalizedResponse(400, 'errors.file_already_exists');
         }
 
         // Adatok beszúrása az adatbázisba
@@ -533,12 +600,12 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
             // Jogosultságok beállítása
             chmod($fileDestination, 0777);
 
-            return createResponse(200, "A fájl sikeresen feltöltve.", $payload);
+                return createLocalizedResponse(200, 'success.file_upload_success', $payload);
         } else {
-            return createResponse(500, "Az adatbázis művelet sikertelen.");
+            return createLocalizedResponse(500, 'errors.database_operation_failed');
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -566,10 +633,10 @@ function addFee($conn, $dbTable, $newItems, $userId)
             } else {
                 return createResponse($getMaxId['status'], $getMaxId['message'] . '. ' . $getMaxId['errorInfo']);
             }
-            return createResponse(200, "Item insertion success", $newItems);
+                return createLocalizedResponse(200, 'success.item_insertion', $newItems);
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -593,7 +660,7 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId)
             return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -624,10 +691,10 @@ function addLocker($conn, $newItems, $userId)
 
         if ($stmt->execute($params)) {
             $newLockerData = dataToHandleInDb($conn, $lockers);
-            return createResponse(200, "Item insertion success", $newLockerData['payload']);
+                return createLocalizedResponse(200, 'success.item_insertion', $newLockerData['payload']);
         }
     } catch (Exception $e) {
-        return createResponse(400, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -644,12 +711,12 @@ function removeLocker($conn, $lockerToRemove)
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createResponse($result['status'], "Delete of locker is success");
+            return createResponse($result['status'], localizeSuccessMessage('success.delete_locker', null));
         } else {
             return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createResponse(400, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -666,12 +733,12 @@ function getUserPassword($conn, $userId)
         ];
         $data = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($data['status'] === 200) {
-            return createResponse($data['status'], "success", $data['payload'][0]);
+            return createResponse($data['status'], localizeSuccessMessage('success.success', null), $data['payload'][0]);
         } else {
             return createResponse($data['status'], $data['message'] . '. ' . $data['errorInfo']);
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -695,7 +762,7 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
             return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -741,7 +808,7 @@ function xlsFileRead($filePath)
 
         // Ellenőrizzük, hogy minden szükséges fejléc megtalálható
         if (count($headerIndexes) !== count($wantedHeaders)) {
-            return createResponse(400, "Nem minden szükséges fejléc található meg az Excel fájlban!");
+            return createLocalizedResponse(400, 'errors.excel_missing_required_headers');
         }
 
         //Kicseréljük a header-t az adatbázis header-re.
@@ -774,7 +841,7 @@ function xlsFileRead($filePath)
                 $value = $rowData[$index];
                 if (in_array($headerValue, $requiredFields)) {
                     if ($value === null || $value == "") {
-                        return createResponse(400, "A betöltés nem sikerült. Van olyan kötelező mező, aminél nincsen adat megadva");
+                        return createLocalizedResponse(400, 'errors.excel_missing_required_field_value');
                     }
                 }
 
@@ -788,11 +855,11 @@ function xlsFileRead($filePath)
             }
             $data[] = $filteredData;
         }
-        return createResponse(200, "success", $data);
+        return createLocalizedResponse(200, 'success.successful_import', $data);
     } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
-        return createResponse(400, $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     } catch (Exception $e) {
-        return createResponse(400, $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -865,11 +932,11 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
 
         // Tranzakció lezárása
         $conn->commit();
-        return createResponse(200, "Sikeres betöltés");
+        return createLocalizedResponse(200, 'success.successful_import');
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createResponse(400, $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -928,7 +995,7 @@ function downloadTig($conn, $companyId)
     } catch (Exception $e) {
         // Győződj meg róla, hogy nincs semmilyen extra kimenet a HTTP fejlécek előtt
         header('Content-Type: application/json');
-        echo json_encode(createResponse(400, $e->getMessage()));
+        echo json_encode(createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage()));
         exit();
     }
 }
@@ -987,7 +1054,7 @@ function downloadTasks($conn, $inputData)
     } catch (Exception $e) {
         // Győződj meg róla, hogy nincs semmilyen extra kimenet a HTTP fejlécek előtt
         header('Content-Type: application/json');
-        echo json_encode(createResponse(400, $e->getMessage()));
+        echo json_encode(createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage()));
         exit();
     }
 }
@@ -1009,7 +1076,7 @@ function updateCheckLockerResult($conn, $data, $userId)
             return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -1020,34 +1087,35 @@ function addTask($conn, $newTask, $userId)
     $plannedDeliveryDate = $newTask['plannedDeliveryDate'];
     $tofShopId = $newTask['selectedLocation']['tofShopId'];
     $taskLocationsId = $newTask['selectedLocation']['id'];
+    $locale = $newTask['locale'] ?? 'hu';
 
 
     //ha a fenti adatok üresek akkor hibaüzenetet kell visszaadni
     if (empty($typeId) || empty($tofShopId)) {
-        return createResponse(400, "A kötelező mezők nincsenek kitöltve");
+        return createLocalizedResponse(400, 'errors.required_fields_missing', null, $locale);
     }
 
     //Ha a typeId egyenlő 1-el vagy 2-vel és a newTask['lockers'] tömb üres akkor hibaüzenetet kell visszaadni
     if (($typeId == 1 || $typeId == 2) || $typeId == 8) {
         if (empty($newTask['lockers'])) {
-            return createResponse(400, "A lockers mező nincsen kitöltve");
+            return createLocalizedResponse(400, 'errors.lockers_field_required', null, $locale);
         }
         foreach ($newTask['lockers'] as $locker) {
             if (empty($locker['serial'])) {
-                return createResponse(400, "A uuid mező nincsen kitöltve");
+                return createLocalizedResponse(400, 'errors.uuid_field_required', null, $locale);
             }
             foreach ($locker['issues'] as $issue) {
                 switch ($issue['type']) {
                     case null:
-                        return createResponse(400, "Az issue type mező nincsen kitöltve");
+                        return createLocalizedResponse(400, 'errors.issue_type_required', null, $locale);
                     case 1:
                         if (empty($issue['compartmentNumber'])) {
-                            return createResponse(400, "A compartmentNumber mező nincsen kitöltve");
+                            return createLocalizedResponse(400, 'errors.compartment_number_required', null, $locale);
                         }
                         break;
                     case 2:
                         if (empty($issue['compartmentNumber'])) {
-                            return createResponse(400, "A compartmentNumber mező nincsen kitöltve");
+                            return createLocalizedResponse(400, 'errors.compartment_number_required', null, $locale);
                         }
                         break;
                     default:
@@ -1192,11 +1260,11 @@ function addTask($conn, $newTask, $userId)
 
         // Tranzakció lezárása
         $conn->commit();
-        return createResponse(200, "Sikeres betöltés", $newTask);
+        return createLocalizedResponse(200, 'success.successful_import', $newTask);
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createResponse(400, "Hiba történt a művelet során: " . $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -1218,13 +1286,13 @@ function deleteImage($conn, $url, $DOC_ROOT)
                 $stmt = $conn->prepare("DELETE FROM task_location_photos WHERE url = :url");
                 $stmt->execute([':url' => $url]);
 
-                return createResponse(200, "A kép sikeresen törölve lett.", ['url' => $url, 'taskLocationsId' => $file['task_locations_id']]);
+                return createLocalizedResponse(200, 'success.image_deleted', ['url' => $url, 'taskLocationsId' => $file['task_locations_id']]);
             }
         } else {
-            return createResponse(404, "A fájl nem található az adatbázisban.");
+            return createLocalizedResponse(404, 'errors.file_not_found_in_database');
         }
     } catch (Exception $e) {
-        return createResponse(400, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -1246,9 +1314,9 @@ function getTofShopId($url)
         foreach ($data['points'] as $point) {
             $tofShopIds[] = $point['id'];
         }
-        return createResponse(200, "success", $tofShopIds);
+        return createLocalizedResponse(200, 'success.success', $tofShopIds);
     } catch (Exception $e) {
-        return createResponse(400, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -1272,7 +1340,7 @@ function getExoboxPoints($url, $user, $password, $id)
 
             return $data;
         } catch (Exception $e) {
-            return createResponse(400, "Hiba történt: " . $e->getMessage());
+            return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
         }
     } else {
         try {
@@ -1294,9 +1362,9 @@ function getExoboxPoints($url, $user, $password, $id)
                     return $point['point_id'];
                 }
             }
-            return createResponse(404, "Nem található a megadott ID-hoz tartozó pont.");
+            return createLocalizedResponse(404, 'errors.point_not_found_by_id');
         } catch (Exception $e) {
-            return createResponse(400, "Hiba történt: " . $e->getMessage());
+            return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
         }
     }
 }
@@ -1358,11 +1426,11 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
 
         // Tranzakció lezárása
         $conn->commit();
-        return createResponse(200, "Sikeres betöltés");
+        return createLocalizedResponse(200, 'success.successful_import');
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createResponse(400, $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
     }
 }
 
@@ -1461,10 +1529,7 @@ function downloadNewPoints($data)
         if (!headers_sent()) {
             header('Content-Type: application/json');
         }
-        echo json_encode([
-            'status' => 400,
-            'message' => $e->getMessage()
-        ]);
+        echo json_encode(createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage()));
         exit();
     }
 }

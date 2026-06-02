@@ -30,7 +30,7 @@ class TaskStatus
         return [
             'status' => $statusCode,
             'message' => $message,
-            'payload' => []
+            'payload' => $data
         ];
     }
 
@@ -143,6 +143,7 @@ class TaskStatus
 
             $this->response = [
                 'status' => 200,
+                'message' => localizeSuccessMessage('success.query_successful', null),
                 'payload' => [
                     'headers' => $headers,
                     'statuses' => $statuses,
@@ -155,9 +156,8 @@ class TaskStatus
                 ]
             ];
 
-            // return $this->createResponse(200, 'Task statuses and related data fetched successfully.', $payload);
         } catch (\Throwable $th) {
-            return $this->createResponse(500, 'Database query error: ' . $th->getMessage());
+            return $this->createResponse(500, localizeErrorMessage('errors.database_error', null, ['message' => $th->getMessage()]));
         }
     }
 }

@@ -35,6 +35,7 @@ class addIntervention
     public function addInterventionFunction($payload)
     {
         $userId = null;
+        $locale = $payload['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(26);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -42,13 +43,12 @@ class addIntervention
             $userId = $isAccess['data']->userId;
         }
 
-        $result = addIntervention($this->conn,$payload['taskId'], $payload['interventions'], $userId);
+        $result = addIntervention($this->conn, $payload['taskId'], $payload['interventions'], $userId);
         if ($result['status'] !== 200) {
             return $this->response = $this->createResponse($result['status'], $result['message']);
         } else {
-            return $this->response = $this->createResponse(200, "Intervention added successfully", $result['payload']);
+            return $this->response = $this->createResponse(200, localizeSuccessMessage('success.intervention_added_success', $locale), $result['payload']);
         }
-        
     }
 }
 

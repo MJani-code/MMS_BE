@@ -33,7 +33,7 @@ class GetData
             'payload' => $payload,
         ];
     }
-    public function getData()
+    public function getData($locale = 'hu')
     {
         //User validation here
         $isAccess = $this->auth->authenticate(14);
@@ -56,7 +56,8 @@ class GetData
             $locations = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = $this->createResponse(400, $result['errorInfo']);
+                //return $this->response = $this->createResponse(400, $result['errorInfo']);
+                return createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
             }
 
             $taskTypesStmt = [
@@ -70,7 +71,7 @@ class GetData
             $taskTypes = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = $this->createResponse(400, $result['errorInfo']);
+                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
             }
 
             //megbízottak lekérdezése
@@ -85,7 +86,7 @@ class GetData
             $responsibles = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = $this->createResponse(400, $result['errorInfo']);
+                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
             }
 
             //lockerd adatok lekérése
@@ -100,7 +101,7 @@ class GetData
             $lockers = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = $this->createResponse(400, $result['errorInfo']);
+                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
             }
 
             $lockerIssueTypesStmt = [
@@ -114,16 +115,16 @@ class GetData
             $lockerIssueTypes = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = $this->createResponse(400, $result['errorInfo']);
+                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
             }
 
-            $this->response = $this->createResponse(200, "Data loaded successfully", [
+            $this->response = createLocalizedResponse(200, 'success.data_loaded_successfully', [
                 'locations' => $locations,
                 'taskTypes' => $taskTypes,
                 'responsibles' => $responsibles,
                 'lockers' => $lockers,
                 'lockerIssueTypes' => $lockerIssueTypes
-            ]);
+            ], $locale);
 
             //return $this->response;
         } catch (Exception $e) {

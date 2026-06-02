@@ -134,7 +134,7 @@ class GetInitialData
                 ];
             }
 
-            return $this->createResponse(200, 'Initial data fetched successfully.', [
+            return $this->createResponse(200, localizeSuccessMessage('success.initial_data_fetched', $this->locale), [
                 'headers' => $headers,
                 'statuses' => $statuses,
                 'allowedStatuses' => $allowedStatuses,
@@ -145,7 +145,7 @@ class GetInitialData
                 'statusGroups' => $statusGroups
             ]);
         } catch (\Throwable $th) {
-            return $this->createResponse(500, 'Database query error: ' . $th->getMessage());
+            return $this->createResponse(500, localizeErrorMessage('errors.database_error', $this->locale, ['message' => $th->getMessage()]));
         }
     }
 }
