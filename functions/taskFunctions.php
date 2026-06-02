@@ -205,7 +205,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     'table' => 'task_columns tc',
                     'method' => "get",
                     'columns' => ['t.text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
-                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id LEFT JOIN translations t on t.task_columns_id = tc.id AND t.locale = '$locale'",
+                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id LEFT JOIN translations t on t.task_column_id = tc.id AND t.locale = '$locale'",
                     'conditions' => "tcp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -241,7 +241,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     'table' => 'task_statuses ts',
                     'method' => "get",
                     'columns' => ['ts.id', 't.text as name', 'color'],
-                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_statuses_id = ts.id AND t.locale = '$locale'",
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = '$locale'",
                     'conditions' => "ts.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -273,7 +273,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     'table' => 'task_statuses ts',
                     'method' => "get",
                     'columns' => ['ts.id', 't.text as name', 'color'],
-                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_statuses_id = ts.id AND t.locale = '$locale'",
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = '$locale'",
                     'conditions' => "tsp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -333,15 +333,15 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     }
 
     //getLocationTypes
-    function getTaskTypes($conn, $manipulatedData, $data, $userRoleId)
+    function getTaskTypes($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_type_details ttd',
                     'method' => "get",
-                    'columns' => ['id', 'name', 'color'],
-                    'others' => "",
+                    'columns' => ['ttd.id', 't.text as name', 'ttd.color'],
+                    'others' => "LEFT JOIN translations t on t.task_type_detail_id = ttd.id AND t.locale = '$locale'",
                     'conditions' => "ttd.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -397,15 +397,15 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     }
 
     //getPriorities
-    function getPriorities($conn, $manipulatedData, $data, $userRoleId)
+    function getPriorities($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'priorities p',
                     'method' => "get",
-                    'columns' => ['id', 'name', 'color'],
-                    'others' => "",
+                    'columns' => ['p.id', 't.text as name', 'p.color'],
+                    'others' => "LEFT JOIN translations t on t.priority_id = p.id AND t.locale = '$locale'",
                     'conditions' => "p.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);

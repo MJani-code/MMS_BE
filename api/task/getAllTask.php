@@ -163,10 +163,11 @@ class GetAllTask
                 'method' => "get",
                 'columns' => [
                     "f.id as id",
-                    'CONCAT(f.name,"(",f.net_unit_price ,")") as name',
+                    'CONCAT(t.text,"(",f.net_unit_price ,")") as name',
                     'f.fee_type as type',
                     "f.net_unit_price as value"
                 ],
+                'others' => "LEFT JOIN translations t on t.fee_id = f.id AND t.locale = '$this->locale'",
                 'conditions' => ""
             ];
             if (!in_array(23, $permissions)) {

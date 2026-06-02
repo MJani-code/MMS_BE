@@ -7,18 +7,23 @@ require('../../api/user/auth/auth.php');
 
 
 $response = [];
+$jsonData = file_get_contents('php://input');
+$data = json_decode($jsonData, true);
+$locale = $data['locale'] ?? 'hu';
 
 class GetData
 {
     private $conn;
     private $response;
     private $auth;
+    private $locale;
 
-    public function __construct($conn, &$response, $auth)
+    public function __construct($conn, &$response, $auth, $locale)
     {
         $this->conn = $conn;
         $this->response = &$response;
         $this->auth = $auth;
+        $this->locale = $locale;
     }
     private function createResponse($status, $message, $payload = null)
     {
@@ -57,8 +62,8 @@ class GetData
             $taskTypesStmt = [
                 'table' => "task_type_details ttd",
                 'method' => "get",
-                'columns' => ['ttd.id', 'ttd.name'],
-                'others' => "",
+                'columns' => ['ttd.id', 't.text as name'],
+                'others' => "LEFT JOIN translations t ON t.task_type_detail_id = ttd.id AND t.locale = '$this->locale'",
                 'conditions' => "ttd.deleted = 0"
             ];
             $result = dataToHandleInDb($this->conn, $taskTypesStmt);
@@ -87,7 +92,7 @@ class GetData
             $lockerStmt = [
                 'table' => "task_lockers tl",
                 'method' => "get",
-                'columns' => ['tl.id', 'tloc.tof_shop_id as tofShopId' ,'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
+                'columns' => ['tl.id', 'tloc.tof_shop_id as tofShopId', 'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
                 'others' => "LEFT JOIN task_locations tloc ON tloc.id = tl.task_locations_id",
                 'conditions' => "tl.deleted = 0"
             ];
@@ -139,7 +144,7 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getData = new GetData($conn, $response, $auth);
+$getData = new GetData($conn, $response, $auth, $locale);
 $getData->getData();
 
 echo json_encode($response);
