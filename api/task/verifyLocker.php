@@ -9,6 +9,7 @@ $response = [];
 
 $jsonData = file_get_contents("php://input");
 $lockerData = json_decode($jsonData, true);
+
 //Eltávolítani az isActive mezőt a lockerData tömbből
 unset($lockerData['is_active']);
 
@@ -22,8 +23,9 @@ class CheckLocker
     private $response;
     private $auth;
     private $token;
+    private $locale;
 
-    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth)
+    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth, $locale = 'hu')
     {
         $this->conn = $conn;
         $this->losUserName = $losUserName;
@@ -32,6 +34,7 @@ class CheckLocker
         $this->losGetLockerStationsForPortalUrl = $losGetLockerStationsForPortalUrl;
         $this->response = &$response;
         $this->auth = $auth;
+        $this->locale = $locale;
         $this->token = $this->getTokenFromDatabase();
     }
 
@@ -62,6 +65,7 @@ class CheckLocker
     {
         //locker adatok lekérdezése
         try {
+            $locale = $lockerData['locale'] ?? 'hu';
             $token = $this->token;
             $url = $this->losGetLockerStationsForPortalUrl;
             $LockerStationHistoryModel = [array('LockerStationFilterType' => 'Uuid', 'Filter' => $lockerData['serial'])];
@@ -93,7 +97,7 @@ class CheckLocker
             $result = json_decode($result, true);
 
             if (!isset($result['payload']['items'][0])) {
-                return $this->response = createLocalizedErrorResponse(404, 'errors.point_not_found_by_id', null, [], 'locker not found');
+                return $this->response = createLocalizedErrorResponse(404, 'errors.point_not_found_by_id', $locale, [], 'locker not found');
             }
 
             $isLockerAdded = isset($result['payload']['items'][0]['lockerStationId']) ? 1 : 0;
@@ -124,10 +128,10 @@ class CheckLocker
             if ($result['status'] == 200) {
                 //put lockerData and arrayToStoreResult into one array
                 $lockerData = array_merge($lockerData, $arrayToStoreResult);
-                $this->response = $this->createResponse(200, localizeSuccessMessage('success.query_successful', null), $lockerData);
+                $this->response = $this->createResponse(200, localizeSuccessMessage('success.query_successful', $locale), $lockerData);
             }
         } catch (Exception $e) {
-            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
         }
     }
 
@@ -164,7 +168,7 @@ class CheckLocker
                 return $this->createResponse(400, localizeErrorMessage('errors.login_failed', null));
             }
         } catch (Exception $e) {
-            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', $this->locale, [], $e->getMessage());
         }
     }
 }

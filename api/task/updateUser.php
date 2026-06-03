@@ -8,10 +8,6 @@ require('../../api/user/auth/auth.php');
 
 $response = [];
 
-$jsonData = file_get_contents("php://input");
-$data = json_decode($jsonData, true);
-
-$locale = $data['locale'] ?? 'hu';
 class UpdateTask
 {
     private $conn;
@@ -34,7 +30,7 @@ class UpdateTask
         ];
     }
 
-    public function updateUser($locale = 'hu')
+    public function updateUser()
     {
         //User validation here
         $isAccess = $this->auth->authenticate(4);
@@ -46,11 +42,16 @@ class UpdateTask
 
         try {
             //Get user password
-            $resultOfGetUserPassword = getUserPassword($this->conn, $userId, $locale);
-            $storedPassword = $resultOfGetUserPassword['payload']['password'];
-
             $jsonData = file_get_contents("php://input");
             $data = json_decode($jsonData, true);
+            $locale = $data['locale'] ?? 'hu';
+
+            $resultOfGetUserPassword = getUserPassword($this->conn, $userId, $locale);
+            if ($resultOfGetUserPassword['status'] !== 200) {
+                return $this->response = $resultOfGetUserPassword;
+            }
+            $storedPassword = $resultOfGetUserPassword['payload']['password'];
+
 
             $password = $data['password'];
             $newPassword = $data['newPassword'] ?? null;

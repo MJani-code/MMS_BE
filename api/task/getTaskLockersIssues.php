@@ -149,9 +149,12 @@ class getItems
         //Fetch interventionList from database
         try {
             $stmt = $this->conn->prepare(
-                "SELECT id, name
-                 FROM interventions"
+                "SELECT i.id, t.text as name
+                 FROM interventions i
+                 LEFT JOIN translations t ON t.intervention_id = i.id AND t.locale = :locale
+                 "
             );
+            $stmt->bindValue(':locale', $locale, PDO::PARAM_STR);
             $stmt->execute();
             $interventionList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
@@ -162,12 +165,14 @@ class getItems
         try {
             // 1) fetch interventions for uuid
             $stmt = $this->conn->prepare(
-                "SELECT tli.id, i.name, tli.performed_by as performedBy, tli.created_at as createdAt, tli.notes
+                "SELECT tli.id, t.text as name, tli.performed_by as performedBy, tli.created_at as createdAt, tli.notes
                  FROM task_lockers_interventions tli
                  LEFT JOIN interventions i ON i.id = tli.intervention_id
+                 LEFT JOIN translations t ON t.intervention_id = i.id AND t.locale = :locale
                  WHERE task_id = :taskId AND uuid = :uuid
                  ORDER BY tli.created_at DESC"
             );
+            $stmt->bindValue(':locale', $locale, PDO::PARAM_STR);
             $stmt->bindValue(':taskId', isset($payload['taskId']) ? $payload['taskId'] : null, PDO::PARAM_STR);
             $stmt->bindValue(':uuid', isset($payload['uuid']) ? $payload['uuid'] : null, PDO::PARAM_STR);
             $stmt->execute();

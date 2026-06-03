@@ -754,9 +754,10 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
             'columns' => ['first_name', 'last_name', 'email', 'password', 'updated_at', 'updated_by'],
             'values' => [$firstName, $lastName, $email, $hashedNewPassword, $updated_at, $userId],
             'others' => "",
-            'conditions' => ['u.id' => $userId]
+            'conditions' => ['u.id' => $userId],
+            'locale' => $locale
         ];
-        $result = dataToHandleInDb($conn, $dataToHandleInDb);
+        $result = dataToHandleInDb($conn, $dataToHandleInDb, $locale);
         if ($result['status'] === 200) {
             return createLocalizedResponse($result['status'], $result['message'], null, $locale, []);
         } else {
