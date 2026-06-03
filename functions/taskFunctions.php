@@ -600,7 +600,7 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
             // Jogosultságok beállítása
             chmod($fileDestination, 0777);
 
-                return createLocalizedResponse(200, 'success.file_upload_success', $payload);
+            return createLocalizedResponse(200, 'success.file_upload_success', $payload);
         } else {
             return createLocalizedResponse(500, 'errors.database_operation_failed');
         }
@@ -609,7 +609,7 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
     }
 }
 
-function addFee($conn, $dbTable, $newItems, $userId)
+function addFee($conn, $dbTable, $newItems, $userId, $locale = 'hu')
 {
     try {
         $created_at = date('Y-m-d H:i:s');
@@ -631,16 +631,16 @@ function addFee($conn, $dbTable, $newItems, $userId)
             if ($getMaxId['status'] === 200) {
                 $newItems['id'] = $getMaxId['payload'][0]['MAX(id)'];
             } else {
-                return createResponse($getMaxId['status'], $getMaxId['message'] . '. ' . $getMaxId['errorInfo']);
+                return createLocalizedErrorResponse($getMaxId['status'], 'errors.database_operation_failed', $locale, [], $getMaxId['errorInfo']);
             }
-                return createLocalizedResponse(200, 'success.item_insertion', $newItems);
+            return createLocalizedResponse(200, 'success.item_insertion', $newItems, $locale, []);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 
-function deleteFee($conn, $dbTable, $id, $taskId, $userId)
+function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale = 'hu')
 {
     try {
         $deleted_at = date('Y-m-d H:i:s');
@@ -651,20 +651,21 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId)
             'columns' => ['deleted', 'deleted_at', 'deleted_by'],
             'values' => [1, $deleted_at, $userId],
             'others' => "",
-            'conditions' => ['task_id' => $taskId, 'id' => $id]
+            'conditions' => ['task_id' => $taskId, 'id' => $id],
+            'locale' => $locale
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createResponse($result['status'], $result['message'], $id = array('id' => $id, 'taskId' => $taskId));
+            return createLocalizedResponse($result['status'], $result['message'], $id = array('id' => $id, 'taskId' => $taskId), $locale);
         } else {
-            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+            return createLocalizedErrorResponse($result['status'], $result['message'] . '. ' . $result['error'], $locale);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 
-function addLocker($conn, $newItems, $userId)
+function addLocker($conn, $newItems, $userId, $locale = 'hu')
 {
     try {
         $created_at = date('Y-m-d H:i:s');
@@ -690,15 +691,15 @@ function addLocker($conn, $newItems, $userId)
         ];
 
         if ($stmt->execute($params)) {
-            $newLockerData = dataToHandleInDb($conn, $lockers);
-                return createLocalizedResponse(200, 'success.item_insertion', $newLockerData['payload']);
+            $newLockerData = dataToHandleInDb($conn, $lockers, $locale);
+            return createLocalizedResponse(200, 'success.item_insertion', $newLockerData['payload'], $locale, []);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 
-function removeLocker($conn, $lockerToRemove)
+function removeLocker($conn, $lockerToRemove, $userId, $locale = 'hu')
 {
     try {
         $serial = $lockerToRemove['value'];
@@ -711,16 +712,16 @@ function removeLocker($conn, $lockerToRemove)
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createResponse($result['status'], localizeSuccessMessage('success.delete_locker', null));
+            return createLocalizedResponse($result['status'], 'success.delete_locker', null, $locale, []);
         } else {
-            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+            return createLocalizedErrorResponse($result['status'], 'errors.unexpected', $locale, [], $result['error']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 
-function getUserPassword($conn, $userId)
+function getUserPassword($conn, $userId, $locale = 'hu')
 {
     try {
         $dataToHandleInDb = [
@@ -731,18 +732,18 @@ function getUserPassword($conn, $userId)
             'conditions' => "u.id = $userId",
             'order' => ""
         ];
-        $data = dataToHandleInDb($conn, $dataToHandleInDb);
+        $data = dataToHandleInDb($conn, $dataToHandleInDb, $locale);
         if ($data['status'] === 200) {
-            return createResponse($data['status'], localizeSuccessMessage('success.success', null), $data['payload'][0]);
+            return createLocalizedResponse($data['status'], $data['message'], $data['payload'][0], $locale);
         } else {
-            return createResponse($data['status'], $data['message'] . '. ' . $data['errorInfo']);
+            return createLocalizedErrorResponse($data['status'], $data['message'] . '. ' . $data['errorInfo'], $locale);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 
-function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $userId)
+function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $userId, $locale = 'hu')
 {
     try {
         $updated_at = date('Y-m-d H:i:s');
@@ -757,12 +758,12 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createResponse($result['status'], $result['message']);
+            return createLocalizedResponse($result['status'], $result['message'], null, $locale, []);
         } else {
-            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+            return createLocalizedErrorResponse($result['status'], $result['message'] . '. ' . $result['error'], $locale, [], $result['error']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 

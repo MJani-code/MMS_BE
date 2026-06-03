@@ -70,9 +70,9 @@ class deleteMedia
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($result['count'] > 0) {
-                return createLocalizedResponse(200, 'success.success', $locale);
+                return createLocalizedResponse(200, 'success.success', null, $locale, []);
             } else {
-                return createLocalizedResponse(404, 'errors.url_not_exists_in_db', $locale);
+                return createLocalizedResponse(404, 'errors.url_not_exists_in_db', null, $locale, []);
             }
         } catch (Exception $e) {
             return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
@@ -133,7 +133,7 @@ class deleteMedia
             $stmt->bindParam(":url", $url);
             $stmt->bindParam(":deletedBy", $deletedBy);
             $stmt->execute();
-            return createLocalizedResponse(200, 'success.url_deleted_success', $locale);
+            return createLocalizedResponse(200, 'success.url_deleted_success', null, $locale, []);
         } catch (Exception $e) {
             return createLocalizedErrorResponse(500, 'errors.url_delete_db_failed', $locale, ['message' => $e->getMessage()]);
         }
@@ -196,7 +196,7 @@ class deleteMedia
                 return $this->response = $isRemovedFromDb;
             }
 
-            return $this->response = createLocalizedResponse(200, 'success.url_deleted_success', $locale, ['url' => $url, 'taskLocationsId' => $this->getTaskLocationIdFromDb($url)]);
+            return $this->response = createLocalizedResponse(200, 'success.url_deleted_success', ['url' => $url, 'taskLocationsId' => $this->getTaskLocationIdFromDb($url)], $locale);
         } catch (AwsException $e) {
             return $this->response = createLocalizedErrorResponse(500, 'errors.file_delete_failed', $locale, ['message' => $e->getAwsErrorMessage()]);
         }

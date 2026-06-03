@@ -8,6 +8,10 @@ require('../../api/user/auth/auth.php');
 
 $response = [];
 
+$jsonData = file_get_contents("php://input");
+$data = json_decode($jsonData, true);
+
+$locale = $data['locale'] ?? 'hu';
 class UpdateTask
 {
     private $conn;
@@ -30,7 +34,7 @@ class UpdateTask
         ];
     }
 
-    public function updateUser()
+    public function updateUser($locale = 'hu')
     {
         //User validation here
         $isAccess = $this->auth->authenticate(4);
@@ -42,7 +46,7 @@ class UpdateTask
 
         try {
             //Get user password
-            $resultOfGetUserPassword = getUserPassword($this->conn, $userId);
+            $resultOfGetUserPassword = getUserPassword($this->conn, $userId, $locale);
             $storedPassword = $resultOfGetUserPassword['payload']['password'];
 
             $jsonData = file_get_contents("php://input");
@@ -58,20 +62,21 @@ class UpdateTask
 
             //Check if user provided password
             if ($password === "") {
-                $errorInfo = "Hibás jelszó";
-                return $this->response = $this->createResponse(400, $errorInfo);
+                $errorInfo = "errors.invalid_password";
+                return $this->response = createLocalizedErrorResponse(400, $errorInfo, $locale);
             }
 
             //Check if the new and the confirmedNew is mathced
             if ($newPassword != null && $newPassword !== $newConfirmedPassword) {
-                $errorInfo = "A két új jelszó értéke nem egyezik";
-                return $this->response = $this->createResponse(400, $errorInfo);
+                $errorInfo = "errors.password_mismatch";
+                return $this->response = createLocalizedErrorResponse(400, $errorInfo, $locale);
             }
 
             //Check if the original password is matched with the sent one
             if ($resultOfGetUserPassword['status'] === 200 && !password_verify($password, $storedPassword)) {
-                $errorInfo = "Hibás jelszó";
-                return $this->response = $this->createResponse(400, $errorInfo);
+                //multianguage response
+                $errorInfo = "errors.invalid_password";
+                return $this->response = createLocalizedErrorResponse(400, $errorInfo, $locale);
             }
 
             //If there is no newPassword sent original password is aplied
@@ -80,7 +85,7 @@ class UpdateTask
             }
 
             $hashedNewPassword = password_hash($newPassword, PASSWORD_DEFAULT, array('cost' => 7)) ?? '';
-            $resultOfUpdateUser = updateUser($this->conn, $hashedNewPassword, $firstName, $lastName, $email, $userId);
+            $resultOfUpdateUser = updateUser($this->conn, $hashedNewPassword, $firstName, $lastName, $email, $userId, $locale);
             return $this->response = $resultOfUpdateUser;
 
             //return $this->response = $result;

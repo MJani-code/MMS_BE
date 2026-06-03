@@ -155,7 +155,6 @@ class TaskStatus
                     'statusGroups' => $statusGroups
                 ]
             ];
-
         } catch (\Throwable $th) {
             return $this->createResponse(500, localizeErrorMessage('errors.database_error', null, ['message' => $th->getMessage()]));
         }

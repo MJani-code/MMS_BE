@@ -55,7 +55,7 @@ class CheckLocker
     private function storeTokenInDatabase($token)
     {
         $stmt = $this->conn->prepare("INSERT INTO api_tokens (token, api) VALUES (:token, :api)");
-        $stmt->execute([':token' => $token , ':api' => 'LOS']);
+        $stmt->execute([':token' => $token, ':api' => 'LOS']);
     }
 
     public function getLockerDataFunction($lockerData)
@@ -65,7 +65,7 @@ class CheckLocker
             $token = $this->token;
             $url = $this->losGetLockerStationsForPortalUrl;
             $LockerStationHistoryModel = [array('LockerStationFilterType' => 'Uuid', 'Filter' => $lockerData['serial'])];
-            
+
             $data = array('Countrycode' => 'HU', 'Filter' => null, 'LockerStationHistoryModel' => $LockerStationHistoryModel, 'maxResultCount' => 10, 'skipCount' => 0);
 
             $ch = curl_init($url);
