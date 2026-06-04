@@ -1371,7 +1371,7 @@ function getExoboxPoints($url, $user, $password, $id)
     }
 }
 
-function addIntervention($conn, $taskId, $newIntervention, $userId)
+function addIntervention($conn, $taskId, $newIntervention, $userId, $locale = 'hu')
 {
     try {
         // Tranzakció indítása
@@ -1428,11 +1428,11 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
 
         // Tranzakció lezárása
         $conn->commit();
-        return createLocalizedResponse(200, 'success.successful_import');
+        return createLocalizedResponse(200, 'success.successful_import', [], $locale);
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
     }
 }
 
