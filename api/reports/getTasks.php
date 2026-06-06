@@ -8,7 +8,7 @@ require('../../api/user/auth/auth.php');
 
 $response = [];
 
-class getCompletedTasks
+class getTasks
 {
     private $conn;
     private $response;
@@ -28,7 +28,7 @@ class getCompletedTasks
             'data' => $data,
         ];
     }
-    public function getCompletedTasksData($token)
+    public function getTasksData($token)
     {
         //token értékét kikérni közvetlenül db-ből
         try {
@@ -83,9 +83,7 @@ class getCompletedTasks
                 ) tt
                 ON
                     tt.task_id = t.id
-                LEFT JOIN task_type_details ttd ON ttd.id = tt.type_id
-                WHERE
-                    t.status_by_exohu_id not in (8,10)";
+                LEFT JOIN task_type_details ttd ON ttd.id = tt.type_id";
 
             // Append the IN clause if there are task types
             if (count($taskTypes) > 0) {
@@ -132,7 +130,7 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$getCompletedTasks = new getCompletedTasks($conn, $response, $auth);
-$getCompletedTasks->getCompletedTasksData($token);
+$getTasks = new getTasks($conn, $response, $auth);
+$getTasks->getTasksData($token);
 
 echo json_encode($response);
