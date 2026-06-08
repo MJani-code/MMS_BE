@@ -24,8 +24,10 @@ class getLocations
     private $tokenD4Me;
     private $d4meApiUrl;
     private $log;
+    private $SearchTerm;
+    private $SearchFields;
 
-    public function __construct($conn, &$response, $auth, $tokenD4Me, $d4meApiUrl, $log)
+    public function __construct($conn, &$response, $auth, $tokenD4Me, $d4meApiUrl, $log, $SearchTerm = '', $SearchFields = [])
     {
         $this->conn = $conn;
         $this->response = &$response;
@@ -33,6 +35,8 @@ class getLocations
         $this->tokenD4Me = $tokenD4Me;
         $this->d4meApiUrl = $d4meApiUrl;
         $this->log = $log;
+        $this->SearchTerm = $SearchTerm;
+        $this->SearchFields = $SearchFields;
     }
 
     public function createResponse($statusCode, $message, $data = null)
@@ -44,8 +48,9 @@ class getLocations
         ];
     }
 
-    private function callApi($url, $token)
+    private function callApi($url, $token, $SearchTerm = '', $SearchFields = [])
     {
+        $url = $url . '&SearchTerm=' . urlencode($SearchTerm) . '&SearchFields[]=' . urlencode(json_encode($SearchFields));
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type:application/json',
@@ -62,6 +67,8 @@ class getLocations
             return ['error' => $error];
         }
         curl_close($ch);
+        // Log the url
+        $this->log->info('API URL called', ['url' => $url]);
         return ['response' => $response];
     }
 
@@ -79,7 +86,7 @@ class getLocations
         }
 
         //First API call to get dataCount
-        $apiResponse = $this->callApi($this->d4meApiUrl, $this->tokenD4Me);
+        $apiResponse = $this->callApi($this->d4meApiUrl, $this->tokenD4Me, $this->SearchTerm, $this->SearchFields);
 
         if (isset($apiResponse['error'])) {
             $this->log->error('API call error', ['error' => $apiResponse['error']]);
@@ -99,7 +106,7 @@ class getLocations
 
         //Second API url with pageSize set to dataCount
         $urlWithPageSize = $this->d4meApiUrl . '&pageSize=' . $dataCount;
-        $apiResponse = $this->callApi($urlWithPageSize, $this->tokenD4Me);
+        $apiResponse = $this->callApi($urlWithPageSize, $this->tokenD4Me, $this->SearchTerm, $this->SearchFields);
 
         if (isset($apiResponse['error'])) {
             $this->log->error('API call error', ['error' => $apiResponse['error']]);
@@ -122,9 +129,12 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
+$SearchTerm = $_GET['SearchTerm'] ?? '';
+$SearchFields = $_GET['SearchFields'] ?? [];
+
 $auth = new Auth($conn, $token, $secretkey);
 
-$items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiUrl, $log);
+$items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiUrl, $log, $SearchTerm, $SearchFields);
 $items->getItems();
 
 echo json_encode($response);
