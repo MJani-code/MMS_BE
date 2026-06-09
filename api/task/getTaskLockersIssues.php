@@ -70,6 +70,7 @@ class getItems
     {
         // Authenticate user
         $userId = null;
+        $locale = $payload['locale'] ?? 'hu';
         $companyId = null;
         $isAccess = $this->auth->authenticate(26);
         if ($isAccess['status'] !== 200) {
@@ -100,7 +101,7 @@ class getItems
             $stmt->execute();
             $issues = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            return $this->response = $this->createResponse(500, "Database error (issues): " . $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(500, 'errors.database_issues', $locale, [], $e->getMessage());
         }
 
         // Fetch spare parts from database
@@ -142,31 +143,36 @@ class getItems
                 $spareParts = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         } catch (PDOException $e) {
-            return $this->response = $this->createResponse(500, "Database error (spareParts): " . $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(500, 'errors.database_spare_parts', $locale, [], $e->getMessage());
         }
 
         //Fetch interventionList from database
         try {
             $stmt = $this->conn->prepare(
-                "SELECT id, name
-                 FROM interventions"
+                "SELECT i.id, t.text as name
+                 FROM interventions i
+                 LEFT JOIN translations t ON t.intervention_id = i.id AND t.locale = :locale
+                 "
             );
+            $stmt->bindValue(':locale', $locale, PDO::PARAM_STR);
             $stmt->execute();
             $interventionList = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            return $this->response = $this->createResponse(500, "Database error (interventions): " . $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(500, 'errors.database_interventions', $locale, [], $e->getMessage());
         }
 
         //Fetch issues, interventions and booked spare parts
         try {
             // 1) fetch interventions for uuid
             $stmt = $this->conn->prepare(
-                "SELECT tli.id, i.name, tli.performed_by as performedBy, tli.created_at as createdAt, tli.notes
+                "SELECT tli.id, t.text as name, tli.performed_by as performedBy, tli.created_at as createdAt, tli.notes
                  FROM task_lockers_interventions tli
                  LEFT JOIN interventions i ON i.id = tli.intervention_id
+                 LEFT JOIN translations t ON t.intervention_id = i.id AND t.locale = :locale
                  WHERE task_id = :taskId AND uuid = :uuid
                  ORDER BY tli.created_at DESC"
             );
+            $stmt->bindValue(':locale', $locale, PDO::PARAM_STR);
             $stmt->bindValue(':taskId', isset($payload['taskId']) ? $payload['taskId'] : null, PDO::PARAM_STR);
             $stmt->bindValue(':uuid', isset($payload['uuid']) ? $payload['uuid'] : null, PDO::PARAM_STR);
             $stmt->execute();
@@ -224,24 +230,24 @@ class getItems
                 $interventions = [];
             }
         } catch (PDOException $e) {
-            return $this->response = $this->createResponse(500, "Database error (interventions): " . $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(500, 'errors.database_interventions', $locale, [], $e->getMessage());
         }
 
         // Return response (issues = task-level issues, spareParts = catalog, interventions = per-intervention data)
         if (!empty($issues) || !empty($spareParts) || !empty($interventions) || !empty($interventionList)) {
-            return $this->response = $this->createResponse(200, "Data fetched", [
+            return $this->response = createLocalizedResponse(200, 'success.data_fetched', [
                 'issues' => $issues,
                 'spareParts' => $spareParts,
                 'interventionList' => $interventionList,
                 'interventions' => $interventions
-            ]);
+            ], $locale);
         } else {
-            return $this->response = $this->createResponse(404, "No data found", [
+            return $this->response = createLocalizedResponse(404, 'errors.no_data_found', [
                 'issues' => $issues,
                 'spareParts' => $spareParts,
                 'interventionList' => $interventionList,
                 'interventions' => $interventions
-            ]);
+            ], $locale);
         }
     }
 }
