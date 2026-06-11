@@ -38,6 +38,7 @@ class updateTask
         //Adat frissítés
         $jsonData = file_get_contents("php://input");
         $data = json_decode($jsonData, true);
+        $locale = $data['locale'] ?? 'hu';
 
         $taskId = $data['task_id'] ?? null;
         $id = $data['id'] ?? null;
@@ -132,11 +133,7 @@ class updateTask
                                     'column' => 'taskTypes',
                                     'value' => $new_items
                                 );
-                                $this->response = array(
-                                    'status' => 200,
-                                    'message' => 'Data update successful',
-                                    'payload' => $payload
-                                );
+                                $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
                             }
                         }
 
@@ -156,11 +153,7 @@ class updateTask
                                             'column' => 'taskTypes',
                                             'value' => $new_items
                                         );
-                                        $this->response = array(
-                                            'status' => 200,
-                                            'message' => 'Data update successful',
-                                            'payload' => $payload
-                                        );
+                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
                                     }
                                 } else {
                                     // Ha az elem még nincs benne, akkor INSERT
@@ -174,11 +167,7 @@ class updateTask
                                             'column' => 'taskTypes',
                                             'value' => $new_items
                                         );
-                                        $this->response = array(
-                                            'status' => 200,
-                                            'message' => 'Data update successful',
-                                            'payload' => $payload
-                                        );
+                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
                                     }
                                 }
                             }
@@ -234,11 +223,7 @@ class updateTask
                                     'column' => 'responsibles',
                                     'value' => $new_items
                                 );
-                                $this->response = array(
-                                    'status' => 200,
-                                    'message' => 'Data update successful',
-                                    'payload' => $payload
-                                );
+                                $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
                             }
                         }
 
@@ -265,11 +250,7 @@ class updateTask
                                             'column' => 'responsibles',
                                             'value' => $new_items
                                         );
-                                        $this->response = array(
-                                            'status' => 200,
-                                            'message' => 'Data update successful',
-                                            'payload' => $payload
-                                        );
+                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
                                     }
                                 } else {
                                     // Ha az elem még nincs benne, akkor INSERT
@@ -288,11 +269,7 @@ class updateTask
                                             'column' => 'responsibles',
                                             'value' => $new_items
                                         );
-                                        $this->response = array(
-                                            'status' => 200,
-                                            'message' => 'Data update successful',
-                                            'payload' => $payload
-                                        );
+                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
                                     }
                                 }
                             }
@@ -380,20 +357,24 @@ class updateTask
                         );
                         $this->response = array(
                             'status' => 200,
-                            'message' => $result['message'],
+                            'message' => localizeSuccessMessage('success.data_update_successful', $locale),
                             'payload' => $payload
                         );
                     } else {
                         $this->response = array(
                             'status' => 400,
-                            'message' => $result['error'],
+                            'message' => localizeErrorMessage('errors.data_update_failed', $locale, ['error' => $result['message']]),
                             'payload' => null
                         );
                     }
                 }
             } catch (Exception $e) {
                 //echo $e;
-                $this->response['error'] =  $e->getMessage();
+                $this->response = array(
+                    'status' => 500,
+                    'message' => localizeErrorMessage('errors.unexpected', $locale, null, [], $e->getMessage()),
+                    'payload' => null
+                );
             }
         }
     }

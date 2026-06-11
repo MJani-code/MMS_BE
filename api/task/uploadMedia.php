@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 require(__DIR__ . '/../../vendor/autoload.php');
 require(__DIR__ . '/../../inc/conn.php');
+require(__DIR__ . '/../../functions/taskFunctions.php');
 require(__DIR__ . '/../../api/user/auth/auth.php');
 
 use Aws\S3\S3Client;
@@ -106,7 +107,7 @@ class uploadMedia
 
             // Public URL mentése az adatbázisba
             if ($this->storePublicUrlInDb($publicUrl, $locationId, $filename, $createdBy) !== true) {
-                return $this->response = $this->createResponse(500, "Hiba történt az URL mentése során.", $this->storePublicUrlInDb($publicUrl, $locationId, $filename, $createdBy));
+                return $this->response = createLocalizedResponse(500, 'errors.url_save_failed', $this->storePublicUrlInDb($publicUrl, $locationId, $filename, $createdBy));
             } else {
                 // Sikeres mentés
                 $result = $client->putObject([
@@ -115,10 +116,10 @@ class uploadMedia
                     'Body'   => fopen($file['tmp_name'], 'rb'),
                     'ContentType' => $mime,
                 ]);
-                return $this->response = $this->createResponse(200, "Fájl feltöltése sikeres.", ['photoUpload' => true, 'locationId' => intval($locationId), 'url' => $publicUrl]);
+                return $this->response = createLocalizedResponse(200, 'success.media_upload_success', ['photoUpload' => true, 'locationId' => intval($locationId), 'url' => $publicUrl]);
             }
         } catch (AwsException $e) {
-            return $this->response = $this->createResponse(500, "Hiba történt a fájl feltöltése során: " . $e->getAwsErrorCode());
+            return $this->response = createLocalizedErrorResponse(500, 'errors.file_upload_failed', null, ['errorCode' => $e->getAwsErrorCode()]);
         }
     }
 }

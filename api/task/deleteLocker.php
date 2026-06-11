@@ -32,6 +32,7 @@ class RemoveLocker
     public function removeLockerFunction($conn, $newItems)
     {
         $userId = null;
+        $locale = $newItems['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(10);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -43,7 +44,7 @@ class RemoveLocker
             }
         }
 
-        $result = removeLocker($conn, $newItems, $userId);
+        $result = removeLocker($conn, $newItems, $userId, $locale);
         $this->response = $result;
     }
 }
