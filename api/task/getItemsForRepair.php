@@ -35,6 +35,7 @@ class getItems
     public function getItemsForRepair($repairData)
     {
         $userId = null;
+        $locale = $repairData['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(14);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -42,16 +43,17 @@ class getItems
             $userId = $isAccess['data']->userId;
         }
         try {
-            $stmt = $this->conn->prepare("SELECT * FROM interventions where is_active = 1");            
+            $stmt = $this->conn->prepare("SELECT * FROM interventions where is_active = 1");
             $stmt->execute();
             $interventions = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+            $this->response = $this->createResponse(200, localizeSuccessMessage('success.data_loaded_successfully', $locale), [
+                'interventions' => $interventions
+            ]);
+            return $this->response;
         } catch (PDOException $e) {
-            return $this->response = $this->createResponse(500, "Database error: " . $e->getMessage());
+            return $this->response = createLocalizedErrorResponse(500, 'errors.database_generic', $locale, ['message' => 'getItemsForRepair'], $e->getMessage());
         }
     }
-
-    
 }
 
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
