@@ -29,9 +29,8 @@ class GetAllTask
     private $auth;
     private $userAuthData;
     private $logger;
-    private $locale;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $logger, $locale = 'hu')
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $logger)
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
@@ -42,7 +41,6 @@ class GetAllTask
         $this->getAllActivePointsUrl = $getAllActivePointsUrl;
         $this->user = $user;
         $this->password = $password;
-        $this->locale = $locale;
     }
 
 
@@ -163,11 +161,10 @@ class GetAllTask
                 'method' => "get",
                 'columns' => [
                     "f.id as id",
-                    'CONCAT(t.text,"(",f.net_unit_price ,")") as name',
+                    'CONCAT(f.name,"(",f.net_unit_price ,")") as name',
                     'f.fee_type as type',
                     "f.net_unit_price as value"
                 ],
-                'others' => "LEFT JOIN translations t on t.fee_id = f.id AND t.locale = '$this->locale'",
                 'conditions' => ""
             ];
             if (!in_array(23, $permissions)) {
@@ -326,7 +323,7 @@ class GetAllTask
     {
         $rowData = $this->taskData;
         if ($rowData) {
-            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds, $this->getAllActivePointsUrl, $this->user, $this->password, $this->locale);
+            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds, $this->getAllActivePointsUrl, $this->user, $this->password);
             $response = $result;
         }
     }
@@ -339,9 +336,8 @@ $token = $matches[1];
 $tofShopIds = [];
 
 $auth = new Auth($conn, $token, $secretkey);
-$locale = $_GET['locale'] ?? 'hu';
 
-$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $logger, $locale);
+$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $logger);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

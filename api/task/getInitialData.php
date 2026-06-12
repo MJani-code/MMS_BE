@@ -22,13 +22,11 @@ class GetInitialData
     private PDO $conn;
     private Auth $auth;
     private ?int $userRoleId = null;
-    private string $locale;
 
-    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
+    public function __construct(PDO $conn, Auth $auth)
     {
         $this->conn = $conn;
         $this->auth = $auth;
-        $this->locale = $locale;
     }
 
     private function createResponse(int $statusCode, string $message, array $payload = []): array
@@ -70,15 +68,14 @@ class GetInitialData
             $params = ['role_id' => $this->userRoleId];
 
             $headers = $this->fetchAll(
-                "SELECT DISTINCT t.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
+                "SELECT DISTINCT tc.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
                  FROM task_columns tc
                  LEFT JOIN task_column_permissions tcp ON tcp.task_columns_id = tc.id
-                 LEFT JOIN translations t ON t.task_columns_id = tc.id AND t.locale = :locale
                  WHERE tc.task_column_types_id = 1
                    AND tc.is_active = 1
                    AND (tcp.role_id IS NULL OR tcp.role_id >= :role_id)
                  ORDER BY tc.orderId ASC",
-                array_merge($params, ['locale' => $this->locale])
+                $params
             );
 
             $statuses = $this->fetchAll(
@@ -141,7 +138,7 @@ class GetInitialData
                 ];
             }
 
-            return $this->createResponse(200, localizeSuccessMessage('success.initial_data_fetched', $this->locale), [
+            return $this->createResponse(200, 'Initial data fetched successfully.', [
                 'headers' => $headers,
                 'statuses' => $statuses,
                 'allowedStatuses' => $allowedStatuses,
@@ -152,7 +149,7 @@ class GetInitialData
                 'statusGroups' => $statusGroups
             ]);
         } catch (\Throwable $th) {
-            return $this->createResponse(500, localizeErrorMessage('errors.database_error', $this->locale, ['message' => $th->getMessage()]));
+            return $this->createResponse(500, 'Database query error: ' . $th->getMessage());
         }
     }
 }
@@ -162,9 +159,8 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1] ?? '';
 $auth = new Auth($conn, $token, $secretkey);
-$locale = $_GET['locale'] ?? 'hu';
 
-$service = new GetInitialData($conn, $auth, $locale);
+$service = new GetInitialData($conn, $auth);
 $response = $service->getInitialData();
 
 // http_response_code((int)($response['status'] ?? 500));

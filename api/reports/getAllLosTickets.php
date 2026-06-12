@@ -8,10 +8,6 @@ require('../../api/user/auth/auth.php');
 
 $response = [];
 
-//input adatok
-$jsonData = file_get_contents("php://input");
-$payload = json_decode($jsonData, true);
-
 class GetAllLosTickets
 {
     private $conn;
@@ -20,9 +16,8 @@ class GetAllLosTickets
     private $getAllActivePointsUrl;
     private $user;
     private $password;
-    private $payload;
 
-    public function __construct($conn, &$response, $auth, $getAllActivePointsUrl, $user, $password, $payload)
+    public function __construct($conn, &$response, $auth, $getAllActivePointsUrl, $user, $password)
     {
         $this->conn = $conn;
         $this->response = &$response;
@@ -30,7 +25,6 @@ class GetAllLosTickets
         $this->getAllActivePointsUrl = $getAllActivePointsUrl;
         $this->user = $user;
         $this->password = $password;
-        $this->payload = $payload;
     }
 
     private function createResponse($status, $message, $data = null)
@@ -42,7 +36,7 @@ class GetAllLosTickets
         ];
     }
 
-    public function getAllLosTicketsData($token, $payload)
+    public function getAllLosTicketsData($token)
     {
         //token értékét kikérni közvetlenül db-ből
         try {
@@ -111,51 +105,8 @@ class GetAllLosTickets
             }
 
             // enrichedData előállítása, gps adatok hozzáadásával
-            $fromDate = $payload['from'] ?? null;
-            $toDate = $payload['to'] ?? null;
-
-            $fromDateTime = null;
-            if (!empty($fromDate)) {
-                try {
-                    $fromDateTime = new DateTimeImmutable($fromDate, new DateTimeZone('UTC'));
-                } catch (Exception $e) {
-                    $fromDateTime = null;
-                }
-            }
-
-            $toDateTime = null;
-            if (!empty($toDate)) {
-                try {
-                    $toDateTime = new DateTimeImmutable($toDate, new DateTimeZone('UTC'));
-                    // Date-only input esetén a nap végét tekintjük felső határnak.
-                    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$toDate)) {
-                        $toDateTime = $toDateTime->setTime(23, 59, 59);
-                    }
-                } catch (Exception $e) {
-                    $toDateTime = null;
-                }
-            }
-
             $enrichedData = [];
             foreach ($result['payload'] as $ticket) {
-                $createdAtRaw = isset($ticket['createdAt']) ? (string)$ticket['createdAt'] : '';
-                $createdAt = null;
-                if ($createdAtRaw !== '') {
-                    try {
-                        $createdAt = new DateTimeImmutable($createdAtRaw, new DateTimeZone('UTC'));
-                    } catch (Exception $e) {
-                        $createdAt = null;
-                    }
-                }
-
-                if ($fromDateTime !== null && ($createdAt === null || $createdAt < $fromDateTime)) {
-                    continue;
-                }
-
-                if ($toDateTime !== null && ($createdAt === null || $createdAt > $toDateTime)) {
-                    continue;
-                }
-
                 $id = isset($ticket['lockerDisplayName']) ? str_replace('EXP-', '', $ticket['lockerDisplayName']) : null;
                 if ($id && isset($exoboxIndex[$id])) {
                     $ticket['latitude'] = $exoboxIndex[$id]['lat'] ?? null;
@@ -184,7 +135,7 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 
-$getAllLosTickets = new GetAllLosTickets($conn, $response, $auth, $getAllActivePointsUrl, $user, $password, $payload);
-$getAllLosTickets->getAllLosTicketsData($token, $payload);
+$getAllLosTickets = new GetAllLosTickets($conn, $response, $auth, $getAllActivePointsUrl, $user, $password);
+$getAllLosTickets->getAllLosTicketsData($token);
 
 echo json_encode($response);
