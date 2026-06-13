@@ -1,32 +1,27 @@
 <?php
+header('Content-Type: application/json');
+
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 
-header('Content-Type: application/json');
-
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
-    exit;
-}
-
-
 //error debugging
-// ini_set('display_errors', 1);
-// ini_set('display_startup_errors', 1);
-// error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 class GetInitialData
 {
     private PDO $conn;
     private Auth $auth;
     private ?int $userRoleId = null;
+    private string $locale;
 
-    public function __construct(PDO $conn, Auth $auth)
+    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
     {
         $this->conn = $conn;
         $this->auth = $auth;
+        $this->locale = $locale;
     }
 
     private function createResponse(int $statusCode, string $message, array $payload = []): array
@@ -49,7 +44,7 @@ class GetInitialData
     {
         $authentication = $this->auth->authenticate(4);
         if (($authentication['status'] ?? 500) === 200) {
-            $this->userRoleId = (int)($authentication['data']->roleId ?? 0);
+            $this->userRoleId = (int)($this->auth->roleId ?? 0);
         }
         return $authentication;
     }
@@ -68,14 +63,15 @@ class GetInitialData
             $params = ['role_id' => $this->userRoleId];
 
             $headers = $this->fetchAll(
-                "SELECT DISTINCT tc.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
+                "SELECT DISTINCT t.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
                  FROM task_columns tc
                  LEFT JOIN task_column_permissions tcp ON tcp.task_columns_id = tc.id
+                 LEFT JOIN translations t ON t.task_columns_id = tc.id AND t.locale = :locale
                  WHERE tc.task_column_types_id = 1
                    AND tc.is_active = 1
                    AND (tcp.role_id IS NULL OR tcp.role_id >= :role_id)
                  ORDER BY tc.orderId ASC",
-                $params
+                array_merge($params, ['locale' => $this->locale])
             );
 
             $statuses = $this->fetchAll(
@@ -138,7 +134,7 @@ class GetInitialData
                 ];
             }
 
-            return $this->createResponse(200, 'Initial data fetched successfully.', [
+            return $this->createResponse(200, localizeSuccessMessage('success.initial_data_fetched', $this->locale), [
                 'headers' => $headers,
                 'statuses' => $statuses,
                 'allowedStatuses' => $allowedStatuses,
@@ -149,18 +145,21 @@ class GetInitialData
                 'statusGroups' => $statusGroups
             ]);
         } catch (\Throwable $th) {
-            return $this->createResponse(500, 'Database query error: ' . $th->getMessage());
+            return $this->createResponse(500, localizeErrorMessage('errors.database_error', $this->locale, ['message' => $th->getMessage()]));
         }
     }
 }
 
 // Authorization header kezelése biztonságosan
-$tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
-$token = $matches[1] ?? '';
-$auth = new Auth($conn, $token, $secretkey);
+$token = $matches[1];
 
-$service = new GetInitialData($conn, $auth);
+$token = $matches[1];
+$auth = new Auth($conn, $token, $secretkey);
+$locale = $_GET['locale'] ?? 'hu';
+
+$service = new GetInitialData($conn, $auth, $locale);
 $response = $service->getInitialData();
 
 // http_response_code((int)($response['status'] ?? 500));

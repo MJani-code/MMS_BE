@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 
 require('../../inc/conn.php');
+require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 
 
@@ -46,7 +47,7 @@ class updateTaskInBatch
             if (!isset($updateItem[$field]) || empty($updateItem[$field])) {
                 $this->response = [
                     'status' => 400,
-                    'message' => "Hiányzó vagy üres mező: '$field'."
+                    'message' => localizeErrorMessage('errors.data_update_missing_field', null, ['field' => $field])
                 ];
                 return $this->response;
             }
@@ -62,11 +63,11 @@ class updateTaskInBatch
         if (count($statusResult) === 0) {
             $this->response = [
                 'status' => 400,
-                'message' => "Érvénytelen statusId érték."
+                'message' => localizeErrorMessage('errors.invalid_status_id', null)
             ];
             return $this->response;
         }
-        return $this->response = ['status' => 200, 'message' => 'Validáció sikeres.', 'data' => $statusResult];
+        return $this->response = ['status' => 200, 'message' => localizeSuccessMessage('success.query_successful', null), 'data' => $statusResult];
     }
 
     private function executeUpdate($updateItem, $userId)
@@ -82,11 +83,11 @@ class updateTaskInBatch
             $stmt->bindValue(":updated_by", $userId);
             $stmt->execute();
         } catch (\Throwable $th) {
-            return throw new Exception("Adatbázis hiba: " . $th->getMessage());
+            throw new Exception(localizeErrorMessage('errors.database_error', null, ['message' => $th->getMessage()]));
         }
 
         if ($this->conn->affected_rows === 0) {
-            throw new Exception("Nincs frissíthető feladat.");
+            throw new Exception(localizeErrorMessage('errors.no_updatable_task', null));
         }
     }
 
@@ -111,7 +112,7 @@ class updateTaskInBatch
             $this->executeUpdate($updateItem, $this->userId);
             $this->response = [
                 'status' => 200,
-                'message' => "A feladatok sikeresen frissítve lettek.",
+                'message' => localizeSuccessMessage('success.data_update_successful', null),
                 'payload' => [
                     'taskIds' => $updateItem['taskIds'],
                     'value' => $updateItem['value'],
@@ -124,7 +125,7 @@ class updateTaskInBatch
         } catch (Exception $e) {
             $this->response = [
                 'status' => 500,
-                'message' => "Hiba történt a frissítés során: " . $e->getMessage()
+                'message' => localizeErrorMessage('errors.database_error', null, ['message' => $e->getMessage()])
             ];
             return;
         }
