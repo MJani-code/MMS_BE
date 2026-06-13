@@ -29,6 +29,7 @@ class AddLocker
     {
 
         $userId = null;
+        $locale = $newItems['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(9);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -40,7 +41,7 @@ class AddLocker
             }
         }
 
-        $result = addLocker($conn, $newItems, $userId);
+        $result = addLocker($conn, $newItems, $userId, $locale);
         $this->response = $result;
     }
 }
