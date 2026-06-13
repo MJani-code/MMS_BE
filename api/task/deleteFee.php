@@ -12,9 +12,7 @@ $data = json_decode($jsonData, true);
 
 $id = $data['id'];
 $taskId = $data['taskId'];
-$locale = $data['locale'] ?? 'hu';
 $dbTable = 'task_fees';
-
 
 class DeleteFee
 {
@@ -31,7 +29,7 @@ class DeleteFee
 
     //TODO: user validation here
 
-    public function deleteFeeFunction($conn, $dbTable, $id, $taskId, $locale = 'hu')
+    public function deleteFeeFunction($conn, $dbTable, $id, $taskId)
     {
         $userId = null;
         $isAccess = $this->auth->authenticate(12);
@@ -44,11 +42,8 @@ class DeleteFee
                 return $this->response = $isTheTaskVisibleForUser;
             }
         }
-        $result = deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale);
-         if ($result['status'] !== 200) {
-             return $this->response = $result;
-         }
-         return $this->response = $result;
+        $result = deleteFee($conn, $dbTable, $id, $taskId, $userId);
+        $this->response = $result;
     }
 }
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
@@ -58,5 +53,5 @@ $token = $matches[1];
 $auth = new Auth($conn, $token, $secretkey);
 
 $getAllTask = new DeleteFee($conn, $response, $auth);
-$getAllTask->deleteFeeFunction($conn, $dbTable, $id, $taskId, $locale);
+$getAllTask->deleteFeeFunction($conn, $dbTable, $id, $taskId);
 echo json_encode($response);

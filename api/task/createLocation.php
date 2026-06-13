@@ -1,6 +1,4 @@
 <?php
-require('../../functions/taskFunctions.php');
-
 //require("locations.php");
 
 // Cél URL
@@ -29,11 +27,11 @@ foreach ($locations as $data) {
 
     // Hibakezelés
     if (curl_errno($curl)) {
-        error_log(localizeErrorMessage('errors.unexpected'));
+        echo "Hiba történt az alábbi objektum feldolgozása közben:\n";
         print_r($data);
-        error_log(curl_error($curl));
+        echo "Hiba: " . curl_error($curl) . "\n";
     } else {
-        error_log($response);
+        echo "Válasz: " . $response . "\n";
     }
 
     // cURL munkamenet lezárása
