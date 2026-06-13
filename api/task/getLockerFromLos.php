@@ -9,7 +9,6 @@ $response = [];
 
 $jsonData = file_get_contents("php://input");
 $lockerData = json_decode($jsonData, true);
-$locale = $lockerData['locale'] ?? 'hu';
 
 class CheckLocker
 {
@@ -21,9 +20,8 @@ class CheckLocker
     private $response;
     private $auth;
     private $token;
-    private $locale;
 
-    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth, $locale = 'hu')
+    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth)
     {
         $this->conn = $conn;
         $this->losUserName = $losUserName;
@@ -33,7 +31,6 @@ class CheckLocker
         $this->response = &$response;
         $this->auth = $auth;
         $this->token = $this->getTokenFromDatabase();
-        $this->locale = $locale;
     }
 
     public function createResponse($statusCode, $message, $data = null)
@@ -59,7 +56,7 @@ class CheckLocker
         $stmt->execute([':token' => $token]);
     }
 
-    public function getLockerDataFunction($lockerData, $locale = 'hu')
+    public function getLockerDataFunction($lockerData)
     {
         //locker adatok lekérdezése
         try {
@@ -89,7 +86,7 @@ class CheckLocker
             }
 
             if ($result === false) {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.locker_data_fetch_failed', $this->locale, ['message' => curl_error($ch)]);
+                return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
             }
 
             curl_close($ch);
@@ -100,7 +97,7 @@ class CheckLocker
 
             $this->response = $result;
         } catch (Exception $e) {
-            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', $this->locale, ['message' => $e->getMessage()]);
+            return $this->response = $this->createResponse(400, $e->getMessage());
         }
     }
 
@@ -123,7 +120,7 @@ class CheckLocker
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($result === false) {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.login_failed_with_reason', $this->locale, ['message' => curl_error($ch)]);
+                return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
             }
 
             curl_close($ch);
@@ -132,12 +129,12 @@ class CheckLocker
             if (isset($result['payload']['token'])) {
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);
-                return $this->response = createLocalizedResponse(200, 'success.login_successful', $result, $this->locale);
+                return $this->createResponse(200, 'Login successful', $result);
             } else {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.login_failed_simple', $this->locale);
+                return $this->createResponse(400, 'Login failed');
             }
         } catch (Exception $e) {
-            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', $this->locale, ['message' => $e->getMessage()]);
+            return $this->createResponse(400, $e->getMessage());
         }
     }
 }

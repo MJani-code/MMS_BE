@@ -36,7 +36,6 @@ class deleteIntervention
     {
         // Authenticate user (use same permission id as other actions)
         $userId = null;
-        $locale = $payload['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(27);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -47,7 +46,7 @@ class deleteIntervention
         $interventionId = isset($payload['interventionId']) ? (int)$payload['interventionId'] : 0;
         $relatedIssues = isset($payload['issues']) ? $payload['issues'] : [];
         if ($interventionId <= 0) {
-            return $this->response = $this->createResponse(400, localizeErrorMessage('errors.invalid_intervention_id', $locale));
+            return $this->response = $this->createResponse(400, "Invalid interventionId");
         }
 
         // Optional: verify taskId + uuid ownership if provided
@@ -62,13 +61,13 @@ class deleteIntervention
             $stmt->execute();
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$row) {
-                return $this->response = $this->createResponse(404, localizeErrorMessage('errors.intervention_not_found', $locale));
+                return $this->response = $this->createResponse(404, "Intervention not found");
             }
             if ($taskId !== null && $row['task_id'] != $taskId) {
-                return $this->response = $this->createResponse(403, localizeErrorMessage('errors.intervention_not_belong_task', $locale));
+                return $this->response = $this->createResponse(403, "Intervention does not belong to the given task");
             }
             if ($uuid !== null && $row['uuid'] != $uuid) {
-                return $this->response = $this->createResponse(403, localizeErrorMessage('errors.intervention_not_belong_uuid', $locale));
+                return $this->response = $this->createResponse(403, "Intervention does not belong to the given uuid");
             }
 
             // Start transaction
@@ -145,12 +144,12 @@ class deleteIntervention
 
             $this->conn->commit();
 
-            return $this->response = $this->createResponse(200, localizeSuccessMessage('success.intervention_deleted_success', $locale), ['interventionId' => $interventionId]);
+            return $this->response = $this->createResponse(200, "Intervention deleted successfully", ['interventionId' => $interventionId]);
         } catch (PDOException $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
-            return $this->response = createLocalizedErrorResponse(500, 'errors.database_generic', $locale, ['message' => 'deleteIntervention'], $e->getMessage());
+            return $this->response = $this->createResponse(500, "Database error (deleteIntervention): " . $e->getMessage());
         }
     }
 }

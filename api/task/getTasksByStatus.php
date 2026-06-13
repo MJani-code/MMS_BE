@@ -21,8 +21,10 @@ class GetAllTask
     private $auth;
     private $userAuthData;
     private $statusId;
+    private $itemsPerPage;
+    private $page;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds = [], $getAllActivePointsUrl, $user, $password, $statusId = null)
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds = [], $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null)
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
@@ -33,6 +35,8 @@ class GetAllTask
         $this->user = $user;
         $this->password = $password;
         $this->statusId = $statusId;
+        $this->itemsPerPage = $itemsPerPage;
+        $this->page = $page;
     }
 
 
@@ -67,6 +71,20 @@ class GetAllTask
         $this->tofShopIds = $tofShopIds['payload'];
         $restrictionOfCompanyId = !in_array(17, $permissions) ? true : false;
         try {
+            $baseTaskConditions = [];
+            $paginatedTaskConditions = [];
+
+            if (!in_array(17, $permissions)) {
+                $baseTaskConditions[] = "tr.company_id = $companyId";
+                $paginatedTaskConditions[] = "tr_filter.id IS NOT NULL";
+            }
+
+            if ($this->statusId) {
+                $statusCondition = "t.status_by_exohu_id = " . intval($this->statusId);
+                $baseTaskConditions[] = $statusCondition;
+                $paginatedTaskConditions[] = $statusCondition;
+            }
+
             $baseTaskData = [
                 'table' => "tasks t",
                 'method' => "get",
@@ -114,17 +132,52 @@ class GetAllTask
                         LEFT JOIN companies c on c.id = tr.company_id
                         LEFT JOIN users u on u.id = t.created_by
                         ",
+                'conditions' => implode(' AND ', $baseTaskConditions),
+                'order' => "ORDER BY t.id DESC"
 
                 //'conditions' => (in_array(17, $permissions) ? "tlp.deleted = 0 OR tlp.deleted is NULL" : "tr.company_id = $companyId AND tlp.deleted = 0 OR tlp.deleted is NULL") . " ORDER BY id"
                 // 'conditions' => (!in_array(17, $permissions) ? "tr.company_id = $companyId ORDER BY id" : "tr.company_id in (1,2,3)"),
-                'order' => "ORDER BY id DESC"
-            ];
-            if (!in_array(17, $permissions)) {
-                $baseTaskData['conditions'] .= " tr.company_id = $companyId";
-            }
+                //'order' => "ORDER BY id DESC"
+            ];            
 
-            if ($this->statusId) {
-                $baseTaskData['conditions'] .= ($baseTaskData['conditions'] ? " AND " : "") . " t.status_by_exohu_id = " . intval($this->statusId);
+            if ($this->itemsPerPage) {
+                $itemsPerPage = intval($this->itemsPerPage);
+                $page = intval($this->page ?? 1);
+
+                if ($page < 1) {
+                    $page = 1;
+                }
+
+                $offset = ($page - 1) * $itemsPerPage;
+
+                $paginatedTaskIds = [
+                    'table' => "tasks t",
+                    'method' => "get",
+                    'columns' => [
+                        'DISTINCT t.id as id'
+                    ],
+                    'others' => !in_array(17, $permissions)
+                        ? "LEFT JOIN task_responsibles tr_filter on tr_filter.task_id = t.id AND tr_filter.deleted = 0 AND tr_filter.company_id = $companyId"
+                        : '',
+                    'conditions' => implode(' AND ', $paginatedTaskConditions),
+                    'order' => "ORDER BY t.id DESC LIMIT $offset, $itemsPerPage"
+                ];
+
+                $resultOfPaginatedTaskIds = dataToHandleInDb($this->conn, $paginatedTaskIds);
+
+                if ($resultOfPaginatedTaskIds['status'] !== 200) {
+                    $errorInfo = isset($resultOfPaginatedTaskIds['errorInfo']) ? $resultOfPaginatedTaskIds['errorInfo'] : 'Hiba történt a task oldalak lekérdezése során.';
+                    $this->response = array(
+                        'status' => 500,
+                        'message' => $errorInfo,
+                        'data' => NULL
+                    );
+                    return;
+                }
+
+                $taskIds = array_map('intval', array_column($resultOfPaginatedTaskIds['payload'], 'id'));
+                $baseTaskData['conditions'] .= ($baseTaskData['conditions'] ? " AND " : "")
+                    . (!empty($taskIds) ? 't.id IN (' . implode(',', $taskIds) . ')' : '1 = 0');
             }
 
             $fees = [
@@ -187,6 +240,8 @@ class GetAllTask
             $resultOfBaseTaskData = dataToHandleInDb($this->conn, $baseTaskData);
             $resultOfLockers = dataToHandleInDb($this->conn, $lockers);
 
+            $taskCount = $resultOfBaseTaskData['payload'] ? count($resultOfBaseTaskData['payload']) : 0;
+
             $errorInfo = '';
             //Check if user has permission to taskFees
             $isAccessTotaskFees = $this->auth->authenticate(6);
@@ -225,7 +280,7 @@ class GetAllTask
                 $this->taskData['baseTaskData'] = $resultOfBaseTaskData;
                 $this->taskData['taskFees'] = $resultOfTaskFees;
                 $this->taskData['lockers'] = $resultOfLockers;
-                $this->taskData['fees'] = $resultOffees;
+                $this->taskData['fees'] = $resultOffees;                
                 return $this->taskData;
             }
         } catch (Exception $e) {
@@ -253,10 +308,12 @@ $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
 $statusId = $_GET['statusId'] ?? null;
+$itemsPerPage = $_GET['itemsPerPage'] ?? null;
+$page = $_GET['page'] ?? null;
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId);
+$getAllTask = new GetAllTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page);
 $getAllTask->getTaskData();
 $getAllTask->dataManipulation($response);
 echo json_encode($response);

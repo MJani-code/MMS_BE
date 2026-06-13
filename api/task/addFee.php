@@ -30,7 +30,6 @@ class AddFee
     public function addFeeFunction($conn, $dbTable, $newItems)
     {
         $userId = null;
-        $locale = $newItems['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(11);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -41,7 +40,7 @@ class AddFee
                 return $this->response = $isTheTaskVisibleForUser;
             }
         }
-        $result = addFee($conn, $dbTable, $newItems, $userId, $locale);
+        $result = addFee($conn, $dbTable, $newItems, $userId);
         $this->response = $result;
     }
 }

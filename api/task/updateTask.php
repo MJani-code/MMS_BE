@@ -38,7 +38,6 @@ class updateTask
         //Adat frissítés
         $jsonData = file_get_contents("php://input");
         $data = json_decode($jsonData, true);
-        $locale = $data['locale'] ?? 'hu';
 
         $taskId = $data['task_id'] ?? null;
         $id = $data['id'] ?? null;
@@ -125,15 +124,17 @@ class updateTask
                             // A frissítési értékek paraméterei
                             $params = [$deleted_at, $deleted_by, $taskId];
                             $params = array_merge($params, $items_to_delete); // hozzáadjuk az `item_id`-kat
-
-                            $stmt->execute($params);
-                            if ($stmt->execute()) {
+                            if ($stmt->execute($params)) {
                                 $payload = array(
                                     'id' => intval($taskId),
                                     'column' => 'taskTypes',
                                     'value' => $new_items
                                 );
-                                $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
+                                $this->response = array(
+                                    'status' => 200,
+                                    'message' => 'Data update successful',
+                                    'payload' => $payload
+                                );
                             }
                         }
 
@@ -153,21 +154,28 @@ class updateTask
                                             'column' => 'taskTypes',
                                             'value' => $new_items
                                         );
-                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
+                                        $this->response = array(
+                                            'status' => 200,
+                                            'message' => 'Data update successful',
+                                            'payload' => $payload
+                                        );
                                     }
                                 } else {
                                     // Ha az elem még nincs benne, akkor INSERT
                                     $insert_query = "INSERT INTO $dbTable (task_id, type_id, created_by) VALUES (?, ?, ?)";
                                     $stmt = $conn->prepare($insert_query);
                                     $params = [$taskId, $item_id, $userId];
-                                    $stmt->execute($params);
-                                    if ($stmt->execute()) {
+                                    if ($stmt->execute($params)) {
                                         $payload = array(
                                             'id' => intval($taskId),
                                             'column' => 'taskTypes',
                                             'value' => $new_items
                                         );
-                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
+                                        $this->response = array(
+                                            'status' => 200,
+                                            'message' => 'Data update successful',
+                                            'payload' => $payload
+                                        );
                                     }
                                 }
                             }
@@ -223,7 +231,11 @@ class updateTask
                                     'column' => 'responsibles',
                                     'value' => $new_items
                                 );
-                                $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
+                                $this->response = array(
+                                    'status' => 200,
+                                    'message' => 'Data update successful',
+                                    'payload' => $payload
+                                );
                             }
                         }
 
@@ -250,7 +262,11 @@ class updateTask
                                             'column' => 'responsibles',
                                             'value' => $new_items
                                         );
-                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
+                                        $this->response = array(
+                                            'status' => 200,
+                                            'message' => 'Data update successful',
+                                            'payload' => $payload
+                                        );
                                     }
                                 } else {
                                     // Ha az elem még nincs benne, akkor INSERT
@@ -269,7 +285,11 @@ class updateTask
                                             'column' => 'responsibles',
                                             'value' => $new_items
                                         );
-                                        $this->response = createLocalizedResponse(200, 'success.data_update_successful', $payload, $locale);
+                                        $this->response = array(
+                                            'status' => 200,
+                                            'message' => 'Data update successful',
+                                            'payload' => $payload
+                                        );
                                     }
                                 }
                             }
@@ -353,28 +373,25 @@ class updateTask
                             'id' => $id,
                             'taskId' => intval($taskId),
                             'column' => $dbColumn,
+                            'status_exohu' => $data['status_exohu'],
                             'value' => $value
                         );
                         $this->response = array(
                             'status' => 200,
-                            'message' => localizeSuccessMessage('success.data_update_successful', $locale),
+                            'message' => $result['message'],
                             'payload' => $payload
                         );
                     } else {
                         $this->response = array(
                             'status' => 400,
-                            'message' => localizeErrorMessage('errors.data_update_failed', $locale, ['error' => $result['message']]),
+                            'message' => $result['error'],
                             'payload' => null
                         );
                     }
                 }
             } catch (Exception $e) {
                 //echo $e;
-                $this->response = array(
-                    'status' => 500,
-                    'message' => localizeErrorMessage('errors.unexpected', $locale, null, [], $e->getMessage()),
-                    'payload' => null
-                );
+                $this->response['error'] =  $e->getMessage();
             }
         }
     }
