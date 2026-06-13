@@ -1082,7 +1082,7 @@ function updateCheckLockerResult($conn, $data, $userId)
     }
 }
 
-function addTask($conn, $newTask, $userId)
+function addTask($conn, $newTask, $userId, $locale = 'hu')
 {
     $typeId = $newTask['taskType'];
     $responsible = $newTask['responsible'];
@@ -1179,7 +1179,7 @@ function addTask($conn, $newTask, $userId)
             ];
             $result = dataToHandleInDb($conn, $dataToHandleInDb);
             if ($result['status'] !== 200) {
-                return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+                return createLocalizedResponse($result['status'], $result['message'] . '. ' . $result['error'], null, $locale);
             }
         }
 
@@ -1257,12 +1257,12 @@ function addTask($conn, $newTask, $userId)
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] !== 200) {
-            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+            return createLocalizedResponse($result['status'], $result['message'] . '. ' . $result['error'], null, $locale);
         }
 
         // Tranzakció lezárása
         $conn->commit();
-        return createLocalizedResponse(200, 'success.successful_import', $newTask);
+        return createLocalizedResponse(200, 'success.item_insertion', ['taskId' => $taskId, 'taskLocationsId' => $locationId], $locale);
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();

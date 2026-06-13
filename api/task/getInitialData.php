@@ -1,11 +1,16 @@
 <?php
 header('Content-Type: application/json');
 
+header('Content-Type: application/json');
+
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 
 //error debugging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -16,11 +21,14 @@ class GetInitialData
     private Auth $auth;
     private ?int $userRoleId = null;
     private string $locale;
+    private string $locale;
 
+    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
     public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
     {
         $this->conn = $conn;
         $this->auth = $auth;
+        $this->locale = $locale;
         $this->locale = $locale;
     }
 
@@ -45,6 +53,7 @@ class GetInitialData
         $authentication = $this->auth->authenticate(4);
         if (($authentication['status'] ?? 500) === 200) {
             $this->userRoleId = (int)($this->auth->roleId ?? 0);
+            $this->userRoleId = (int)($this->auth->roleId ?? 0);
         }
         return $authentication;
     }
@@ -64,17 +73,21 @@ class GetInitialData
 
             $headers = $this->fetchAll(
                 "SELECT DISTINCT t.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
+                "SELECT DISTINCT t.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
                  FROM task_columns tc
                  LEFT JOIN task_column_permissions tcp ON tcp.task_columns_id = tc.id
+                 LEFT JOIN translations t ON t.task_column_id = tc.id AND t.locale = :locale
                  LEFT JOIN translations t ON t.task_column_id = tc.id AND t.locale = :locale
                  WHERE tc.task_column_types_id = 1
                    AND tc.is_active = 1
                    AND (tcp.role_id IS NULL OR tcp.role_id >= :role_id)
                  ORDER BY tc.orderId ASC",
                 array_merge($params, ['locale' => $this->locale])
+                array_merge($params, ['locale' => $this->locale])
             );
 
             $statuses = $this->fetchAll(
+                "SELECT ts.id, t.text AS name, ts.color
                 "SELECT ts.id, t.text AS name, ts.color
                  FROM task_statuses ts
                  LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = :locale
@@ -130,6 +143,9 @@ class GetInitialData
                  LEFT JOIN translations tr ON tr.task_status_id = ts.id AND tr.locale = :locale
                  GROUP BY t.status_by_exohu_id, tr.text, ts.color",
                 ['locale' => $this->locale]
+                 LEFT JOIN translations tr ON tr.task_status_id = ts.id AND tr.locale = :locale
+                 GROUP BY t.status_by_exohu_id, tr.text, ts.color",
+                ['locale' => $this->locale]
             );
 
             $statusGroups = [];
@@ -146,6 +162,7 @@ class GetInitialData
             }
 
             return $this->createResponse(200, localizeSuccessMessage('success.initial_data_fetched', $this->locale), [
+            return $this->createResponse(200, localizeSuccessMessage('success.initial_data_fetched', $this->locale), [
                 'headers' => $headers,
                 'statuses' => $statuses,
                 'allowedStatuses' => $allowedStatuses,
@@ -157,19 +174,26 @@ class GetInitialData
             ]);
         } catch (\Throwable $th) {
             return $this->createResponse(500, localizeErrorMessage('errors.database_error', $this->locale, ['message' => $th->getMessage()]));
+            return $this->createResponse(500, localizeErrorMessage('errors.database_error', $this->locale, ['message' => $th->getMessage()]));
         }
     }
 }
 
 // Authorization header kezelése biztonságosan
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
+$token = $matches[1];
+
+$token = $matches[1];
 $token = $matches[1];
 
 $token = $matches[1];
 $auth = new Auth($conn, $token, $secretkey);
 $locale = $_GET['locale'] ?? 'hu';
+$locale = $_GET['locale'] ?? 'hu';
 
+$service = new GetInitialData($conn, $auth, $locale);
 $service = new GetInitialData($conn, $auth, $locale);
 $response = $service->getInitialData();
 
