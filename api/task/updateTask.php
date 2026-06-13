@@ -373,6 +373,7 @@ class updateTask
                             'id' => $id,
                             'taskId' => intval($taskId),
                             'column' => $dbColumn,
+                            'status_exohu' => $data['status_exohu'],
                             'value' => $value
                         );
                         $this->response = array(
