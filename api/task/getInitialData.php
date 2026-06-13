@@ -66,7 +66,7 @@ class GetInitialData
                 "SELECT DISTINCT t.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
                  FROM task_columns tc
                  LEFT JOIN task_column_permissions tcp ON tcp.task_columns_id = tc.id
-                 LEFT JOIN translations t ON t.task_columns_id = tc.id AND t.locale = :locale
+                 LEFT JOIN translations t ON t.task_column_id = tc.id AND t.locale = :locale
                  WHERE tc.task_column_types_id = 1
                    AND tc.is_active = 1
                    AND (tcp.role_id IS NULL OR tcp.role_id >= :role_id)
@@ -75,9 +75,11 @@ class GetInitialData
             );
 
             $statuses = $this->fetchAll(
-                "SELECT ts.id, ts.name, ts.color
+                "SELECT ts.id, t.text AS name, ts.color
                  FROM task_statuses ts
-                 WHERE ts.is_active = 1"
+                 LEFT JOIN translations t ON t.task_status_id = ts.id AND t.locale = :locale
+                 WHERE ts.is_active = 1",
+                ['locale' => $this->locale]
             );
 
             $allowedStatuses = $this->fetchAll(
@@ -115,10 +117,12 @@ class GetInitialData
             );
 
             $statusesGroupsResult = $this->fetchAll(
-                "SELECT t.status_by_exohu_id AS id, ts.name, ts.color, COUNT(t.id) AS count
+                "SELECT t.status_by_exohu_id AS id, tr.text as name, ts.color, COUNT(t.id) AS count
                  FROM tasks t
                  LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
-                 GROUP BY t.status_by_exohu_id, ts.name, ts.color"
+                 LEFT JOIN translations tr ON tr.task_status_id = ts.id AND tr.locale = :locale
+                 GROUP BY t.status_by_exohu_id, tr.text, ts.color",
+                ['locale' => $this->locale]
             );
 
             $statusGroups = [];
