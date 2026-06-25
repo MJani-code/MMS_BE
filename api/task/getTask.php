@@ -31,8 +31,10 @@ class FilterTask
     private $filters = [];
     private $paginationMeta = [];
     private $locale;
+    private $sortBy;
+    private $sortDesc;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [], $locale = 'hu')
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [], $locale = 'hu', $sortBy = null, $sortDesc = null)
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
@@ -48,6 +50,39 @@ class FilterTask
         $this->page = $page;
         $this->searchText = $searchText;
         $this->filters = is_array($filters) ? $filters : [];
+        $this->sortBy = $sortBy;
+        $this->sortDesc = filter_var($sortDesc, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+    }
+
+    private function getOrderByClause()
+    {
+        $sortKey = strtolower(trim((string)$this->sortBy));
+        $direction = ($this->sortDesc === true) ? 'DESC' : 'ASC';
+
+        $allowedSortColumns = [
+            'id' => 't.id',
+            'name' => 'tl.name',
+            'city' => 'tl.city',
+            'zip' => 'tl.zip',
+            'address' => 'tl.address',
+            'box_id' => 'tl.box_id',
+            'tof_shop_id' => 'tl.tof_shop_id',
+            'status_exohu_id' => 'ts.id',
+            'status_by_exohu_id' => 't.status_by_exohu_id',
+            'status_exohu' => 'ts.name',
+            'location_type' => 'tl.location_type_id',
+            'planned_delivery_date' => 'td.planned_delivery_date',
+            'delivery_date' => 'td.delivery_date',
+            'createdat' => 't.created_at',
+            'created_at' => 't.created_at',
+            'createdby' => "CONCAT(UPPER(LEFT(u.last_name, 1)), UPPER(LEFT(u.first_name, 1)))"
+        ];
+
+        if ($sortKey === '' || !isset($allowedSortColumns[$sortKey])) {
+            return 't.id DESC';
+        }
+
+        return $allowedSortColumns[$sortKey] . ' ' . $direction . ', t.id DESC';
     }
 
     private function escapeLike($value)
@@ -338,8 +373,11 @@ class FilterTask
             FROM tasks t
             LEFT JOIN task_locations tl ON tl.id = t.task_locations_id
             LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
+            LEFT JOIN task_dates td ON td.task_id = t.id
             LEFT JOIN users u ON u.id = t.created_by
         ";
+
+        $orderBySql = $this->getOrderByClause();
 
         $whereSql = '';
         if (!empty($where)) {
@@ -358,7 +396,7 @@ class FilterTask
             SELECT DISTINCT t.id
             " . $baseFrom . "
             " . $whereSql . "
-            ORDER BY t.id DESC
+            ORDER BY " . $orderBySql . "
             LIMIT :offset, :itemsPerPage
         ";
 
@@ -454,7 +492,7 @@ class FilterTask
                         LEFT JOIN users u on u.id = t.created_by
                         ",
                 'conditions' => implode(' AND ', $baseTaskConditions),
-                'order' => "ORDER BY t.id DESC"
+                'order' => "ORDER BY " . $this->getOrderByClause()
             ];
 
             $taskTypes = [
@@ -644,10 +682,12 @@ $page         = $body['page']         ?? null;
 $searchText   = $body['filters']['searchText']   ?? null;
 $filters      = is_array($body['filters'] ?? null) ? $body['filters'] : [];
 $locale       = $body['locale'] ?? 'hu';
+$sortBy       = $body['sortBy'] ?? ($filters['sortBy'] ?? null);
+$sortDesc     = $body['sortDesc'] ?? ($filters['sortDesc'] ?? null);
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters, $locale);
+$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters, $locale, $sortBy, $sortDesc);
 $filterTask->getTaskData();
 $filterTask->dataManipulation($response);
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
