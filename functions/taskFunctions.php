@@ -18,7 +18,73 @@ function createResponse($status, $errorMessage = '', $data = null)
     ];
 }
 
-function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActivePointsUrl, $user, $password)
+function normalizeLocale($locale)
+{
+    $allowedLocales = ['hu', 'en', 'sl'];
+    return in_array($locale, $allowedLocales, true) ? $locale : 'hu';
+}
+
+function getRequestLocale()
+{
+    $requestLocale = $_REQUEST['locale'] ?? null;
+    return normalizeLocale($requestLocale ?? 'hu');
+}
+
+function localizeErrorMessage($key, $locale = 'hu', $params = [])
+{
+    static $messages = null;
+    if ($messages === null) {
+        $messages = require __DIR__ . '/errorMessages.php';
+    }
+
+    $locale = ($locale === null || $locale === '') ? getRequestLocale() : normalizeLocale($locale);
+    $message = $messages[$key][$locale] ?? $messages[$key]['hu'] ?? $key;
+
+    foreach ($params as $paramKey => $paramValue) {
+        $message = str_replace(':' . $paramKey, (string) $paramValue, $message);
+    }
+
+    return $message;
+}
+
+function createLocalizedErrorResponse($status, $messageKey, $locale = null, $params = [], $debugMessage = '')
+{
+    return createLocalizedResponse($status, $messageKey, null, $locale, $params, $debugMessage);
+}
+
+function localizeSuccessMessage($key, $locale = null, $params = [])
+{
+    static $messages = null;
+    if ($messages === null) {
+        $messages = require __DIR__ . '/successMessages.php';
+    }
+
+    $locale = ($locale === null || $locale === '') ? getRequestLocale() : normalizeLocale($locale);
+    $message = $messages[$key][$locale] ?? $messages[$key]['hu'] ?? $key;
+
+    foreach ($params as $paramKey => $paramValue) {
+        $message = str_replace(':' . $paramKey, (string) $paramValue, $message);
+    }
+
+    return $message;
+}
+
+function createLocalizedResponse($status, $messageKey, $data = null, $locale = null, $params = [], $debugMessage = '')
+{
+    if ($status >= 200 && $status < 300) {
+        $message = localizeSuccessMessage($messageKey, $locale, $params);
+    } else {
+        $message = localizeErrorMessage($messageKey, $locale, $params);
+    }
+
+    if ($debugMessage !== '') {
+        $message .= ' [' . $debugMessage . ']';
+    }
+
+    return createResponse($status, $message, $data);
+}
+
+function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale = 'hu')
 {
     $manipulatedData = array(
         'status' => 200,
@@ -32,7 +98,7 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
     $userRoleId = $userAuthData['data']->roleId;
 
     //getData
-    function getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password)
+    function getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale)
     {
 
         if (isset($data['baseTaskData']['payload'])) {
@@ -190,22 +256,23 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető adat'
+                // 'message' => localizeErrorMessage('errors.no_displayable_data', $locale)
+                'message' => 'test message'
             );
             return $manipulatedData;
         }
     }
 
     //getHeaders
-    function getHeaders($conn, $manipulatedData, $data, $userRoleId)
+    function getHeaders($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_columns tc',
                     'method' => "get",
-                    'columns' => ['text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
-                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id",
+                    'columns' => ['t.text', 'dbTable', 'dbColumn', 'align', 'filterable', 'value'],
+                    'others' => "LEFT JOIN task_column_permissions tcp on tcp.task_columns_id = tc.id LEFT JOIN translations t on t.task_column_id = tc.id AND t.locale = '$locale'",
                     'conditions' => "tcp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -220,28 +287,28 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_header', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getStatuses
-    function getStatuses($conn, $manipulatedData, $data, $userRoleId)
+    function getStatuses($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_statuses ts',
                     'method' => "get",
-                    'columns' => ['ts.id', 'name', 'color'],
-                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'columns' => ['ts.id', 't.text as name', 'color'],
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = '$locale'",
                     'conditions' => "ts.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -252,28 +319,28 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_status', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getAllowedStatuses
-    function getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId)
+    function getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_statuses ts',
                     'method' => "get",
-                    'columns' => ['ts.id', 'name', 'color'],
-                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id",
+                    'columns' => ['ts.id', 't.text as name', 'color'],
+                    'others' => "LEFT JOIN task_status_permissions tsp on tsp.task_status_id = ts.id LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = '$locale'",
                     'conditions' => "tsp.role_id >=
                         (CASE
                         WHEN $userRoleId = $userRoleId THEN $userRoleId
@@ -288,28 +355,28 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_allowed_status', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getLocationTypes
-    function getLocationTypes($conn, $manipulatedData, $data, $userRoleId)
+    function getLocationTypes($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'location_types lt',
                     'method' => "get",
-                    'columns' => ['id', 'name', 'color'],
-                    'others' => "",
+                    'columns' => ['lt.id', 't.text as name', 'lt.color'],
+                    'others' => "LEFT JOIN translations t on t.location_type_id = lt.id AND t.locale = '$locale'",
                     'conditions' => "lt.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -320,28 +387,28 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_location_type', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getLocationTypes
-    function getTaskTypes($conn, $manipulatedData, $data, $userRoleId)
+    function getTaskTypes($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'task_type_details ttd',
                     'method' => "get",
-                    'columns' => ['id', 'name', 'color'],
-                    'others' => "",
+                    'columns' => ['ttd.id', 't.text as name', 'ttd.color'],
+                    'others' => "LEFT JOIN translations t on t.task_type_detail_id = ttd.id AND t.locale = '$locale'",
                     'conditions' => "ttd.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -352,20 +419,20 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_task_type', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getLocationTypes
-    function getResponsibles($conn, $manipulatedData, $data, $userRoleId)
+    function getResponsibles($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
@@ -384,28 +451,28 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_companies', $locale)
             );
             return $manipulatedData;
         }
     }
 
     //getPriorities
-    function getPriorities($conn, $manipulatedData, $data, $userRoleId)
+    function getPriorities($conn, $manipulatedData, $data, $userRoleId, $locale = 'hu')
     {
         if (isset($manipulatedData['data'])) {
             try {
                 $dataToHandleInDb = [
                     'table' => 'priorities p',
                     'method' => "get",
-                    'columns' => ['id', 'name', 'color'],
-                    'others' => "",
+                    'columns' => ['p.id', 't.text as name', 'p.color'],
+                    'others' => "LEFT JOIN translations t on t.priority_id = p.id AND t.locale = '$locale'",
                     'conditions' => "p.is_active = 1"
                 ];
                 $result = dataToHandleInDb($conn, $dataToHandleInDb);
@@ -416,26 +483,26 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
                     return createResponse($result['status'], $result['message'] . '. ' . $result['errorInfo']);
                 }
             } catch (Exception $e) {
-                return createResponse(500, "Hiba történt: " . $e->getMessage());
+                return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
             }
             return $manipulatedData;
         } else {
             $manipulatedData = array(
                 'status' => 500,
-                'message' => 'Nincsen megjeleníthető header'
+                'message' => localizeErrorMessage('errors.no_displayable_priority', $locale)
             );
             return $manipulatedData;
         }
     }
 
-    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password);
-    $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getResponsibles($conn, $manipulatedData, $data, $userRoleId);
-    $manipulatedData = getPriorities($conn, $manipulatedData, $data, $userRoleId);
+    $manipulatedData = getData($conn, $manipulatedData, $data, $tofShopIds, $getAllActivePointsUrl, $user, $password, $locale);
+    $manipulatedData = getHeaders($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getStatuses($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getAllowedStatuses($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getLocationTypes($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getTaskTypes($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getResponsibles($conn, $manipulatedData, $data, $userRoleId, $locale);
+    $manipulatedData = getPriorities($conn, $manipulatedData, $data, $userRoleId, $locale);
 
     return $manipulatedData;
 }

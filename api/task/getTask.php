@@ -30,8 +30,9 @@ class FilterTask
     private $searchText;
     private $filters = [];
     private $paginationMeta = [];
+    private $locale;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [])
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [], $locale = 'hu')
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
@@ -42,6 +43,7 @@ class FilterTask
         $this->user = $user;
         $this->password = $password;
         $this->statusId = $statusId;
+        $this->locale = $locale;
         $this->itemsPerPage = $itemsPerPage;
         $this->page = $page;
         $this->searchText = $searchText;
@@ -499,7 +501,7 @@ class FilterTask
     {
         $rowData = $this->taskData;
         if ($rowData) {
-            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds, $this->getAllActivePointsUrl, $this->user, $this->password);
+            $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds, $this->getAllActivePointsUrl, $this->user, $this->password, $this->locale);
             $result['pagination'] = $this->paginationMeta;
             $response = $result;
         }
@@ -517,10 +519,11 @@ $itemsPerPage = $body['itemsPerPage'] ?? null;
 $page         = $body['page']         ?? null;
 $searchText   = $body['filters']['searchText']   ?? null;
 $filters      = is_array($body['filters'] ?? null) ? $body['filters'] : [];
+$locale       = $body['locale'] ?? 'hu';
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters);
+$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters, $locale);
 $filterTask->getTaskData();
 $filterTask->dataManipulation($response);
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
