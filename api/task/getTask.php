@@ -84,13 +84,77 @@ class FilterTask
             $where[] = "tl.name LIKE :f_name ESCAPE '\\\\'";
         }
 
-        if (isset($this->filters['box_id']) && trim((string)$this->filters['box_id']) !== '') {
-            $params[':f_box_id'] = '%' . $this->escapeLike(trim((string)$this->filters['box_id'])) . '%';
-            $where[] = "tl.box_id LIKE :f_box_id ESCAPE '\\\\'";
+        if (isset($this->filters['zip']) && trim((string)$this->filters['zip']) !== '') {
+            $params[':f_zip'] = '%' . $this->escapeLike(trim((string)$this->filters['zip'])) . '%';
+            $where[] = "tl.zip LIKE :f_zip ESCAPE '\\\\'";
         }
 
-        if (isset($this->filters['tofShopId']) && $this->filters['tofShopId'] !== '') {
-            $params[':f_tof_shop_id'] = (int)$this->filters['tofShopId'];
+        if (isset($this->filters['address']) && trim((string)$this->filters['address']) !== '') {
+            $params[':f_address'] = '%' . $this->escapeLike(trim((string)$this->filters['address'])) . '%';
+            $where[] = "tl.address LIKE :f_address ESCAPE '\\\\'";
+        }
+
+        if (isset($this->filters['box_id']) && trim((string)$this->filters['box_id']) !== '') {
+            $params[':f_box_id'] = trim((string)$this->filters['box_id']);
+            $where[] = "tl.box_id = :f_box_id";
+        }
+
+        if (isset($this->filters['serial']) && trim((string)$this->filters['serial']) !== '') {
+            $params[':f_serial'] = '%' . $this->escapeLike(trim((string)$this->filters['serial'])) . '%';
+            $where[] = "EXISTS (
+                SELECT 1
+                FROM task_lockers tl_serial
+                WHERE tl_serial.task_id = t.id
+                  AND tl_serial.deleted = 0
+                  AND tl_serial.serial LIKE :f_serial ESCAPE '\\\\'
+            )";
+        }
+
+        if (isset($this->filters['location_type'])) {
+            $locationTypesRaw = $this->filters['location_type'];
+            if (!is_array($locationTypesRaw)) {
+                $locationTypesRaw = explode(',', (string)$locationTypesRaw);
+            }
+
+            $locationTypeIds = array_values(array_filter(array_map('intval', $locationTypesRaw), fn($id) => $id > 0));
+            if (!empty($locationTypeIds)) {
+                $placeholders = [];
+                foreach ($locationTypeIds as $idx => $id) {
+                    $key = ':f_location_type_' . $idx;
+                    $placeholders[] = $key;
+                    $params[$key] = $id;
+                }
+                $where[] = 'tl.location_type_id IN (' . implode(', ', $placeholders) . ')';
+            }
+        }
+
+        if (isset($this->filters['taskType']) || isset($this->filters['taskTypes']) || isset($this->filters['task_type'])) {
+            $taskTypesRaw = $this->filters['taskType'] ?? ($this->filters['taskTypes'] ?? $this->filters['task_type']);
+            if (!is_array($taskTypesRaw)) {
+                $taskTypesRaw = explode(',', (string)$taskTypesRaw);
+            }
+
+            $taskTypeIds = array_values(array_filter(array_map('intval', $taskTypesRaw), fn($id) => $id > 0));
+            if (!empty($taskTypeIds)) {
+                $placeholders = [];
+                foreach ($taskTypeIds as $idx => $id) {
+                    $key = ':f_task_type_' . $idx;
+                    $placeholders[] = $key;
+                    $params[$key] = $id;
+                }
+
+                $where[] = "EXISTS (
+                    SELECT 1
+                    FROM task_types tt_client
+                    WHERE tt_client.task_id = t.id
+                      AND tt_client.deleted = 0
+                      AND tt_client.type_id IN (" . implode(', ', $placeholders) . ")
+                )";
+            }
+        }
+
+        if (isset($this->filters['tof_shop_id']) && $this->filters['tof_shop_id'] !== '') {
+            $params[':f_tof_shop_id'] = (int)$this->filters['tof_shop_id'];
             $where[] = 'tl.tof_shop_id = :f_tof_shop_id';
         }
 
@@ -104,15 +168,75 @@ class FilterTask
             $where[] = 't.created_at <= :f_created_to';
         }
 
-        if (isset($this->filters['responsibleCompanyId']) && $this->filters['responsibleCompanyId'] !== '') {
-            $params[':f_responsible_company_id'] = (int)$this->filters['responsibleCompanyId'];
+        if (isset($this->filters['delivery_dateFrom']) && trim((string)$this->filters['delivery_dateFrom']) !== '') {
+            $params[':f_delivery_from'] = trim((string)$this->filters['delivery_dateFrom']) . ' 00:00:00';
             $where[] = "EXISTS (
                 SELECT 1
-                FROM task_responsibles tr_client
-                WHERE tr_client.task_id = t.id
-                  AND tr_client.deleted = 0
-                  AND tr_client.company_id = :f_responsible_company_id
+                FROM task_dates td_filter
+                WHERE td_filter.task_id = t.id
+                  AND td_filter.delivery_date >= :f_delivery_from
             )";
+        }
+
+        if (isset($this->filters['delivery_dateTo']) && trim((string)$this->filters['delivery_dateTo']) !== '') {
+            $params[':f_delivery_to'] = trim((string)$this->filters['delivery_dateTo']) . ' 23:59:59';
+            $where[] = "EXISTS (
+                SELECT 1
+                FROM task_dates td_filter2
+                WHERE td_filter2.task_id = t.id
+                  AND td_filter2.delivery_date <= :f_delivery_to
+            )";
+        }
+
+        if (isset($this->filters['planned_delivery_dateFrom']) && trim((string)$this->filters['planned_delivery_dateFrom']) !== '') {
+            $params[':f_planned_delivery_from'] = trim((string)$this->filters['planned_delivery_dateFrom']) . ' 00:00:00';
+            $where[] = "EXISTS (
+                SELECT 1
+                FROM task_dates td_filter3
+                WHERE td_filter3.task_id = t.id
+                  AND td_filter3.planned_delivery_date >= :f_planned_delivery_from
+            )";
+        }
+
+        if (isset($this->filters['planned_delivery_dateTo']) && trim((string)$this->filters['planned_delivery_dateTo']) !== '') {
+            $params[':f_planned_delivery_to'] = trim((string)$this->filters['planned_delivery_dateTo']) . ' 23:59:59';
+            $where[] = "EXISTS (
+                SELECT 1
+                FROM task_dates td_filter4
+                WHERE td_filter4.task_id = t.id
+                  AND td_filter4.planned_delivery_date <= :f_planned_delivery_to
+            )";
+        }
+
+        if (
+            isset($this->filters['responsibles'])
+        ) {
+            $responsiblesRaw = $this->filters['responsibles']
+                ?? ($this->filters['responsibleCompanyIds']
+                    ?? ($this->filters['responsibleCompanyId']
+                        ?? $this->filters['responsible_company_id']));
+
+            if (!is_array($responsiblesRaw)) {
+                $responsiblesRaw = explode(',', (string)$responsiblesRaw);
+            }
+
+            $responsibleCompanyIds = array_values(array_filter(array_map('intval', $responsiblesRaw), fn($id) => $id > 0));
+            if (!empty($responsibleCompanyIds)) {
+                $placeholders = [];
+                foreach ($responsibleCompanyIds as $idx => $id) {
+                    $key = ':f_responsible_company_' . $idx;
+                    $placeholders[] = $key;
+                    $params[$key] = $id;
+                }
+
+                $where[] = "EXISTS (
+                    SELECT 1
+                    FROM task_responsibles tr_client
+                    WHERE tr_client.task_id = t.id
+                      AND tr_client.deleted = 0
+                      AND tr_client.company_id IN (" . implode(', ', $placeholders) . ")
+                )";
+            }
         }
     }
 
