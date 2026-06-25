@@ -130,6 +130,12 @@ class GetInitialData
                 ['locale' => $this->locale]
             );
 
+            $companies = $this->fetchAll(
+                "SELECT c.id, c.name
+                 FROM companies c
+                 WHERE c.is_active = 1"
+            );
+
             $statusesGroupsResult = $this->fetchAll(
                 "SELECT t.status_by_exohu_id AS id, tr.text AS name, ts.color, COUNT(t.id) AS count
                  FROM tasks t
@@ -160,6 +166,7 @@ class GetInitialData
                 'taskTypes' => $taskTypes,
                 'responsibles' => $responsibles,
                 'priorities' => $priorities,
+                'companies' => $companies,
                 'statusGroups' => $statusGroups
             ]);
         } catch (\Throwable $th) {
