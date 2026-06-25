@@ -109,11 +109,11 @@ function dataToHandleInDb($conn, $dataToHandleInDb)
                 $stmt->execute();
                 //echo $query;
                 $payload = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                if ($stmt->execute()) {
+                if ($stmt->errorCode() === '00000') {
                     $results['status'] = 200;
                     $results['message'] = 'success';
                     $results['payload'] = $payload;
-                    $results['rowCount'] = $stmt->rowCount();
+                    $results['rowCount'] = count($payload);
                     $results['stmt'] = $query;
                 } else {
                     $errorInfo = $stmt->errorInfo();

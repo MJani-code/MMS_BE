@@ -106,141 +106,120 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
             $exoboxPoints = getExoboxPoints($getAllActivePointsUrl, $user, $password, null);
 
             $groupedData = [];
-            // Segédtömb az ismétlődések elkerülésére
-            $uniqueTaskFees = [];
-            $uniqueLockers = [];
+            $activeTofShopMap = [];
+            foreach ((array)$tofShopIds as $shopId) {
+                $activeTofShopMap[(string)$shopId] = true;
+            }
+
+            $pointIdByTofShop = [];
+            if (!empty($exoboxPoints['payload'])) {
+                foreach ($exoboxPoints['payload'] as $point) {
+                    if (!isset($point['id'])) {
+                        continue;
+                    }
+                    $pointIdByTofShop[(string)$point['id']] = $point['point_id'] ?? null;
+                }
+            }
+
+            $photosByLocation = [];
+            if (!empty($data['taskPhotos']['payload'])) {
+                foreach ($data['taskPhotos']['payload'] as $photo) {
+                    if (!isset($photo['task_locations_id'], $photo['url'])) {
+                        continue;
+                    }
+                    $locationId = (int)$photo['task_locations_id'];
+                    $photoUrl = (string)$photo['url'];
+                    $photosByLocation[$locationId][$photoUrl] = ['url' => $photoUrl];
+                }
+            }
+
+            $taskTypesByTask = [];
+            if (!empty($data['taskTypes']['payload'])) {
+                foreach ($data['taskTypes']['payload'] as $type) {
+                    if (!isset($type['task_id']) || $type['type_id'] === null) {
+                        continue;
+                    }
+                    $taskId = (int)$type['task_id'];
+                    $typeId = (int)$type['type_id'];
+                    $taskTypesByTask[$taskId][$typeId] = $typeId;
+                }
+            }
+
+            $priorityByTask = [];
+            if (!empty($data['taskPriorities']['payload'])) {
+                foreach ($data['taskPriorities']['payload'] as $priority) {
+                    if (!isset($priority['task_id']) || $priority['priority_id'] === null) {
+                        continue;
+                    }
+                    $taskId = (int)$priority['task_id'];
+                    if (!isset($priorityByTask[$taskId])) {
+                        $priorityByTask[$taskId] = $priority['priority_id'];
+                    }
+                }
+            }
+
+            $responsiblesByTask = [];
+            if (!empty($data['taskResponsibles']['payload'])) {
+                foreach ($data['taskResponsibles']['payload'] as $responsible) {
+                    if (!isset($responsible['task_id']) || $responsible['company_id'] === null) {
+                        continue;
+                    }
+                    $taskId = (int)$responsible['task_id'];
+                    $companyId = (int)$responsible['company_id'];
+                    $responsiblesByTask[$taskId][$companyId] = $companyId;
+                }
+            }
+
+            $taskFeesByTask = [];
+            if (!empty($data['taskFees']['payload'])) {
+                foreach ($data['taskFees']['payload'] as $taskFee) {
+                    if (!isset($taskFee['taskId'], $taskFee['id'])) {
+                        continue;
+                    }
+                    $taskId = (int)$taskFee['taskId'];
+                    $taskFeeId = (int)$taskFee['id'];
+                    if (!isset($taskFeesByTask[$taskId][$taskFeeId])) {
+                        $taskFeesByTask[$taskId][$taskFeeId] = $taskFee;
+                    }
+                }
+            }
+
+            $lockersByTask = [];
+            $lockerSerialsByTask = [];
+            if (!empty($data['lockers']['payload'])) {
+                foreach ($data['lockers']['payload'] as $locker) {
+                    if (!isset($locker['task_id'], $locker['id'])) {
+                        continue;
+                    }
+                    $taskId = (int)$locker['task_id'];
+                    $lockerId = (int)$locker['id'];
+                    if (!isset($lockersByTask[$taskId][$lockerId])) {
+                        $lockersByTask[$taskId][$lockerId] = $locker;
+                    }
+                    if (isset($locker['serial']) && $locker['serial'] !== null) {
+                        $serial = (string)$locker['serial'];
+                        $lockerSerialsByTask[$taskId][$serial] = $serial;
+                    }
+                }
+            }
 
             foreach ($data['baseTaskData']['payload'] as $task) {
-                $id = $task['id'];
-                //$tofShopId = $task['tof_shop_id'];                
+                $taskId = (int)$task['id'];
+                $locationId = (int)($task['task_locations_id'] ?? 0);
+                $tofShopId = (string)($task['tof_shop_id'] ?? '');
 
-                // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
-                $existingIndex = array_search($id, array_column($groupedData, 'id'));
+                $newTask = $task;
+                $newTask['location_photos'] = isset($photosByLocation[$locationId]) ? array_values($photosByLocation[$locationId]) : [];
+                $newTask['taskTypes'] = isset($taskTypesByTask[$taskId]) ? array_values($taskTypesByTask[$taskId]) : [];
+                $newTask['priorityId'] = $priorityByTask[$taskId] ?? null;
+                $newTask['responsibles'] = isset($responsiblesByTask[$taskId]) ? array_values($responsiblesByTask[$taskId]) : [];
+                $newTask['isActiveInAdmin'] = isset($activeTofShopMap[$tofShopId]);
+                $newTask['pointId'] = $pointIdByTofShop[$tofShopId] ?? null;
+                $newTask['taskFees'] = isset($taskFeesByTask[$taskId]) ? array_values($taskFeesByTask[$taskId]) : [];
+                $newTask['lockers'] = isset($lockersByTask[$taskId]) ? array_values($lockersByTask[$taskId]) : [];
+                $newTask['lockerSerials'] = isset($lockerSerialsByTask[$taskId]) ? array_values($lockerSerialsByTask[$taskId]) : [];
 
-                // Ha az objektum még nem létezik, hozzuk létre és inicializáljuk a szükséges kulcsokat
-                if ($existingIndex === false) {
-                    $newTask = $task;
-                    $newTask['taskTypes'] = [];
-                    $newTask['lockerSerials'] = [];
-                    $newTask['responsibles'] = [];
-                    $newTask['priorityId'] = null;
-                    $newTask['location_photos'] = [];
-                    $newTask['isActiveInAdmin'] = null;
-                    $newTask['pointId'] = null;
-                    $groupedData[] = $newTask;
-                    $existingIndex = array_key_last($groupedData); // Frissítjük az existingIndex-et az új elem indexével
-                }
-
-                // Fotók hozzáadása a taskPhotos tömbből
-                if (!empty($data['taskPhotos']['payload'])) {
-                    foreach ($data['taskPhotos']['payload'] as $photo) {
-                        if ($photo['task_locations_id'] == $task['task_locations_id'] && !in_array(['url' => $photo['url']], $groupedData[$existingIndex]['location_photos'])) {
-                            $groupedData[$existingIndex]['location_photos'][] = ['url' => $photo['url']];
-                        }
-                    }
-                }
-
-                // Task types hozzáadása külön query-ből
-                if (!empty($data['taskTypes']['payload'])) {
-                    foreach ($data['taskTypes']['payload'] as $type) {
-                        if ($type['task_id'] == $id && $type['type_id'] !== null && !in_array($type['type_id'], $groupedData[$existingIndex]['taskTypes'])) {
-                            $groupedData[$existingIndex]['taskTypes'][] = $type['type_id'];
-                        }
-                    }
-                }
-
-                // Task priority hozzáadása külön query-ből
-                if (!empty($data['taskPriorities']['payload'])) {
-                    foreach ($data['taskPriorities']['payload'] as $priority) {
-                        if ($priority['task_id'] == $id && $priority['priority_id'] !== null) {
-                            $groupedData[$existingIndex]['priorityId'] = $priority['priority_id'];
-                            break; // Egy taskhoz egy priority tartozik
-                        }
-                    }
-                }
-
-                // Task responsibles hozzáadása külön query-ből
-                if (!empty($data['taskResponsibles']['payload'])) {
-                    foreach ($data['taskResponsibles']['payload'] as $responsible) {
-                        if ($responsible['task_id'] == $id && $responsible['company_id'] !== null && !in_array($responsible['company_id'], $groupedData[$existingIndex]['responsibles'])) {
-                            $groupedData[$existingIndex]['responsibles'][] = $responsible['company_id'];
-                        }
-                    }
-                }
-
-                // Feldolgozzuk az egyes mezőket
-
-                //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
-                if (in_array($task['tof_shop_id'], $tofShopIds)) {
-                    $groupedData[$existingIndex]['isActiveInAdmin'] = true;
-                } else {
-                    $groupedData[$existingIndex]['isActiveInAdmin'] = false;
-                }
-
-                foreach ($exoboxPoints['payload'] as $point) {
-                    if ($point['id'] == $task['tof_shop_id']) {
-                        $groupedData[$existingIndex]['pointId'] = $point['point_id'];
-                        break;
-                    }
-                }
-
-                // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
-                $taskFeesFound = false; // Flag a taskFees ellenőrzésére
-                if (!empty($data['taskFees']['payload'])) {
-                    foreach ($data['taskFees']['payload'] as $taskFee) {
-                        $taskId = $taskFee['taskId'];
-                        $taskFeeId = $taskFee['id'];
-
-                        // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueTaskFees` segédtömbben
-                        if (!isset($uniqueTaskFees[$taskId][$taskFeeId]) && $taskId === $id) {
-                            $groupedData[$existingIndex]['taskFees'][] = $taskFee;
-                            $uniqueTaskFees[$taskId][$taskFeeId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                            $taskFeesFound = true; // Ha találunk legalább egy taskFee-t
-                        }
-                        // Ha nem találunk taskFee-t, akkor nem módosítjuk a taskFees kulcsot
-                        if (!$taskFeesFound && empty($groupedData[$existingIndex]['taskFees'])) {
-                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                            $groupedData[$existingIndex]['taskFees'] = [];
-                        }
-                    }
-                } else {
-                    $groupedData[$existingIndex]['taskFees'] = [];
-                }
-
-                //Add lockers into lockerSerials
-                // if (isset($data['lockers']['payload'])) {
-                //     foreach ($data['lockers']['payload'] as $locker) {
-                //         if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
-                //             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                //         }
-                //     }
-                // }
-
-
-                $lockerFound = false; // Flag a locker ellenőrzésére
-                if (!empty($data['lockers']['payload'])) {
-                    foreach ($data['lockers']['payload'] as $locker) {
-                        $lockerId = $locker['id'];
-                        $locationId = $locker['task_locations_id'];
-                        $lockerTaskId = $locker['task_id'];
-
-                        // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
-                        if (!isset($uniqueLockers[$lockerId][$lockerTaskId]) && $lockerTaskId === $task['id']) {
-                            $groupedData[$existingIndex]['lockers'][] = $locker;
-                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                            $uniqueLockers[$lockerId][$lockerTaskId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                            $lockerFound = true; // Ha találunk legalább egy locker-t
-                        }
-                        // Ha nem találunk locker-t, akkor nem módosítjuk a locker kulcsot
-                        if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
-                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                            $groupedData[$existingIndex]['lockers'] = [];
-                            $groupedData[$existingIndex]['lockerSerials'] = [];
-                        }
-                    }
-                } else {
-                    $groupedData[$existingIndex]['lockers'] = [];
-                }
+                $groupedData[] = $newTask;
             }
 
             //fees hozzáadása
@@ -1297,22 +1276,66 @@ function deleteImage($conn, $url, $DOC_ROOT)
 
 function getTofShopId($url)
 {
+    static $memoryCache = [];
+    $cacheKey = 'tof_shop_ids_' . md5((string)$url);
+
+    if (isset($memoryCache[$cacheKey])) {
+        return createResponse(200, "success", $memoryCache[$cacheKey]);
+    }
+
+    $cacheDir = sys_get_temp_dir() . '/mms_api_cache';
+    $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+    $ttlSeconds = 120;
+
+    if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+        $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+        if (is_array($cachedPayload)) {
+            $memoryCache[$cacheKey] = $cachedPayload;
+            return createResponse(200, "success", $cachedPayload);
+        }
+    }
+
     try {
         //API hívás és eredményének feldolgozása
         $context = stream_context_create([
+            'http' => [
+                'timeout' => 2
+            ],
             'ssl' => [
                 'verify_peer' => true,
                 'verify_peer_name' => true,
                 'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
             ]
         ]);
-        $response = file_get_contents($url, false, $context);
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            if (is_file($cacheFile)) {
+                $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+                if (is_array($cachedPayload)) {
+                    $memoryCache[$cacheKey] = $cachedPayload;
+                    return createResponse(200, "success", $cachedPayload);
+                }
+            }
+            return createResponse(400, "Hiba történt: Külső szolgáltatás nem elérhető.");
+        }
+
         $data = json_decode($response, true);
+        if (!isset($data['points']) || !is_array($data['points'])) {
+            return createResponse(400, "Hiba történt: Hibás API válasz.");
+        }
+
         //$data['points'] körbejárása és az ID értékek kigyűjtése
         $tofShopIds = [];
         foreach ($data['points'] as $point) {
             $tofShopIds[] = $point['id'];
         }
+
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0777, true);
+        }
+        @file_put_contents($cacheFile, json_encode($tofShopIds));
+        $memoryCache[$cacheKey] = $tofShopIds;
+
         return createResponse(200, "success", $tofShopIds);
     } catch (Exception $e) {
         return createResponse(400, "Hiba történt: " . $e->getMessage());
@@ -1321,12 +1344,32 @@ function getTofShopId($url)
 
 function getExoboxPoints($url, $user, $password, $id)
 {
+    static $memoryCache = [];
+
     if (!isset($id)) {
+        $cacheKey = 'exobox_points_' . md5((string)$url . '|' . (string)$user);
+        if (isset($memoryCache[$cacheKey])) {
+            return $memoryCache[$cacheKey];
+        }
+
+        $cacheDir = sys_get_temp_dir() . '/mms_api_cache';
+        $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+        $ttlSeconds = 120;
+
+        if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+            $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+            if (is_array($cachedPayload)) {
+                $memoryCache[$cacheKey] = $cachedPayload;
+                return $cachedPayload;
+            }
+        }
+
         try {
             //API hívás és eredményének feldolgozása
             $context = stream_context_create([
                 'http' => [
-                    'header' => "Authorization: Basic " . base64_encode("$user:$password")
+                    'header' => "Authorization: Basic " . base64_encode("$user:$password"),
+                    'timeout' => 2
                 ],
                 'ssl' => [
                     'verify_peer' => true,
@@ -1334,8 +1377,27 @@ function getExoboxPoints($url, $user, $password, $id)
                     'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
                 ]
             ]);
-            $response = file_get_contents($url, false, $context);
+            $response = @file_get_contents($url, false, $context);
+            if ($response === false) {
+                if (is_file($cacheFile)) {
+                    $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+                    if (is_array($cachedPayload)) {
+                        $memoryCache[$cacheKey] = $cachedPayload;
+                        return $cachedPayload;
+                    }
+                }
+                return createResponse(400, "Hiba történt: Külső szolgáltatás nem elérhető.");
+            }
+
             $data = json_decode($response, true);
+
+            if (is_array($data)) {
+                if (!is_dir($cacheDir)) {
+                    @mkdir($cacheDir, 0777, true);
+                }
+                @file_put_contents($cacheFile, json_encode($data));
+                $memoryCache[$cacheKey] = $data;
+            }
 
             return $data;
         } catch (Exception $e) {

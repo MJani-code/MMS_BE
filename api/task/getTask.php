@@ -418,6 +418,7 @@ class FilterTask
 
             $taskIds = $this->getPaginatedTaskIds($companyId, $permissions);
             $baseTaskConditions[] = !empty($taskIds) ? 't.id IN (' . implode(',', $taskIds) . ')' : '1 = 0';
+            $taskIdsCondition = !empty($taskIds) ? implode(',', $taskIds) : '0';
 
             $baseTaskData = [
                 'table' => "tasks t",
@@ -464,7 +465,7 @@ class FilterTask
                     'ttd.id as type_id'
                 ],
                 'others' => "LEFT JOIN task_type_details ttd on ttd.id = tt.type_id",
-                'conditions' => "tt.deleted = 0"
+                'conditions' => "tt.deleted = 0 AND tt.task_id IN ($taskIdsCondition)"
             ];
 
             $fees = [
@@ -491,7 +492,7 @@ class FilterTask
                     'tp.task_id',
                     'tp.priority_id'
                 ],
-                'conditions' => ""
+                'conditions' => "tp.task_id IN ($taskIdsCondition)"
             ];
 
             $taskFees = [
@@ -508,7 +509,7 @@ class FilterTask
                     'tf.serial as lockerSerial'
                 ],
                 'others' => "LEFT JOIN fees f on f.id = tf.fee_id",
-                'conditions' => "tf.deleted = 0 ORDER BY tf.task_id"
+                'conditions' => "tf.deleted = 0 AND tf.task_id IN ($taskIdsCondition) ORDER BY tf.task_id"
             ];
 
             // Task responsibles külön lekérdezése
@@ -520,7 +521,7 @@ class FilterTask
                     'c.id as company_id'
                 ],
                 'others' => "LEFT JOIN companies c on c.id = tr.company_id",
-                'conditions' => "tr.deleted = 0"
+                'conditions' => "tr.deleted = 0 AND tr.task_id IN ($taskIdsCondition)"
             ];
             if (!in_array(17, $permissions)) {
                 $taskResponsibles['conditions'] .= " AND tr.company_id = $companyId";
@@ -549,7 +550,7 @@ class FilterTask
                 'others' => "
                 LEFT JOIN tasks t on t.id = tl.task_id
                 ",
-                'conditions' => "tl.deleted = 0"
+                'conditions' => "tl.deleted = 0 AND tl.task_id IN ($taskIdsCondition)"
             ];
 
             $taskPhotos = [
@@ -559,7 +560,7 @@ class FilterTask
                     'tlp.task_locations_id',
                     'tlp.url as url'
                 ],
-                'conditions' => "tlp.deleted = 0 OR tlp.deleted IS NULL",
+                'conditions' => "(tlp.deleted = 0 OR tlp.deleted IS NULL) AND tlp.task_locations_id IN (SELECT DISTINCT t_inner.task_locations_id FROM tasks t_inner WHERE t_inner.id IN ($taskIdsCondition))",
                 'order' => "ORDER BY tlp.task_locations_id"
             ];
 
@@ -570,20 +571,19 @@ class FilterTask
             $resultOfTaskResponsibles = dataToHandleInDb($this->conn, $taskResponsibles);
             $resultOfTaskPhotos = dataToHandleInDb($this->conn, $taskPhotos);
             $errorInfo = '';
-            $isAccessTotaskFees = $this->auth->authenticate(6);
-            if ($isAccessTotaskFees['status'] !== 403) {
+            $feesAccess = $this->auth->authenticate(6);
+            if ($feesAccess['status'] !== 403) {
                 $resultOfTaskFees = dataToHandleInDb($this->conn, $taskFees);
                 $errorInfo .= isset($resultOfTaskFees['errorInfo']) ? $resultOfTaskFees['errorInfo'] : '';
             } else {
-                $resultOfTaskFees = $isAccessTotaskFees;
+                $resultOfTaskFees = $feesAccess;
             }
 
-            $isAccessTofees = $this->auth->authenticate(6);
-            if ($isAccessTofees['status'] !== 403) {
+            if ($feesAccess['status'] !== 403) {
                 $resultOffees = dataToHandleInDb($this->conn, $fees);
                 $errorInfo .= isset($resultOffees['errorInfo']) ? $resultOffees['errorInfo'] : '';
             } else {
-                $resultOffees = $isAccessTofees;
+                $resultOffees = $feesAccess;
             }
 
             if ($resultOfBaseTaskData['status'] !== 200) {
