@@ -26,21 +26,21 @@ class NotificationService
 
   public function readNotifications($notificationId)
   {
-    
+
     $isAccess = $this->auth->authenticate(11);
     if ($isAccess['status'] !== 200) {
       return $this->response = $isAccess;
     } else {
-        // Prepare the SQL statement with placeholders
-        $sql = "UPDATE notifications SET read_at = NOW() WHERE id = ?";
+      // Prepare the SQL statement with placeholders
+      $sql = "UPDATE notifications SET read_at = NOW() WHERE id = ?";
 
-        $stmt = $this->conn->prepare($sql);
-        $stmt->execute([$notificationId]);
+      $stmt = $this->conn->prepare($sql);
+      $stmt->execute([$notificationId['value']]);
 
-        $this->response = [
-            'status' => 200,
-            'message' => 'Notifications marked as read successfully.'
-        ];
+      $this->response = [
+        'status' => 200,
+        'message' => 'Notifications marked as read successfully.'
+      ];
     }
   }
 }
