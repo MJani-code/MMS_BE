@@ -12,6 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 $response = [];
 
+//error debugging
+// ini_set('display_errors', 1);
+// ini_set('display_startup_errors', 1);
+// error_reporting(E_ALL);
+
 class FilterTask
 {
     private $conn;
@@ -490,6 +495,7 @@ class FilterTask
                         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
                         LEFT JOIN task_dates td on td.task_id = t.id
                         LEFT JOIN users u on u.id = t.created_by
+                        LEFT JOIN task_responsibles tr on tr.task_id = t.id
                         ",
                 'conditions' => implode(' AND ', $baseTaskConditions),
                 'order' => "ORDER BY " . $this->getOrderByClause()
