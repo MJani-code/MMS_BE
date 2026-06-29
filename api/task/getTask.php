@@ -452,7 +452,13 @@ class FilterTask
             $baseTaskConditions = [];
 
             if (!in_array(17, $permissions)) {
-                $baseTaskConditions[] = "tr.company_id = $companyId";
+                $baseTaskConditions[] = "EXISTS (
+                    SELECT 1
+                    FROM task_responsibles tr_filter
+                    WHERE tr_filter.task_id = t.id
+                      AND tr_filter.deleted = 0
+                      AND tr_filter.company_id = $companyId
+                )";
             }
 
             if ($this->statusId) {
@@ -495,7 +501,6 @@ class FilterTask
                         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
                         LEFT JOIN task_dates td on td.task_id = t.id
                         LEFT JOIN users u on u.id = t.created_by
-                        LEFT JOIN task_responsibles tr on tr.task_id = t.id
                         ",
                 'conditions' => implode(' AND ', $baseTaskConditions),
                 'order' => "ORDER BY " . $this->getOrderByClause()
