@@ -138,17 +138,26 @@ class GetInitialData
                  WHERE c.is_active = 1"
             );
 
-            $statusesGroupsResult = $this->fetchAll(
+            $statusesGroupsSql =
                 "SELECT t.status_by_exohu_id AS id, tr.text AS name, ts.color, COUNT(t.id) AS count
                  FROM tasks t
                  LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
                  LEFT JOIN translations tr ON tr.task_status_id = ts.id AND tr.locale = :locale
-                 LEFT JOIN task_responsibles trp ON trp.task_id = t.id
-                 WHERE trp.company_id = :company_id AND trp.deleted = 0
-                 GROUP BY t.status_by_exohu_id, tr.text, ts.color",
-                ['locale' => $this->locale, 'company_id' => $this->companyId]
+                 LEFT JOIN task_responsibles trp ON trp.task_id = t.id";
+            if (!in_array("17", $this->isUserAllowed()['data']->permissions ?? [])) {
+                $statusesGroupsSql .= " WHERE trp.company_id = :company_id AND trp.deleted = 0";
+            }
+            $statusesGroupsSql .= " GROUP BY t.status_by_exohu_id, tr.text, ts.color";
+
+            $params = ['locale' => $this->locale];
+            if (!in_array("17", $this->isUserAllowed()['data']->permissions ?? [])) {
+                $params['company_id'] = $this->companyId;
+            }
+
+            $statusesGroupsResult = $this->fetchAll(
+                $statusesGroupsSql,
+                $params
             );
-            // echo json_encode($statusesGroupsResult);
 
             $statusGroups = [];
             foreach ($statusesGroupsResult as $status) {
