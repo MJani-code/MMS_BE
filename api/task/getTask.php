@@ -676,7 +676,13 @@ class FilterTask
         if ($rowData) {
             $result = dataManipulation($this->conn, $rowData, $this->userAuthData, $this->tofShopIds, $this->getAllActivePointsUrl, $this->user, $this->password, $this->locale);
             $result['pagination'] = $this->paginationMeta;
-            $response = $result;
+            // echo json_encode($result, JSON_UNESCAPED_UNICODE);
+            $response = [
+                'status' => $result['status'],
+                'message' => $result['message'] ?? null,
+                'pagination' => $result['pagination'],
+                'data' => $result['data']
+            ];
         }
     }
 }
