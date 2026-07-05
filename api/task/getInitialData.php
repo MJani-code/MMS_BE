@@ -139,11 +139,11 @@ class GetInitialData
             );
 
             $statusesGroupsSql =
-                "SELECT t.status_by_exohu_id AS id, tr.text AS name, ts.color, COUNT(t.id) AS count
+                "SELECT t.status_by_exohu_id AS id, tr.text AS name, ts.color, COUNT(DISTINCT t.id) AS count
                  FROM tasks t
                  LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
                  LEFT JOIN translations tr ON tr.task_status_id = ts.id AND tr.locale = :locale
-                 LEFT JOIN task_responsibles trp ON trp.task_id = t.id";
+                 LEFT JOIN task_responsibles trp ON trp.task_id = t.id AND trp.deleted = 0";
             if (!in_array("17", $this->isUserAllowed()['data']->permissions ?? [])) {
                 $statusesGroupsSql .= " WHERE trp.company_id = :company_id AND trp.deleted = 0";
             }
