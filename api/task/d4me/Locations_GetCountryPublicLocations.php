@@ -22,17 +22,19 @@ class getLocations
     private $auth;
     private $response;
     private $tokenD4Me;
-    private $d4meApiUrl;
+    private $d4meApiGetPhotoUrl;
     private $log;
+    private $searchTerm;
 
-    public function __construct($conn, &$response, $auth, $tokenD4Me, $d4meApiUrl, $log)
+    public function __construct($conn, &$response, $auth, $tokenD4Me, $d4meApiGetPhotoUrl, $log, $searchTerm)
     {
         $this->conn = $conn;
         $this->response = &$response;
         $this->auth = $auth;
         $this->tokenD4Me = $tokenD4Me;
-        $this->d4meApiUrl = $d4meApiUrl;
+        $this->d4meApiGetPhotoUrl = $d4meApiGetPhotoUrl;
         $this->log = $log;
+        $this->searchTerm = $searchTerm;
     }
 
     public function createResponse($statusCode, $message, $data = null)
@@ -44,8 +46,11 @@ class getLocations
         ];
     }
 
-    private function callApi($url, $token)
+    private function callApi($url, $token, $searchTerm = '')
     {
+        if (!empty($searchTerm)) {
+            $url .= '&SearchTerm=' . urlencode($searchTerm) . '&SearchFields[]=id';
+        }
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Content-Type:application/json',
@@ -79,27 +84,27 @@ class getLocations
         }
 
         //First API call to get dataCount
-        $apiResponse = $this->callApi($this->d4meApiUrl, $this->tokenD4Me);
+        //$apiResponse = $this->callApi($this->d4meApiGetPhotoUrl, $this->tokenD4Me);
 
         if (isset($apiResponse['error'])) {
             $this->log->error('API call error', ['error' => $apiResponse['error']]);
             return $this->response = $this->createResponse(500, "API call error: " . $apiResponse['error']);
         }
 
-        $data = json_decode($apiResponse['response'], true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            $this->log->error('JSON decode error', ['error' => json_last_error_msg()]);
-            return $this->response = $this->createResponse(500, "JSON decode error: " . json_last_error_msg());
-        }
+        // $data = json_decode($apiResponse['response'], true);
+        // if (json_last_error() !== JSON_ERROR_NONE) {
+        //     $this->log->error('JSON decode error', ['error' => json_last_error_msg()]);
+        //     return $this->response = $this->createResponse(500, "JSON decode error: " . json_last_error_msg());
+        // }
 
         // Get dataCount value
-        $dataCount = $data['pagination']['dataCount'] ?? 0;
-        $this->log->info('Data count retrieved', ['dataCount' => $dataCount]);
+        // $dataCount = $data['pagination']['dataCount'] ?? 0;
+        // $this->log->info('Data count retrieved', ['dataCount' => $dataCount]);
 
 
         //Second API url with pageSize set to dataCount
-        $urlWithPageSize = $this->d4meApiUrl . '&pageSize=' . $dataCount;
-        $apiResponse = $this->callApi($urlWithPageSize, $this->tokenD4Me);
+        // $urlWithPageSize = $this->d4meApiGetPhotoUrl . '&pageSize=' . $dataCount;
+        $apiResponse = $this->callApi($this->d4meApiGetPhotoUrl, $this->tokenD4Me, $this->searchTerm);
 
         if (isset($apiResponse['error'])) {
             $this->log->error('API call error', ['error' => $apiResponse['error']]);
@@ -121,10 +126,11 @@ class getLocations
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
 $token = $matches[1];
+$searchTerm = $_GET['boxId'] ?? '';
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiUrl, $log);
+$items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiGetPhotoUrl, $log, $searchTerm);
 $items->getItems();
 
 echo json_encode($response);
