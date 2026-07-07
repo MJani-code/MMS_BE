@@ -39,13 +39,12 @@ class FilterTask
     private $sortBy;
     private $sortDesc;
 
-    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [], $locale = 'hu', $sortBy = null, $sortDesc = null)
+    public function __construct($conn, &$response, $auth, $tofShopIdUrl, $getAllActivePointsUrl, $user, $password, $statusId = null, $itemsPerPage = null, $page = null, $searchText = null, $filters = [], $locale = 'hu', $sortBy = null, $sortDesc = null)
     {
         $this->conn = $conn;
         $this->tofShopIdUrl = $tofShopIdUrl;
         $this->response = &$response;
         $this->auth = $auth;
-        $this->tofShopIds = $tofShopIds;
         $this->getAllActivePointsUrl = $getAllActivePointsUrl;
         $this->user = $user;
         $this->password = $password;
@@ -525,7 +524,8 @@ class FilterTask
                     'CONCAT(f.name,"(",f.net_unit_price ,")") as name',
                     'f.fee_type as type',
                     "f.net_unit_price as value"
-                ]
+                ],
+                'conditions' => ""
             ];
             if (!in_array(23, $permissions)) {
                 $fees['conditions'] .= " f.company_id = $companyId AND f.is_active = 1 ORDER BY f.name DESC";
@@ -704,7 +704,7 @@ $sortDesc     = $body['sortDesc'] ?? ($filters['sortDesc'] ?? null);
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $tofShopIds, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters, $locale, $sortBy, $sortDesc);
+$filterTask = new FilterTask($conn, $response, $auth, $tofShopIdUrl, $getAllActivePointsUrl, $user, $password, $statusId, $itemsPerPage, $page, $searchText, $filters, $locale, $sortBy, $sortDesc);
 $filterTask->getTaskData();
 $filterTask->dataManipulation($response);
 echo json_encode($response, JSON_UNESCAPED_UNICODE);
