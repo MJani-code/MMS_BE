@@ -207,7 +207,7 @@ class UpdatePart
                 $stmt = $this->conn->prepare($sqlStockMovements);
                 $stmt->bindValue(':part_id', (int)$data['part']['partId'], PDO::PARAM_INT);
                 $stmt->bindValue(':owner_id', (int)$data['ownerId'], PDO::PARAM_INT);
-                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId']['id'], PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
                 $stmt->bindValue(':change_amount', (int)$data['quantityDifference'], PDO::PARAM_INT);
                 $stmt->bindValue(':unit_price', $data['unitPrice'], $data['unitPrice'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
