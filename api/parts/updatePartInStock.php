@@ -83,7 +83,7 @@ class UpdatePart
             #2 stock tábla frissítés lehetőségének ellenőrzése
             if ($stockToUpdate) {
                 //mandatory fields ellenőrzése
-                if (empty($data['stockId']) || empty($data['ownerId']) || empty($data['warehouseId']) || empty($data['supplierId'])) {
+                if (empty($data['stockId']) || empty($data['ownerId']) || empty($data['warehouseId']['id']) || empty($data['supplierId'])) {
                     return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a stock frissítéséhez');
                 }
                 // létezik-e a készlet
@@ -187,7 +187,7 @@ class UpdatePart
                             WHERE id = :id";
                 $stmt = $this->conn->prepare($sqlStock);
                 $stmt->bindValue(':owner_id', (int)$data['ownerId'], PDO::PARAM_INT);
-                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId']['id'], PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
                 $stmt->bindValue(':id', (int)$data['stockId'], PDO::PARAM_INT);
                 $stmt->execute();
