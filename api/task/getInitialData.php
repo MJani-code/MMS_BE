@@ -1,10 +1,8 @@
 <?php
-require('../../inc/conn.php');
-require('../../functions/taskFunctions.php');
-require('../../api/user/auth/auth.php');
-
-header('Content-Type: application/json');
-
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../../inc/conn.php';
+require_once __DIR__ . '/../../functions/taskFunctions.php';
+require_once __DIR__ . '/../user/auth/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(204);
