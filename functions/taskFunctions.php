@@ -1,7 +1,7 @@
 <?php
-require('db/dbFunctions.php');
-// require('../../vendor/autoload.php');
-require(DOC_ROOT . '/vendor/autoload.php');
+require_once __DIR__ . '/../inc/config.php';
+require_once __DIR__ . '/db/dbFunctions.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
