@@ -216,4 +216,34 @@ return [
         'en' => 'Failed to fetch locker data: :message',
         'sl' => 'Pridobivanje podatkov omarice ni uspelo: :message'
     ],
+    'errors.token_expired' => [
+        'hu' => 'A token lejárt, kérjük jelentkezz be újra.',
+        'en' => 'The token has expired, please sign in again.',
+        'sl' => 'Zeton je potekel, prosimo prijavite se znova.'
+    ],
+    'errors.invalid_token' => [
+        'hu' => 'Érvénytelen token.',
+        'en' => 'Invalid token.',
+        'sl' => 'Neveljaven zeton.'
+    ],
+    'errors.no_token' => [
+        'hu' => 'Nincs token.',
+        'en' => 'No token provided.',
+        'sl' => 'Zeton ni bil posredovan.'
+    ],
+    'errors.access_denied' => [
+        'hu' => 'Nincs hozzáférésed a kért művelethez.',
+        'en' => 'You do not have access to the requested operation.',
+        'sl' => 'Nimate dostopa do zahtevane operacije.'
+    ],
+    'errors.valid_token' => [
+        'hu' => 'Érvényes token.',
+        'en' => 'Valid token.',
+        'sl' => 'Veljaven zeton.'
+    ],
+    'errors.apiCallFailed' => [
+        'hu' => 'API hívás sikertelen: :error',
+        'en' => 'API call failed: :error',
+        'sl' => 'Klic API ni uspel: :error'
+    ],
 ];
