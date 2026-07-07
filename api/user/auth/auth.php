@@ -1,6 +1,6 @@
 <?php
-require(DOC_ROOT . '/inc/secretkey.php');
-require(DOC_ROOT. '/vendor/autoload.php');
+require_once __DIR__ . '/../../../inc/secretkey.php';
+require_once __DIR__ . '/../../../vendor/autoload.php';
 
 // require('../../inc/secretkey.php');
 // require('../../vendor/autoload.php');
@@ -82,7 +82,7 @@ class Auth
                 if ($result) {
                     return $this->createResponse(200, 'success', null);
                 } else {
-                    
+
                     return $this->createResponse(403, 'Nincs hozzáférésed ehhez az elemhez', null);
                 }
             } catch (\Throwable $th) {
