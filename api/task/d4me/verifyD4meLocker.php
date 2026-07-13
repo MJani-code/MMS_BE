@@ -59,6 +59,28 @@ class getLockerCondition
         return ['response' => $response];
     }
 
+    private function extractSerialFromValue($value)
+    {
+        if (!is_string($value) || trim($value) === '') {
+            return '';
+        }
+
+        $parts = explode('-', $value);
+        $tail = end($parts);
+
+        if (!is_string($tail) || $tail === '') {
+            return '';
+        }
+
+        if (preg_match('/^([A-Za-z]*)(\d+)$/', $tail, $matches)) {
+            $prefix = $matches[1];
+            $digits = ltrim($matches[2], '0');
+            return $prefix . ($digits === '' ? '0' : $digits);
+        }
+
+        return preg_replace('/0+/', '', $tail);
+    }
+
     public function getItems($locale)
     {
         // Get user ID from authentication
@@ -71,7 +93,7 @@ class getLockerCondition
         }
 
         $apiResponse = $this->callApi($this->d4meLockerCondition, $this->tokenD4Me, $this->lockerData['boxId'] ?? null);
-
+        
         if (isset($apiResponse['error'])) {
             return $this->response = $this->createResponse(500, localizeErrorMessage('errors.apiCallFailed', $locale) . $apiResponse['error']);
         }
@@ -81,27 +103,46 @@ class getLockerCondition
             return $this->response = $this->createResponse(500, localizeErrorMessage('errors.jsonDecodeError', $locale) . json_last_error_msg());
         }
 
+        $serial = $this->extractSerialFromValue($this->lockerData['serial'] ?? '');
+        if ($serial !== '' && isset($decodedResponse['data']) && is_array($decodedResponse['data'])) {
+            $matchedItem = null;
+            foreach ($decodedResponse['data'] as $item) {
+                if (($item['terminalId'] ?? null) === $serial) {
+                    $matchedItem = $item;
+                    break;
+                }
+            }
+
+            if ($matchedItem !== null) {
+                $decodedResponse['data'] = [$matchedItem];
+            }
+        }
+
         //transform data
-        $isLockerAdded = $decodedResponse['data'][0]['isEnabled'];
+        $isLockerAdded = $decodedResponse['data'][0]['isEnabled'] ? 1 : 0;
         $isActive = $decodedResponse['data'][0]['availability'] > 0 ? 1 : 0;
         $privateKey1Error = 0;
         $batteryLevel = $decodedResponse['data'][0]['batteryState'];
         switch ($batteryLevel) {
             case '1':
-                $batteryLevel = '100';
+                $batteryLevel = 100;
                 break;
             case '2':
-                $batteryLevel = '20';
+                $batteryLevel = 20;
                 break;
             case '3':
-                $batteryLevel = '5';
+                $batteryLevel = 5;
                 break;
             default:
-                $batteryLevel = '100';
+                $batteryLevel = 0;
                 break;
         }
         $currentVersion = $decodedResponse['data'][0]['firmwareVersion'];
-        $lastConnectionTimestamp = $decodedResponse['data'][0]['lastDelivery']['authorisedFrom'];
+        $lastConnectionTimestampRaw = $decodedResponse['data'][0]['lastDelivery']['authorisedFrom'] ?? null;
+        $lastConnectionTimestamp = $lastConnectionTimestampRaw ? strtotime($lastConnectionTimestampRaw) : null;
+        if ($lastConnectionTimestamp === false) {
+            $lastConnectionTimestamp = null;
+        }
 
         $arrayToStoreResult = array(
             'id' => $this->lockerData['id'],
