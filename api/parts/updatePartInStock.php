@@ -83,7 +83,7 @@ class UpdatePart
             #2 stock tábla frissítés lehetőségének ellenőrzése
             if ($stockToUpdate) {
                 //mandatory fields ellenőrzése
-                if (empty($data['stockId']) || empty($data['ownerId']) || empty($data['warehouseId']) || empty($data['supplierId'])) {
+                if (empty($data['stockId']) || empty($data['ownerId']) || empty($data['warehouseId']['id']) || empty($data['supplierId'])) {
                     return $this->response = $this->createResponse(400, 'Hiányzó kötelező mezők a stock frissítéséhez');
                 }
                 // létezik-e a készlet
@@ -187,7 +187,7 @@ class UpdatePart
                             WHERE id = :id";
                 $stmt = $this->conn->prepare($sqlStock);
                 $stmt->bindValue(':owner_id', (int)$data['ownerId'], PDO::PARAM_INT);
-                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId']['id'], PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
                 $stmt->bindValue(':id', (int)$data['stockId'], PDO::PARAM_INT);
                 $stmt->execute();
@@ -207,7 +207,7 @@ class UpdatePart
                 $stmt = $this->conn->prepare($sqlStockMovements);
                 $stmt->bindValue(':part_id', (int)$data['part']['partId'], PDO::PARAM_INT);
                 $stmt->bindValue(':owner_id', (int)$data['ownerId'], PDO::PARAM_INT);
-                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId'], PDO::PARAM_INT);
+                $stmt->bindValue(':warehouse_id', (int)$data['warehouseId']['id'], PDO::PARAM_INT);
                 $stmt->bindValue(':supplier_id', (int)$data['supplierId'], PDO::PARAM_INT);
                 $stmt->bindValue(':change_amount', (int)$data['quantityDifference'], PDO::PARAM_INT);
                 $stmt->bindValue(':unit_price', $data['unitPrice'], $data['unitPrice'] === null ? PDO::PARAM_NULL : PDO::PARAM_STR);
