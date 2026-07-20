@@ -5,11 +5,47 @@ require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../functions/analyzeLockers.php');
 require('../../api/user/auth/auth.php');
+require(__DIR__ . '/helpers/getAvailableCompartmentsCache.php');
 
 $response = [];
 
+const GAC_CACHE_TTL_SECONDS = 30;
+const GAC_STALE_WHILE_REVALIDATE_SECONDS = 60;
+const GAC_RATE_LIMIT_WINDOW_SECONDS = 60;
+const GAC_RATE_LIMIT_MAX_REQUESTS = 90;
+
 $jsonData = file_get_contents("php://input");
 $lockerData = json_decode($jsonData, true);
+
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
+$tokenMMS = $matches[1] ?? '';
+
+$requestIp = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$requestSignature = sha1('getAvailableCompartments|' . $tokenMMS . '|' . (string)$jsonData);
+$rateLimitKey = sha1('gac_rate|' . $tokenMMS . '|' . $requestIp);
+$cacheFilePath = gacCacheFilePath($requestSignature);
+
+$cached = gacLoadCachedResponse($cacheFilePath);
+if ($cached && $cached['age'] <= GAC_CACHE_TTL_SECONDS) {
+    gacEmitResponse($cached['response'], GAC_CACHE_TTL_SECONDS, GAC_STALE_WHILE_REVALIDATE_SECONDS, $cached['age'], 'HIT');
+}
+
+$rateLimitState = gacIsRateLimited($rateLimitKey, GAC_RATE_LIMIT_WINDOW_SECONDS, GAC_RATE_LIMIT_MAX_REQUESTS);
+if ($rateLimitState['limited']) {
+    if ($cached && $cached['age'] <= (GAC_CACHE_TTL_SECONDS + GAC_STALE_WHILE_REVALIDATE_SECONDS)) {
+        gacEmitResponse($cached['response'], GAC_CACHE_TTL_SECONDS, GAC_STALE_WHILE_REVALIDATE_SECONDS, $cached['age'], 'STALE-RATELIMIT');
+    }
+
+    header('Retry-After: ' . (int)$rateLimitState['retryAfter']);
+    gacEmitResponse(
+        gacCreateResponse(429, 'Too many requests. Please retry later.'),
+        GAC_CACHE_TTL_SECONDS,
+        GAC_STALE_WHILE_REVALIDATE_SECONDS,
+        0,
+        'MISS-RATELIMIT'
+    );
+}
 
 class getAvailableCompartments
 {
@@ -139,14 +175,16 @@ class getAvailableCompartments
         }
     }
 }
-
-$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
-preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
-$tokenMMS = $matches[1];
-
 $auth = new Auth($conn, $tokenMMS, $secretkey);
 
 $getAvailableCompartments = new getAvailableCompartments($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, $response, $auth);
 $getAvailableCompartments->getLockerDataFunction($lockerData);
 
-echo json_encode($response);
+if (is_array($response) && (($response['status'] ?? null) === 200)) {
+    gacWriteJsonFile($cacheFilePath, [
+        'createdAt' => time(),
+        'response' => $response
+    ]);
+}
+
+gacEmitResponse($response, GAC_CACHE_TTL_SECONDS, GAC_STALE_WHILE_REVALIDATE_SECONDS, 0, 'MISS');
