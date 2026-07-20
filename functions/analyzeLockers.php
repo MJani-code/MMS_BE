@@ -146,9 +146,9 @@ function getAvailableCompartmentCountByLocation($data)
         $availableByLocation[] = [
             'lockerStationId' => $lockerStationId,
             'totalCompartmentCount' => $totalCompartmentCount,
-            'totalOfEmpty' => $emptyCompartmentCount
+            'totalOfEmpty' => $emptyCompartmentCount,
             // 'totalBySize' => $totalBySize,
-            // 'emptyBySize' => $emptyBySize
+            'emptyBySize' => $emptyBySize
         ];
     }
 
