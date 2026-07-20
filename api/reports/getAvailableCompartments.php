@@ -11,7 +11,7 @@ $response = [];
 $jsonData = file_get_contents("php://input");
 $lockerData = json_decode($jsonData, true);
 
-class getOutOfOrderCompartments
+class getAvailableCompartments
 {
     private $conn;
     private $losUserName;
@@ -59,10 +59,8 @@ class getOutOfOrderCompartments
 
     public function getLockerDataFunction($lockerData)
     {
-        //locker adatok lekérdezése
         try {
             $token = $this->token;
-            $page = $lockerData['pageNumber'];
             $pageSize = $lockerData['pageSize'];
             $url = $this->losGetLockerStationsForPortalUrl;
             $LockerStationHistoryModel = [];
@@ -88,7 +86,7 @@ class getOutOfOrderCompartments
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($httpCode == 401) {
-                $loginResult = $this->login();
+                $this->login();
                 return $this->getLockerDataFunction($lockerData);
             }
 
@@ -97,11 +95,10 @@ class getOutOfOrderCompartments
             }
 
             curl_close($ch);
-            $errors = getErrorCountByLocation(json_decode($result, true));
 
-            return $this->response = $this->createResponse(200, 'Locker data retrieved successfully', $errors);
+            $availableData = getAvailableCompartmentCountByLocation(json_decode($result, true));
 
-            //echo $result;
+            return $this->response = $this->createResponse(200, 'Locker data retrieved successfully', $availableData);
         } catch (Exception $e) {
             return $this->response = $this->createResponse(400, $e->getMessage());
         }
@@ -109,7 +106,6 @@ class getOutOfOrderCompartments
 
     public function login()
     {
-        //bejelentkezés
         try {
             $url = $this->losLoginUrl;
             $data = array('username' => $this->losUserName, 'password' => $this->losPassword);
@@ -123,7 +119,6 @@ class getOutOfOrderCompartments
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
             $result = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($result === false) {
                 return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
@@ -136,9 +131,9 @@ class getOutOfOrderCompartments
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);
                 return $this->createResponse(200, 'Login successful', $result);
-            } else {
-                return $this->createResponse(400, 'Login failed');
             }
+
+            return $this->createResponse(400, 'Login failed');
         } catch (Exception $e) {
             return $this->createResponse(400, $e->getMessage());
         }
@@ -151,7 +146,7 @@ $tokenMMS = $matches[1];
 
 $auth = new Auth($conn, $tokenMMS, $secretkey);
 
-$getOutOfOrderCompartments = new getOutOfOrderCompartments($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, $response, $auth);
-$getOutOfOrderCompartments->getLockerDataFunction($lockerData);
+$getAvailableCompartments = new getAvailableCompartments($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, $response, $auth);
+$getAvailableCompartments->getLockerDataFunction($lockerData);
 
 echo json_encode($response);
