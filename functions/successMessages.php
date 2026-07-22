@@ -57,7 +57,7 @@ return [
         'sl' => 'URL je bil uspesno izbrisan.'
     ],
     'success.intervention_deleted_success' => [
-        'hu' => 'Intervenció sikeresen törölve.',
+        'hu' => 'Beavatkozás sikeresen törölve.',
         'en' => 'Intervention deleted successfully.',
         'sl' => 'Intervencija je bila uspesno izbrisana.'
     ],
