@@ -146,12 +146,13 @@ class getItems
             return $this->response = createLocalizedErrorResponse(500, 'errors.database_spare_parts', $locale, [], $e->getMessage());
         }
 
-        //Fetch interventionList from database
+        //Fetch interventionList from database        
         try {
             $stmt = $this->conn->prepare(
                 "SELECT i.id, t.text as name
                  FROM interventions i
                  LEFT JOIN translations t ON t.intervention_id = i.id AND t.locale = :locale
+                 WHERE i.is_active = 1
                  "
             );
             $stmt->bindValue(':locale', $locale, PDO::PARAM_STR);
