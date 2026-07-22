@@ -656,12 +656,12 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale = 'hu')
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createLocalizedResponse($result['status'], $result['message'], $id = array('id' => $id, 'taskId' => $taskId), $locale);
+            return createLocalizedResponse($result['status'], 'success.intervention_deleted_success', $id = array('id' => $id, 'taskId' => $taskId), $locale);
         } else {
-            return createLocalizedErrorResponse($result['status'], $result['message'] . '. ' . $result['error'], $locale);
+            return createLocalizedErrorResponse($result['status'], 'errors.unexpected', $locale, null, $result['error']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, null, $e->getMessage());
     }
 }
 

@@ -45,10 +45,10 @@ class DeleteFee
             }
         }
         $result = deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale);
-         if ($result['status'] !== 200) {
-             return $this->response = $result;
-         }
-         return $this->response = $result;
+        if ($result['status'] !== 200) {
+            return $this->response = $result;
+        }
+        return $this->response = $result;
     }
 }
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
