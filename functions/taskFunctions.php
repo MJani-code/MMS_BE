@@ -619,7 +619,7 @@ function addFee($conn, $dbTable, $newItems, $userId)
     }
 }
 
-function deleteFee($conn, $dbTable, $id, $taskId, $userId)
+function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale)
 {
     try {
         $deleted_at = date('Y-m-d H:i:s');
@@ -634,12 +634,12 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId)
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createResponse($result['status'], $result['message'], $id = array('id' => $id, 'taskId' => $taskId));
+            return createLocalizedResponse($result['status'], 'success.intervention_deleted_success', $id = array('id' => $id, 'taskId' => $taskId), $locale);
         } else {
-            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
+            return createLocalizedErrorResponse($result['status'], 'errors.unexpected', $locale, null, $result['error']);
         }
     } catch (Exception $e) {
-        return createResponse(500, "Hiba történt: " . $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, null, $e->getMessage());
     }
 }
 
