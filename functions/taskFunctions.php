@@ -745,7 +745,7 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
     }
 }
 
-function xlsFileRead($filePath)
+function xlsFileRead($filePath, $locale)
 {
     try {
         $spreadsheet = IOFactory::load($filePath);
@@ -787,7 +787,7 @@ function xlsFileRead($filePath)
 
         // Ellenőrizzük, hogy minden szükséges fejléc megtalálható
         if (count($headerIndexes) !== count($wantedHeaders)) {
-            return createResponse(400, "Nem minden szükséges fejléc található meg az Excel fájlban!");
+            return createLocalizedErrorResponse(400, 'errors.missingHeadersFromXls', $locale, null);
         }
 
         //Kicseréljük a header-t az adatbázis header-re.
@@ -820,7 +820,7 @@ function xlsFileRead($filePath)
                 $value = $rowData[$index];
                 if (in_array($headerValue, $requiredFields)) {
                     if ($value === null || $value == "") {
-                        return createResponse(400, "A betöltés nem sikerült. Van olyan kötelező mező, aminél nincsen adat megadva");
+                        return createLocalizedErrorResponse(400, 'errors.missingMandatoryFieldValueInXls', $locale, ['field' => $headerValue]);
                     }
                 }
 
@@ -834,19 +834,19 @@ function xlsFileRead($filePath)
             }
             $data[] = $filteredData;
         }
-        return createResponse(200, "success", $data);
+        return createResponse(200, localizeSuccessMessage('success.successful_import', $locale), $data);
     } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
-        return createResponse(400, $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, null);
     } catch (Exception $e) {
-        return createResponse(400, $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, null);
     }
 }
 
-function xlsFileDataToWrite($conn, $filePath, $userId)
+function xlsFileDataToWrite($conn, $filePath, $userId, $locale)
 {
     $created_at = date('Y-m-d H:i:s');
 
-    $data = xlsFileRead($filePath);
+    $data = xlsFileRead($filePath, $locale);
     if ($data['status'] !== 200) {
         return $data;
     }
@@ -1059,7 +1059,7 @@ function updateCheckLockerResult($conn, $data, $userId)
     }
 }
 
-function addTask($conn, $newTask, $userId)
+function addTask($conn, $newTask, $userId, $locale)
 {
     $typeId = $newTask['taskType'];
     $responsible = $newTask['responsible'];
@@ -1070,30 +1070,30 @@ function addTask($conn, $newTask, $userId)
 
     //ha a fenti adatok üresek akkor hibaüzenetet kell visszaadni
     if (empty($typeId) || empty($tofShopId)) {
-        return createResponse(400, "A kötelező mezők nincsenek kitöltve");
+        return createLocalizedErrorResponse(400, 'errors.missingMandatoryFields', $locale, null);
     }
 
     //Ha a typeId egyenlő 1-el vagy 2-vel és a newTask['lockers'] tömb üres akkor hibaüzenetet kell visszaadni
     if (($typeId == 1 || $typeId == 2) || $typeId == 8) {
         if (empty($newTask['lockers'])) {
-            return createResponse(400, "A lockers mező nincsen kitöltve");
+            return createLocalizedErrorResponse(400, 'errors.missingMandatoryFields', $locale, null);
         }
         foreach ($newTask['lockers'] as $locker) {
             if (empty($locker['serial'])) {
-                return createResponse(400, "A uuid mező nincsen kitöltve");
+                return createLocalizedErrorResponse(400, 'errors.missingLockers', $locale, null);
             }
             foreach ($locker['issues'] as $issue) {
                 switch ($issue['type']) {
                     case null:
-                        return createResponse(400, "Az issue type mező nincsen kitöltve");
+                        return createLocalizedErrorResponse(400, 'errors.missingIssueType', $locale, null);
                     case 1:
                         if (empty($issue['compartmentNumber'])) {
-                            return createResponse(400, "A compartmentNumber mező nincsen kitöltve");
+                            return createLocalizedErrorResponse(400, 'errors.missingCompartmentNumber', $locale, null);
                         }
                         break;
                     case 2:
                         if (empty($issue['compartmentNumber'])) {
-                            return createResponse(400, "A compartmentNumber mező nincsen kitöltve");
+                            return createLocalizedErrorResponse(400, 'errors.missingCompartmentNumber', $locale, null);
                         }
                         break;
                     default:

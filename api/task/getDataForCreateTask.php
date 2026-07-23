@@ -28,7 +28,7 @@ class GetData
             'payload' => $payload,
         ];
     }
-    public function getData()
+    public function getData($locale)
     {
         //User validation here
         $isAccess = $this->auth->authenticate(14);
@@ -57,8 +57,8 @@ class GetData
             $taskTypesStmt = [
                 'table' => "task_type_details ttd",
                 'method' => "get",
-                'columns' => ['ttd.id', 'ttd.name'],
-                'others' => "",
+                'columns' => ['ttd.id', 't.text as name'],
+                'others' => "LEFT JOIN translations t ON t.task_type_detail_id = ttd.id AND t.locale = '$locale'",
                 'conditions' => "ttd.deleted = 0"
             ];
             $result = dataToHandleInDb($this->conn, $taskTypesStmt);
@@ -87,7 +87,7 @@ class GetData
             $lockerStmt = [
                 'table' => "task_lockers tl",
                 'method' => "get",
-                'columns' => ['tl.id', 'tloc.tof_shop_id as tofShopId' ,'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
+                'columns' => ['tl.id', 'tloc.tof_shop_id as tofShopId', 'tl.task_locations_id as locationId', 'tl.serial', 'tl.brand', 'tl.type'],
                 'others' => "LEFT JOIN task_locations tloc ON tloc.id = tl.task_locations_id",
                 'conditions' => "tl.deleted = 0"
             ];
@@ -139,7 +139,10 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
+$payload = json_decode(file_get_contents('php://input'), true) ?? [];
+$locale = $payload['locale'] ?? 'hu';
+
 $getData = new GetData($conn, $response, $auth);
-$getData->getData();
+$getData->getData($locale);
 
 echo json_encode($response);
