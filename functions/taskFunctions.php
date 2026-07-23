@@ -1,7 +1,7 @@
 <?php
-require('db/dbFunctions.php');
-// require('../../vendor/autoload.php');
-require(DOC_ROOT . '/vendor/autoload.php');
+require_once __DIR__ . '/../inc/config.php';
+require_once __DIR__ . '/db/dbFunctions.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -106,141 +106,120 @@ function dataManipulation($conn, $data, $userAuthData, $tofShopIds, $getAllActiv
             $exoboxPoints = getExoboxPoints($getAllActivePointsUrl, $user, $password, null);
 
             $groupedData = [];
-            // Segédtömb az ismétlődések elkerülésére
-            $uniqueTaskFees = [];
-            $uniqueLockers = [];
+            $activeTofShopMap = [];
+            foreach ((array)$tofShopIds as $shopId) {
+                $activeTofShopMap[(string)$shopId] = true;
+            }
+
+            $pointIdByTofShop = [];
+            if (!empty($exoboxPoints['payload'])) {
+                foreach ($exoboxPoints['payload'] as $point) {
+                    if (!isset($point['id'])) {
+                        continue;
+                    }
+                    $pointIdByTofShop[(string)$point['id']] = $point['point_id'] ?? null;
+                }
+            }
+
+            $photosByLocation = [];
+            if (!empty($data['taskPhotos']['payload'])) {
+                foreach ($data['taskPhotos']['payload'] as $photo) {
+                    if (!isset($photo['task_locations_id'], $photo['url'])) {
+                        continue;
+                    }
+                    $locationId = (int)$photo['task_locations_id'];
+                    $photoUrl = (string)$photo['url'];
+                    $photosByLocation[$locationId][$photoUrl] = ['url' => $photoUrl];
+                }
+            }
+
+            $taskTypesByTask = [];
+            if (!empty($data['taskTypes']['payload'])) {
+                foreach ($data['taskTypes']['payload'] as $type) {
+                    if (!isset($type['task_id']) || $type['type_id'] === null) {
+                        continue;
+                    }
+                    $taskId = (int)$type['task_id'];
+                    $typeId = (int)$type['type_id'];
+                    $taskTypesByTask[$taskId][$typeId] = $typeId;
+                }
+            }
+
+            $priorityByTask = [];
+            if (!empty($data['taskPriorities']['payload'])) {
+                foreach ($data['taskPriorities']['payload'] as $priority) {
+                    if (!isset($priority['task_id']) || $priority['priority_id'] === null) {
+                        continue;
+                    }
+                    $taskId = (int)$priority['task_id'];
+                    if (!isset($priorityByTask[$taskId])) {
+                        $priorityByTask[$taskId] = $priority['priority_id'];
+                    }
+                }
+            }
+
+            $responsiblesByTask = [];
+            if (!empty($data['taskResponsibles']['payload'])) {
+                foreach ($data['taskResponsibles']['payload'] as $responsible) {
+                    if (!isset($responsible['task_id']) || $responsible['company_id'] === null) {
+                        continue;
+                    }
+                    $taskId = (int)$responsible['task_id'];
+                    $companyId = (int)$responsible['company_id'];
+                    $responsiblesByTask[$taskId][$companyId] = $companyId;
+                }
+            }
+
+            $taskFeesByTask = [];
+            if (!empty($data['taskFees']['payload'])) {
+                foreach ($data['taskFees']['payload'] as $taskFee) {
+                    if (!isset($taskFee['taskId'], $taskFee['id'])) {
+                        continue;
+                    }
+                    $taskId = (int)$taskFee['taskId'];
+                    $taskFeeId = (int)$taskFee['id'];
+                    if (!isset($taskFeesByTask[$taskId][$taskFeeId])) {
+                        $taskFeesByTask[$taskId][$taskFeeId] = $taskFee;
+                    }
+                }
+            }
+
+            $lockersByTask = [];
+            $lockerSerialsByTask = [];
+            if (!empty($data['lockers']['payload'])) {
+                foreach ($data['lockers']['payload'] as $locker) {
+                    if (!isset($locker['task_id'], $locker['id'])) {
+                        continue;
+                    }
+                    $taskId = (int)$locker['task_id'];
+                    $lockerId = (int)$locker['id'];
+                    if (!isset($lockersByTask[$taskId][$lockerId])) {
+                        $lockersByTask[$taskId][$lockerId] = $locker;
+                    }
+                    if (isset($locker['serial']) && $locker['serial'] !== null) {
+                        $serial = (string)$locker['serial'];
+                        $lockerSerialsByTask[$taskId][$serial] = $serial;
+                    }
+                }
+            }
 
             foreach ($data['baseTaskData']['payload'] as $task) {
-                $id = $task['id'];
-                //$tofShopId = $task['tof_shop_id'];                
+                $taskId = (int)$task['id'];
+                $locationId = (int)($task['task_locations_id'] ?? 0);
+                $tofShopId = (string)($task['tof_shop_id'] ?? '');
 
-                // Ellenőrizzük, hogy van-e már ilyen id-vel objektum a groupedData tömbben
-                $existingIndex = array_search($id, array_column($groupedData, 'id'));
+                $newTask = $task;
+                $newTask['location_photos'] = isset($photosByLocation[$locationId]) ? array_values($photosByLocation[$locationId]) : [];
+                $newTask['taskTypes'] = isset($taskTypesByTask[$taskId]) ? array_values($taskTypesByTask[$taskId]) : [];
+                $newTask['priorityId'] = $priorityByTask[$taskId] ?? null;
+                $newTask['responsibles'] = isset($responsiblesByTask[$taskId]) ? array_values($responsiblesByTask[$taskId]) : [];
+                $newTask['isActiveInAdmin'] = isset($activeTofShopMap[$tofShopId]);
+                $newTask['pointId'] = $pointIdByTofShop[$tofShopId] ?? null;
+                $newTask['taskFees'] = isset($taskFeesByTask[$taskId]) ? array_values($taskFeesByTask[$taskId]) : [];
+                $newTask['lockers'] = isset($lockersByTask[$taskId]) ? array_values($lockersByTask[$taskId]) : [];
+                $newTask['lockerSerials'] = isset($lockerSerialsByTask[$taskId]) ? array_values($lockerSerialsByTask[$taskId]) : [];
 
-                // Ha az objektum még nem létezik, hozzuk létre és inicializáljuk a szükséges kulcsokat
-                if ($existingIndex === false) {
-                    $newTask = $task;
-                    $newTask['taskTypes'] = [];
-                    $newTask['lockerSerials'] = [];
-                    $newTask['responsibles'] = [];
-                    $newTask['priorityId'] = null;
-                    $newTask['location_photos'] = [];
-                    $newTask['isActiveInAdmin'] = null;
-                    $newTask['pointId'] = null;
-                    $groupedData[] = $newTask;
-                    $existingIndex = array_key_last($groupedData); // Frissítjük az existingIndex-et az új elem indexével
-                }
-
-                // Fotók hozzáadása a taskPhotos tömbből
-                if (!empty($data['taskPhotos']['payload'])) {
-                    foreach ($data['taskPhotos']['payload'] as $photo) {
-                        if ($photo['task_locations_id'] == $task['task_locations_id'] && !in_array(['url' => $photo['url']], $groupedData[$existingIndex]['location_photos'])) {
-                            $groupedData[$existingIndex]['location_photos'][] = ['url' => $photo['url']];
-                        }
-                    }
-                }
-
-                // Task types hozzáadása külön query-ből
-                if (!empty($data['taskTypes']['payload'])) {
-                    foreach ($data['taskTypes']['payload'] as $type) {
-                        if ($type['task_id'] == $id && $type['type_id'] !== null && !in_array($type['type_id'], $groupedData[$existingIndex]['taskTypes'])) {
-                            $groupedData[$existingIndex]['taskTypes'][] = $type['type_id'];
-                        }
-                    }
-                }
-
-                // Task priority hozzáadása külön query-ből
-                if (!empty($data['taskPriorities']['payload'])) {
-                    foreach ($data['taskPriorities']['payload'] as $priority) {
-                        if ($priority['task_id'] == $id && $priority['priority_id'] !== null) {
-                            $groupedData[$existingIndex]['priorityId'] = $priority['priority_id'];
-                            break; // Egy taskhoz egy priority tartozik
-                        }
-                    }
-                }
-
-                // Task responsibles hozzáadása külön query-ből
-                if (!empty($data['taskResponsibles']['payload'])) {
-                    foreach ($data['taskResponsibles']['payload'] as $responsible) {
-                        if ($responsible['task_id'] == $id && $responsible['company_id'] !== null && !in_array($responsible['company_id'], $groupedData[$existingIndex]['responsibles'])) {
-                            $groupedData[$existingIndex]['responsibles'][] = $responsible['company_id'];
-                        }
-                    }
-                }
-
-                // Feldolgozzuk az egyes mezőket
-
-                //ha a $task['tof_shop_id'] értéke szerepel a $tofShopIds tömbben, akkor az isActiveInAdmin értéke true, egyébként false
-                if (in_array($task['tof_shop_id'], $tofShopIds)) {
-                    $groupedData[$existingIndex]['isActiveInAdmin'] = true;
-                } else {
-                    $groupedData[$existingIndex]['isActiveInAdmin'] = false;
-                }
-
-                foreach ($exoboxPoints['payload'] as $point) {
-                    if ($point['id'] == $task['tof_shop_id']) {
-                        $groupedData[$existingIndex]['pointId'] = $point['point_id'];
-                        break;
-                    }
-                }
-
-                // `taskFees` hozzáadása a `groupedData`-hoz, az ismétlődések elkerülésével
-                $taskFeesFound = false; // Flag a taskFees ellenőrzésére
-                if (!empty($data['taskFees']['payload'])) {
-                    foreach ($data['taskFees']['payload'] as $taskFee) {
-                        $taskId = $taskFee['taskId'];
-                        $taskFeeId = $taskFee['id'];
-
-                        // Ellenőrizzük, hogy a `taskFee` már szerepel-e az `uniqueTaskFees` segédtömbben
-                        if (!isset($uniqueTaskFees[$taskId][$taskFeeId]) && $taskId === $id) {
-                            $groupedData[$existingIndex]['taskFees'][] = $taskFee;
-                            $uniqueTaskFees[$taskId][$taskFeeId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                            $taskFeesFound = true; // Ha találunk legalább egy taskFee-t
-                        }
-                        // Ha nem találunk taskFee-t, akkor nem módosítjuk a taskFees kulcsot
-                        if (!$taskFeesFound && empty($groupedData[$existingIndex]['taskFees'])) {
-                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                            $groupedData[$existingIndex]['taskFees'] = [];
-                        }
-                    }
-                } else {
-                    $groupedData[$existingIndex]['taskFees'] = [];
-                }
-
-                //Add lockers into lockerSerials
-                // if (isset($data['lockers']['payload'])) {
-                //     foreach ($data['lockers']['payload'] as $locker) {
-                //         if (isset($locker['serial']) && $locker['serial'] !== null && !in_array($locker['serial'], $groupedData[$existingIndex]['lockerSerials'])) {
-                //             $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                //         }
-                //     }
-                // }
-
-
-                $lockerFound = false; // Flag a locker ellenőrzésére
-                if (!empty($data['lockers']['payload'])) {
-                    foreach ($data['lockers']['payload'] as $locker) {
-                        $lockerId = $locker['id'];
-                        $locationId = $locker['task_locations_id'];
-                        $lockerTaskId = $locker['task_id'];
-
-                        // Ellenőrizzük, hogy a `locker` már szerepel-e az `uniqueLockers` segédtömbben
-                        if (!isset($uniqueLockers[$lockerId][$lockerTaskId]) && $lockerTaskId === $task['id']) {
-                            $groupedData[$existingIndex]['lockers'][] = $locker;
-                            $groupedData[$existingIndex]['lockerSerials'][] = $locker['serial'];
-                            $uniqueLockers[$lockerId][$lockerTaskId] = true; // Jelöljük, hogy ez az ID már hozzá lett adva
-                            $lockerFound = true; // Ha találunk legalább egy locker-t
-                        }
-                        // Ha nem találunk locker-t, akkor nem módosítjuk a locker kulcsot
-                        if (!$lockerFound && empty($groupedData[$existingIndex]['lockers'])) {
-                            // Csak akkor állítjuk üres tömbre, ha előzőleg nem lett hozzáadva adat
-                            $groupedData[$existingIndex]['lockers'] = [];
-                            $groupedData[$existingIndex]['lockerSerials'] = [];
-                        }
-                    }
-                } else {
-                    $groupedData[$existingIndex]['lockers'] = [];
-                }
+                $groupedData[] = $newTask;
             }
 
             //fees hozzáadása
@@ -521,17 +500,17 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
         // Fájl kiterjesztés ellenőrzése
         $fileActualExt = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
         if (!in_array($fileActualExt, $allowedExtensions)) {
-            return createLocalizedResponse(400, 'errors.file_type_not_allowed');
+            return createResponse(400, "Ez a fájltípus nem engedélyezett!");
         }
 
         // Hibaellenőrzés
         if ($fileError !== 0) {
-            return createLocalizedResponse(400, 'errors.file_upload_error_with_code', null, null, ['errorCode' => $fileError]);
+            return createResponse(400, "Hiba történt a fájl feltöltése közben. Kérlek fordulj a rendszergazdához! Hiba: $fileError");
         }
 
         // Fájlméret ellenőrzése
         if ($fileSize > $maxFileSize) {
-            return createLocalizedResponse(400, 'errors.file_too_large');
+            return createResponse(400, "A fájl mérete túl nagy!");
         }
 
         // Útvonalak létrehozása
@@ -540,7 +519,7 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
 
         // Ellenőrzi, hogy létezik-e a fájl
         if (file_exists($fileDestination)) {
-            return createLocalizedResponse(400, 'errors.file_already_exists');
+            return createResponse(400, "A fájl már létezik");
         }
 
         // Adatok beszúrása az adatbázisba
@@ -600,16 +579,16 @@ function uploadFile($conn, $file, $locationId, $userId, $maxFileSize, $DOC_ROOT,
             // Jogosultságok beállítása
             chmod($fileDestination, 0777);
 
-            return createLocalizedResponse(200, 'success.file_upload_success', $payload);
+            return createResponse(200, "A fájl sikeresen feltöltve.", $payload);
         } else {
-            return createLocalizedResponse(500, 'errors.database_operation_failed');
+            return createResponse(500, "Az adatbázis művelet sikertelen.");
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function addFee($conn, $dbTable, $newItems, $userId, $locale = 'hu')
+function addFee($conn, $dbTable, $newItems, $userId)
 {
     try {
         $created_at = date('Y-m-d H:i:s');
@@ -631,16 +610,16 @@ function addFee($conn, $dbTable, $newItems, $userId, $locale = 'hu')
             if ($getMaxId['status'] === 200) {
                 $newItems['id'] = $getMaxId['payload'][0]['MAX(id)'];
             } else {
-                return createLocalizedErrorResponse($getMaxId['status'], 'errors.database_operation_failed', $locale, [], $getMaxId['errorInfo']);
+                return createResponse($getMaxId['status'], $getMaxId['message'] . '. ' . $getMaxId['errorInfo']);
             }
-            return createLocalizedResponse(200, 'success.item_insertion', $newItems, $locale, []);
+            return createResponse(200, "Item insertion success", $newItems);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale = 'hu')
+function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale)
 {
     try {
         $deleted_at = date('Y-m-d H:i:s');
@@ -651,8 +630,7 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale = 'hu')
             'columns' => ['deleted', 'deleted_at', 'deleted_by'],
             'values' => [1, $deleted_at, $userId],
             'others' => "",
-            'conditions' => ['task_id' => $taskId, 'id' => $id],
-            'locale' => $locale
+            'conditions' => ['task_id' => $taskId, 'id' => $id]
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
@@ -665,7 +643,7 @@ function deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale = 'hu')
     }
 }
 
-function addLocker($conn, $newItems, $userId, $locale = 'hu')
+function addLocker($conn, $newItems, $userId)
 {
     try {
         $created_at = date('Y-m-d H:i:s');
@@ -680,29 +658,29 @@ function addLocker($conn, $newItems, $userId, $locale = 'hu')
             'method' => "get",
             'columns' => [
                 'tl.id',
-                'tl.task_id as taskId',
+                'tl.task_id',
                 'tl.brand',
                 'tl.serial',
                 'tl.task_locations_id',
-                'tl.is_active as isActive'
+                'tl.is_active as is_active'
             ],
             'others' => "",
             'conditions' => "tl.deleted = 0 AND tl.task_locations_id = $newItems[task_locations_id] AND tl.task_id = $newItems[task_id]"
         ];
 
         if ($stmt->execute($params)) {
-            $newLockerData = dataToHandleInDb($conn, $lockers, $locale);
-            return createLocalizedResponse(200, 'success.item_insertion', $newLockerData['payload'], $locale, []);
+            $newLockerData = dataToHandleInDb($conn, $lockers);
+            return createResponse(200, "Item insertion success", $newLockerData['payload']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function removeLocker($conn, $lockerToRemove, $userId, $locale = 'hu')
+function removeLocker($conn, $lockerToRemove)
 {
     try {
-        $serial = $lockerToRemove['value'];
+        $serial = $lockerToRemove['serial'];
 
         $dataToHandleInDb = [
             'table' => "task_lockers",
@@ -712,16 +690,16 @@ function removeLocker($conn, $lockerToRemove, $userId, $locale = 'hu')
         ];
         $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createLocalizedResponse($result['status'], 'success.delete_locker', null, $locale, []);
+            return createResponse($result['status'], "Delete of locker is success");
         } else {
-            return createLocalizedErrorResponse($result['status'], 'errors.unexpected', $locale, [], $result['error']);
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function getUserPassword($conn, $userId, $locale = 'hu')
+function getUserPassword($conn, $userId)
 {
     try {
         $dataToHandleInDb = [
@@ -732,18 +710,18 @@ function getUserPassword($conn, $userId, $locale = 'hu')
             'conditions' => "u.id = $userId",
             'order' => ""
         ];
-        $data = dataToHandleInDb($conn, $dataToHandleInDb, $locale);
+        $data = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($data['status'] === 200) {
-            return createLocalizedResponse($data['status'], $data['message'], $data['payload'][0], $locale);
+            return createResponse($data['status'], "success", $data['payload'][0]);
         } else {
-            return createLocalizedErrorResponse($data['status'], $data['message'] . '. ' . $data['errorInfo'], $locale);
+            return createResponse($data['status'], $data['message'] . '. ' . $data['errorInfo']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $userId, $locale = 'hu')
+function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $userId)
 {
     try {
         $updated_at = date('Y-m-d H:i:s');
@@ -754,21 +732,20 @@ function updateUser($conn, $hashedNewPassword, $firstName, $lastName, $email, $u
             'columns' => ['first_name', 'last_name', 'email', 'password', 'updated_at', 'updated_by'],
             'values' => [$firstName, $lastName, $email, $hashedNewPassword, $updated_at, $userId],
             'others' => "",
-            'conditions' => ['u.id' => $userId],
-            'locale' => $locale
+            'conditions' => ['u.id' => $userId]
         ];
-        $result = dataToHandleInDb($conn, $dataToHandleInDb, $locale);
+        $result = dataToHandleInDb($conn, $dataToHandleInDb);
         if ($result['status'] === 200) {
-            return createLocalizedResponse($result['status'], $result['message'], null, $locale, []);
+            return createResponse($result['status'], $result['message']);
         } else {
-            return createLocalizedErrorResponse($result['status'], $result['message'] . '. ' . $result['error'], $locale, [], $result['error']);
+            return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function xlsFileRead($filePath)
+function xlsFileRead($filePath, $locale)
 {
     try {
         $spreadsheet = IOFactory::load($filePath);
@@ -810,7 +787,7 @@ function xlsFileRead($filePath)
 
         // Ellenőrizzük, hogy minden szükséges fejléc megtalálható
         if (count($headerIndexes) !== count($wantedHeaders)) {
-            return createLocalizedResponse(400, 'errors.excel_missing_required_headers');
+            return createLocalizedErrorResponse(400, 'errors.missingHeadersFromXls', $locale, null);
         }
 
         //Kicseréljük a header-t az adatbázis header-re.
@@ -843,7 +820,7 @@ function xlsFileRead($filePath)
                 $value = $rowData[$index];
                 if (in_array($headerValue, $requiredFields)) {
                     if ($value === null || $value == "") {
-                        return createLocalizedResponse(400, 'errors.excel_missing_required_field_value');
+                        return createLocalizedErrorResponse(400, 'errors.missingMandatoryFieldValueInXls', $locale, ['field' => $headerValue]);
                     }
                 }
 
@@ -857,19 +834,19 @@ function xlsFileRead($filePath)
             }
             $data[] = $filteredData;
         }
-        return createLocalizedResponse(200, 'success.successful_import', $data);
+        return createResponse(200, localizeSuccessMessage('success.successful_import', $locale), $data);
     } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, null);
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, null);
     }
 }
 
-function xlsFileDataToWrite($conn, $filePath, $userId)
+function xlsFileDataToWrite($conn, $filePath, $userId, $locale)
 {
     $created_at = date('Y-m-d H:i:s');
 
-    $data = xlsFileRead($filePath);
+    $data = xlsFileRead($filePath, $locale);
     if ($data['status'] !== 200) {
         return $data;
     }
@@ -934,11 +911,11 @@ function xlsFileDataToWrite($conn, $filePath, $userId)
 
         // Tranzakció lezárása
         $conn->commit();
-        return createLocalizedResponse(200, 'success.successful_import');
+        return createResponse(200, "Sikeres betöltés");
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createResponse(400, $e->getMessage());
     }
 }
 
@@ -997,7 +974,7 @@ function downloadTig($conn, $companyId)
     } catch (Exception $e) {
         // Győződj meg róla, hogy nincs semmilyen extra kimenet a HTTP fejlécek előtt
         header('Content-Type: application/json');
-        echo json_encode(createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage()));
+        echo json_encode(createResponse(400, $e->getMessage()));
         exit();
     }
 }
@@ -1056,7 +1033,7 @@ function downloadTasks($conn, $inputData)
     } catch (Exception $e) {
         // Győződj meg róla, hogy nincs semmilyen extra kimenet a HTTP fejlécek előtt
         header('Content-Type: application/json');
-        echo json_encode(createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage()));
+        echo json_encode(createResponse(400, $e->getMessage()));
         exit();
     }
 }
@@ -1078,46 +1055,45 @@ function updateCheckLockerResult($conn, $data, $userId)
             return createResponse($result['status'], $result['message'] . '. ' . $result['error']);
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(500, 'errors.unexpected', null, [], $e->getMessage());
+        return createResponse(500, "Hiba történt: " . $e->getMessage());
     }
 }
 
-function addTask($conn, $newTask, $userId)
+function addTask($conn, $newTask, $userId, $locale)
 {
     $typeId = $newTask['taskType'];
     $responsible = $newTask['responsible'];
     $plannedDeliveryDate = $newTask['plannedDeliveryDate'];
     $tofShopId = $newTask['selectedLocation']['tofShopId'];
     $taskLocationsId = $newTask['selectedLocation']['id'];
-    $locale = $newTask['locale'] ?? 'hu';
 
 
     //ha a fenti adatok üresek akkor hibaüzenetet kell visszaadni
     if (empty($typeId) || empty($tofShopId)) {
-        return createLocalizedResponse(400, 'errors.required_fields_missing', null, $locale);
+        return createLocalizedErrorResponse(400, 'errors.missingMandatoryFields', $locale, null);
     }
 
     //Ha a typeId egyenlő 1-el vagy 2-vel és a newTask['lockers'] tömb üres akkor hibaüzenetet kell visszaadni
     if (($typeId == 1 || $typeId == 2) || $typeId == 8) {
         if (empty($newTask['lockers'])) {
-            return createLocalizedResponse(400, 'errors.lockers_field_required', null, $locale);
+            return createLocalizedErrorResponse(400, 'errors.missingMandatoryFields', $locale, null);
         }
         foreach ($newTask['lockers'] as $locker) {
             if (empty($locker['serial'])) {
-                return createLocalizedResponse(400, 'errors.uuid_field_required', null, $locale);
+                return createLocalizedErrorResponse(400, 'errors.missingLockers', $locale, null);
             }
             foreach ($locker['issues'] as $issue) {
                 switch ($issue['type']) {
                     case null:
-                        return createLocalizedResponse(400, 'errors.issue_type_required', null, $locale);
+                        return createLocalizedErrorResponse(400, 'errors.missingIssueType', $locale, null);
                     case 1:
                         if (empty($issue['compartmentNumber'])) {
-                            return createLocalizedResponse(400, 'errors.compartment_number_required', null, $locale);
+                            return createLocalizedErrorResponse(400, 'errors.missingCompartmentNumber', $locale, null);
                         }
                         break;
                     case 2:
                         if (empty($issue['compartmentNumber'])) {
-                            return createLocalizedResponse(400, 'errors.compartment_number_required', null, $locale);
+                            return createLocalizedErrorResponse(400, 'errors.missingCompartmentNumber', $locale, null);
                         }
                         break;
                     default:
@@ -1262,11 +1238,11 @@ function addTask($conn, $newTask, $userId)
 
         // Tranzakció lezárása
         $conn->commit();
-        return createLocalizedResponse(200, 'success.successful_import', $newTask);
+        return createResponse(200, "Sikeres betöltés", $newTask);
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createResponse(400, "Hiba történt a művelet során: " . $e->getMessage());
     }
 }
 
@@ -1288,48 +1264,112 @@ function deleteImage($conn, $url, $DOC_ROOT)
                 $stmt = $conn->prepare("DELETE FROM task_location_photos WHERE url = :url");
                 $stmt->execute([':url' => $url]);
 
-                return createLocalizedResponse(200, 'success.image_deleted', ['url' => $url, 'taskLocationsId' => $file['task_locations_id']]);
+                return createResponse(200, "A kép sikeresen törölve lett.", ['url' => $url, 'taskLocationsId' => $file['task_locations_id']]);
             }
         } else {
-            return createLocalizedResponse(404, 'errors.file_not_found_in_database');
+            return createResponse(404, "A fájl nem található az adatbázisban.");
         }
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }
 
 function getTofShopId($url)
 {
+    static $memoryCache = [];
+    $cacheKey = 'tof_shop_ids_' . md5((string)$url);
+
+    if (isset($memoryCache[$cacheKey])) {
+        return createResponse(200, "success", $memoryCache[$cacheKey]);
+    }
+
+    $cacheDir = sys_get_temp_dir() . '/mms_api_cache';
+    $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+    $ttlSeconds = 120;
+
+    if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+        $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+        if (is_array($cachedPayload)) {
+            $memoryCache[$cacheKey] = $cachedPayload;
+            return createResponse(200, "success", $cachedPayload);
+        }
+    }
+
     try {
         //API hívás és eredményének feldolgozása
         $context = stream_context_create([
+            'http' => [
+                'timeout' => 2
+            ],
             'ssl' => [
                 'verify_peer' => true,
                 'verify_peer_name' => true,
                 'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
             ]
         ]);
-        $response = file_get_contents($url, false, $context);
+        $response = @file_get_contents($url, false, $context);
+        if ($response === false) {
+            if (is_file($cacheFile)) {
+                $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+                if (is_array($cachedPayload)) {
+                    $memoryCache[$cacheKey] = $cachedPayload;
+                    return createResponse(200, "success", $cachedPayload);
+                }
+            }
+            return createResponse(400, "Hiba történt: Külső szolgáltatás nem elérhető.");
+        }
+
         $data = json_decode($response, true);
+        if (!isset($data['points']) || !is_array($data['points'])) {
+            return createResponse(400, "Hiba történt: Hibás API válasz.");
+        }
+
         //$data['points'] körbejárása és az ID értékek kigyűjtése
         $tofShopIds = [];
         foreach ($data['points'] as $point) {
             $tofShopIds[] = $point['id'];
         }
-        return createLocalizedResponse(200, 'success.success', $tofShopIds);
+
+        if (!is_dir($cacheDir)) {
+            @mkdir($cacheDir, 0777, true);
+        }
+        @file_put_contents($cacheFile, json_encode($tofShopIds));
+        $memoryCache[$cacheKey] = $tofShopIds;
+
+        return createResponse(200, "success", $tofShopIds);
     } catch (Exception $e) {
-        return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+        return createResponse(400, "Hiba történt: " . $e->getMessage());
     }
 }
 
 function getExoboxPoints($url, $user, $password, $id)
 {
+    static $memoryCache = [];
+
     if (!isset($id)) {
+        $cacheKey = 'exobox_points_' . md5((string)$url . '|' . (string)$user);
+        if (isset($memoryCache[$cacheKey])) {
+            return $memoryCache[$cacheKey];
+        }
+
+        $cacheDir = sys_get_temp_dir() . '/mms_api_cache';
+        $cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+        $ttlSeconds = 120;
+
+        if (is_file($cacheFile) && (time() - filemtime($cacheFile)) < $ttlSeconds) {
+            $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+            if (is_array($cachedPayload)) {
+                $memoryCache[$cacheKey] = $cachedPayload;
+                return $cachedPayload;
+            }
+        }
+
         try {
             //API hívás és eredményének feldolgozása
             $context = stream_context_create([
                 'http' => [
-                    'header' => "Authorization: Basic " . base64_encode("$user:$password")
+                    'header' => "Authorization: Basic " . base64_encode("$user:$password"),
+                    'timeout' => 2
                 ],
                 'ssl' => [
                     'verify_peer' => true,
@@ -1337,12 +1377,31 @@ function getExoboxPoints($url, $user, $password, $id)
                     'crypto_method' => STREAM_CRYPTO_METHOD_TLSv1_2_CLIENT | STREAM_CRYPTO_METHOD_TLSv1_3_CLIENT
                 ]
             ]);
-            $response = file_get_contents($url, false, $context);
+            $response = @file_get_contents($url, false, $context);
+            if ($response === false) {
+                if (is_file($cacheFile)) {
+                    $cachedPayload = json_decode((string)file_get_contents($cacheFile), true);
+                    if (is_array($cachedPayload)) {
+                        $memoryCache[$cacheKey] = $cachedPayload;
+                        return $cachedPayload;
+                    }
+                }
+                return createResponse(400, "Hiba történt: Külső szolgáltatás nem elérhető.");
+            }
+
             $data = json_decode($response, true);
+
+            if (is_array($data)) {
+                if (!is_dir($cacheDir)) {
+                    @mkdir($cacheDir, 0777, true);
+                }
+                @file_put_contents($cacheFile, json_encode($data));
+                $memoryCache[$cacheKey] = $data;
+            }
 
             return $data;
         } catch (Exception $e) {
-            return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+            return createResponse(400, "Hiba történt: " . $e->getMessage());
         }
     } else {
         try {
@@ -1364,14 +1423,14 @@ function getExoboxPoints($url, $user, $password, $id)
                     return $point['point_id'];
                 }
             }
-            return createLocalizedResponse(404, 'errors.point_not_found_by_id');
+            return createResponse(404, "Nem található a megadott ID-hoz tartozó pont.");
         } catch (Exception $e) {
-            return createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage());
+            return createResponse(400, "Hiba történt: " . $e->getMessage());
         }
     }
 }
 
-function addIntervention($conn, $taskId, $newIntervention, $userId, $locale = 'hu')
+function addIntervention($conn, $taskId, $newIntervention, $userId)
 {
     try {
         // Tranzakció indítása
@@ -1428,11 +1487,11 @@ function addIntervention($conn, $taskId, $newIntervention, $userId, $locale = 'h
 
         // Tranzakció lezárása
         $conn->commit();
-        return createLocalizedResponse(200, 'success.successful_import', [], $locale);
+        return createResponse(200, "Sikeres betöltés");
     } catch (Exception $e) {
         // Hiba esetén rollback
         $conn->rollBack();
-        return createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
+        return createResponse(400, $e->getMessage());
     }
 }
 
@@ -1531,7 +1590,10 @@ function downloadNewPoints($data)
         if (!headers_sent()) {
             header('Content-Type: application/json');
         }
-        echo json_encode(createLocalizedErrorResponse(400, 'errors.unexpected', null, [], $e->getMessage()));
+        echo json_encode([
+            'status' => 400,
+            'message' => $e->getMessage()
+        ]);
         exit();
     }
 }

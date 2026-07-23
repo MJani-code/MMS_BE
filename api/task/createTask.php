@@ -27,6 +27,7 @@ class CreateTask
     public function createTask($newTask)
     {
         $userId = null;
+        $locale = $newTask['locale'] ?? 'hu';
         $isAccess = $this->auth->authenticate(14);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -34,7 +35,7 @@ class CreateTask
             $userId = $isAccess['data']->userId;
         }
 
-        $result = addTask($this->conn, $newTask, $userId);
+        $result = addTask($this->conn, $newTask, $userId, $locale);
         $this->response = $result;
     }
 }

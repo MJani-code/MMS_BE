@@ -7,23 +7,18 @@ require('../../api/user/auth/auth.php');
 
 
 $response = [];
-$jsonData = file_get_contents('php://input');
-$data = json_decode($jsonData, true);
-$locale = $data['locale'] ?? 'hu';
 
 class GetData
 {
     private $conn;
     private $response;
     private $auth;
-    private $locale;
 
-    public function __construct($conn, &$response, $auth, $locale)
+    public function __construct($conn, &$response, $auth)
     {
         $this->conn = $conn;
         $this->response = &$response;
         $this->auth = $auth;
-        $this->locale = $locale;
     }
     private function createResponse($status, $message, $payload = null)
     {
@@ -33,7 +28,7 @@ class GetData
             'payload' => $payload,
         ];
     }
-    public function getData($locale = 'hu')
+    public function getData($locale)
     {
         //User validation here
         $isAccess = $this->auth->authenticate(14);
@@ -56,22 +51,21 @@ class GetData
             $locations = $result['payload'];
 
             if ($result['status'] !== 200) {
-                //return $this->response = $this->createResponse(400, $result['errorInfo']);
-                return createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
+                return $this->response = $this->createResponse(400, $result['errorInfo']);
             }
 
             $taskTypesStmt = [
                 'table' => "task_type_details ttd",
                 'method' => "get",
                 'columns' => ['ttd.id', 't.text as name'],
-                'others' => "LEFT JOIN translations t ON t.task_type_detail_id = ttd.id AND t.locale = '$this->locale'",
+                'others' => "LEFT JOIN translations t ON t.task_type_detail_id = ttd.id AND t.locale = '$locale'",
                 'conditions' => "ttd.deleted = 0"
             ];
             $result = dataToHandleInDb($this->conn, $taskTypesStmt);
             $taskTypes = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
+                return $this->response = $this->createResponse(400, $result['errorInfo']);
             }
 
             //megbízottak lekérdezése
@@ -86,7 +80,7 @@ class GetData
             $responsibles = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
+                return $this->response = $this->createResponse(400, $result['errorInfo']);
             }
 
             //lockerd adatok lekérése
@@ -101,7 +95,7 @@ class GetData
             $lockers = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
+                return $this->response = $this->createResponse(400, $result['errorInfo']);
             }
 
             $lockerIssueTypesStmt = [
@@ -115,16 +109,16 @@ class GetData
             $lockerIssueTypes = $result['payload'];
 
             if ($result['status'] !== 200) {
-                return $this->response = createLocalizedErrorResponse(400, 'errors.data_retrieval_failed', $locale, ['message' => $result['errorInfo']]);
+                return $this->response = $this->createResponse(400, $result['errorInfo']);
             }
 
-            $this->response = createLocalizedResponse(200, 'success.data_loaded_successfully', [
+            $this->response = $this->createResponse(200, "Data loaded successfully", [
                 'locations' => $locations,
                 'taskTypes' => $taskTypes,
                 'responsibles' => $responsibles,
                 'lockers' => $lockers,
                 'lockerIssueTypes' => $lockerIssueTypes
-            ], $locale);
+            ]);
 
             //return $this->response;
         } catch (Exception $e) {
@@ -145,7 +139,10 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$getData = new GetData($conn, $response, $auth, $locale);
-$getData->getData();
+$payload = json_decode(file_get_contents('php://input'), true) ?? [];
+$locale = $payload['locale'] ?? 'hu';
+
+$getData = new GetData($conn, $response, $auth);
+$getData->getData($locale);
 
 echo json_encode($response);

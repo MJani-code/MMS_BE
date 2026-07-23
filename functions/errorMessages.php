@@ -216,4 +216,64 @@ return [
         'en' => 'Failed to fetch locker data: :message',
         'sl' => 'Pridobivanje podatkov omarice ni uspelo: :message'
     ],
+    'errors.token_expired' => [
+        'hu' => 'A token lejárt, kérjük jelentkezz be újra.',
+        'en' => 'The token has expired, please sign in again.',
+        'sl' => 'Zeton je potekel, prosimo prijavite se znova.'
+    ],
+    'errors.invalid_token' => [
+        'hu' => 'Érvénytelen token.',
+        'en' => 'Invalid token.',
+        'sl' => 'Neveljaven zeton.'
+    ],
+    'errors.no_token' => [
+        'hu' => 'Nincs token.',
+        'en' => 'No token provided.',
+        'sl' => 'Zeton ni bil posredovan.'
+    ],
+    'errors.access_denied' => [
+        'hu' => 'Nincs hozzáférésed a kért művelethez.',
+        'en' => 'You do not have access to the requested operation.',
+        'sl' => 'Nimate dostopa do zahtevane operacije.'
+    ],
+    'errors.valid_token' => [
+        'hu' => 'Érvényes token.',
+        'en' => 'Valid token.',
+        'sl' => 'Veljaven zeton.'
+    ],
+    'errors.apiCallFailed' => [
+        'hu' => 'API hívás sikertelen: :error',
+        'en' => 'API call failed: :error',
+        'sl' => 'Klic API ni uspel: :error'
+    ],
+    'errors.missingLockers' => [
+        'hu' => 'A lockers mező nincsen kitöltve',
+        'en' => 'The lockers field is not filled',
+        'sl' => 'Polje lockers ni izpolnjeno'
+    ],
+    'errors.missingMandatoryFields' => [
+        'hu' => 'A kötelező mezők nincsenek kitöltve',
+        'en' => 'Required fields are not filled',
+        'sl' => 'Obvezna polja niso izpolnjena'
+    ],
+    'errors.missingIssueType' => [
+        'hu' => 'A feladattípus mező nincsen kitöltve',
+        'en' => 'The issue type field is not filled',
+        'sl' => 'Polje issue type ni izpolnjeno'
+    ],
+    'errors.missingCompartmentNumber' => [
+        'hu' => 'A rekeszszám mező nincsen kitöltve',
+        'en' => 'The compartmentNumber field is not filled',
+        'sl' => 'Polje compartmentNumber ni izpolnjeno'
+    ],
+    'errors.missingHeadersFromXls' => [
+        'hu' => 'Nem minden szükséges fejléc található meg az Excel fájlban',
+        'en' => 'Not all required headers were found in the Excel file',
+        'sl' => 'V datoteki Excel niso bile najdene vse obvezne glave'
+    ],
+    'errors.missingMandatoryFieldValueInXls' => [
+        'hu' => 'A betöltés nem sikerült. Van olyan kötelező mező, aminél nincsen adat megadva',
+        'en' => 'Import failed. At least one required field has no value',
+        'sl' => 'Uvoz ni uspel. Vsaj eno obvezno polje nima vrednosti'
+    ],
 ];

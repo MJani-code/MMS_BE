@@ -33,6 +33,10 @@ class CreateTaskBatch
     public function createTaskBatch()
     {
         $userId = null;
+        $jsonData = file_get_contents("php://input");
+        $payload = json_decode($jsonData, true);
+        $locale = $payload['locale'] ?? 'hu';
+
         $isAccess = $this->auth->authenticate(14);
         if ($isAccess['status'] !== 200) {
             return $this->response = $isAccess;
@@ -42,7 +46,7 @@ class CreateTaskBatch
 
         //Csatolt file feldolgozása
         $filePath = $_FILES['file']['tmp_name'];
-        $result = xlsFileDataToWrite($this->conn, $filePath, $userId);
+        $result = xlsFileDataToWrite($this->conn, $filePath, $userId, $locale);
         $this->response = $result;
     }
 }
