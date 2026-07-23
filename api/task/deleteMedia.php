@@ -2,7 +2,6 @@
 header('Content-Type: application/json');
 require(__DIR__ . '/../../vendor/autoload.php');
 require(__DIR__ . '/../../inc/conn.php');
-require(__DIR__ . '/../../functions/taskFunctions.php');
 require(__DIR__ . '/../../api/user/auth/auth.php');
 
 
@@ -14,7 +13,6 @@ $response = [];
 
 $jsonData = file_get_contents("php://input");
 $data = json_decode($jsonData, true);
-$locale = $data['locale'] ?? 'hu';
 
 $url = $data['url'];
 
@@ -30,9 +28,8 @@ class deleteMedia
     private $auth;
     private $baseUrl;
     private $bucketName;
-    private $locale;
 
-    public function __construct($conn, &$response, $auth, $endpoint, $accessKey, $secretKey, $zoneId, $cachePurgeToken, $baseUrl, $bucketName, $locale)
+    public function __construct($conn, &$response, $auth, $endpoint, $accessKey, $secretKey, $zoneId, $cachePurgeToken, $baseUrl, $bucketName)
     {
         $this->conn = $conn;
         $this->response = &$response;
@@ -43,7 +40,6 @@ class deleteMedia
         $this->zoneId = $zoneId;
         $this->cachePurgeToken = $cachePurgeToken;
         $this->baseUrl = $baseUrl;
-        $this->locale = $locale;
         $this->bucketName = $bucketName;
     }
 
@@ -61,7 +57,7 @@ class deleteMedia
         return $this->auth->authenticate(13);
     }
 
-    public function isUrlExistInDb($url, $locale = 'hu')
+    public function isUrlExistInDb($url)
     {
         try {
             $stmt = $this->conn->prepare("SELECT COUNT(*) as count FROM task_location_photos WHERE url = :url");
@@ -70,12 +66,12 @@ class deleteMedia
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($result['count'] > 0) {
-                return createLocalizedResponse(200, 'success.success', null, $locale, []);
+                return $this->createResponse(200, "URL létezik az adatbázisban.");
             } else {
-                return createLocalizedResponse(404, 'errors.url_not_exists_in_db', null, $locale, []);
+                return $this->createResponse(404, "URL nem létezik az adatbázisban.");
             }
         } catch (Exception $e) {
-            return createLocalizedErrorResponse(500, 'errors.unexpected', $locale, [], $e->getMessage());
+            return $this->createResponse(500, "Hiba történt az adatbázis lekérdezés során: " . $e->getMessage());
         }
     }
 
@@ -126,16 +122,16 @@ class deleteMedia
         }
     }
 
-    function removeUrlFromDb($url, $deletedBy, $locale = 'hu')
+    function removeUrlFromDb($url, $deletedBy)
     {
         try {
             $stmt = $this->conn->prepare("UPDATE task_location_photos SET deleted = 1, deleted_at = NOW(), deleted_by = :deletedBy WHERE url = :url");
             $stmt->bindParam(":url", $url);
             $stmt->bindParam(":deletedBy", $deletedBy);
             $stmt->execute();
-            return createLocalizedResponse(200, 'success.url_deleted_success', null, $locale, []);
+            return $this->createResponse(200, "URL sikeresen törölve az adatbázisból.");
         } catch (Exception $e) {
-            return createLocalizedErrorResponse(500, 'errors.url_delete_db_failed', $locale, ['message' => $e->getMessage()]);
+            return $this->createResponse(500, "Hiba történt az adatbázis frissítése során: " . $e->getMessage());
         }
     }
 
@@ -153,7 +149,7 @@ class deleteMedia
         ]);
     }
 
-    function deleteFileFromR2($bucketName, $url, $locale = 'hu')
+    function deleteFileFromR2($bucketName, $url)
     {
         //User jogosultság ellenőrzése
         $isUserAllowed = $this->isUserAllowed();
@@ -162,7 +158,7 @@ class deleteMedia
         }
 
         //URL létezés ellenőrzése az adatbázisban
-        $isUrlExist = $this->isUrlExistInDb($url, $locale);
+        $isUrlExist = $this->isUrlExistInDb($url);
         if ($isUrlExist['status'] !== 200) {
             return $this->response = $isUrlExist;
         }
@@ -187,18 +183,18 @@ class deleteMedia
             // Cache törlése Cloudflare-ben
             $isCachePurged = $this->purgeCloudflareCache($this->zoneId, $this->cachePurgeToken, $url);
             if (isset($isCachePurged['success']) && $isCachePurged['success'] === false) {
-                return $this->response = createLocalizedErrorResponse(500, 'errors.cache_purge_failed', $locale, [], 'cache purge failed');
+                return $this->response = $this->createResponse(500, "A fájl törlése sikeres volt, de a cache törlése sikertelen: ", $isCachePurged);
             }
 
             // Fájl törlése az adatbázisból
-            $isRemovedFromDb = $this->removeUrlFromDb($url, $deletedBy, $locale);
+            $isRemovedFromDb = $this->removeUrlFromDb($url, $deletedBy);
             if ($isRemovedFromDb['status'] !== 200) {
                 return $this->response = $isRemovedFromDb;
             }
 
-            return $this->response = createLocalizedResponse(200, 'success.url_deleted_success', ['url' => $url, 'taskLocationsId' => $this->getTaskLocationIdFromDb($url)], $locale);
+            return $this->response = $this->createResponse(200, "Fájl törlése sikeres.", ['url' => $url, 'taskLocationsId' => $this->getTaskLocationIdFromDb($url)]);
         } catch (AwsException $e) {
-            return $this->response = createLocalizedErrorResponse(500, 'errors.file_delete_failed', $locale, ['message' => $e->getAwsErrorMessage()]);
+            return $this->response = $this->createResponse(500, "Hiba történt a fájl törlése során: " . $e->getAwsErrorMessage());
         }
     }
 }
@@ -208,7 +204,7 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$deleteMedia = new deleteMedia($conn, $response, $auth, $endpoint, $accessKey, $secretKey, $zoneId, $cachePurgeToken, $baseUrl, $bucketName, $locale);
-$deleteMedia->deleteFileFromR2($bucketName, $url, $locale);
+$deleteMedia = new deleteMedia($conn, $response, $auth, $endpoint, $accessKey, $secretKey, $zoneId, $cachePurgeToken, $baseUrl, $bucketName);
+$deleteMedia->deleteFileFromR2($bucketName, $url);
 
 echo json_encode($response);

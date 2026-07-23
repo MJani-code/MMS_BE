@@ -1,12 +1,23 @@
 <?php
+//require ('../../inc/conn.php');
 
-function dataToHandleInDb($conn, $dataToHandleInDb, $locale = null)
+// $dataToHandleInDb = array();
+
+// $dataToHandleInDb = [
+//     'table' => "polls_questions",
+//     'method' => "get",
+//     'columns' => ['question_id'],
+//     'values' => [],
+//     'others' => [],
+//     'conditions' => []
+// ];
+
+function dataToHandleInDb($conn, $dataToHandleInDb)
 {
     $columnsFormatted = '';
     $valuesFormatted = '';
     $table = $dataToHandleInDb['table'];
     $method = $dataToHandleInDb['method'];
-    $effectiveLocale = $dataToHandleInDb['locale'] ?? $locale;
 
     foreach ($dataToHandleInDb['columns'] as $key => $column) {
         $lastColumnKey = array_key_last($dataToHandleInDb['columns']);
@@ -39,19 +50,19 @@ function dataToHandleInDb($conn, $dataToHandleInDb, $locale = null)
                 if ($stmt->execute()) {
                     $response = array(
                         "isInserted" => 1,
-                        "message" => localizeSuccessMessage('success.item_insertion', $effectiveLocale)
+                        "message" => "Data inserted successfully."
                     );
                 } else {
                     $response = array(
                         "isInserted" => 0,
-                        "message" => localizeErrorMessage('errors.database_operation_failed', $effectiveLocale)
+                        "message" => "Data insertion failed."
                     );
                 }
                 return $response;
             } catch (Exception $e) {
                 $response = array(
                     "isInserted" => 0,
-                    "message" => localizeErrorMessage('errors.database_error', $effectiveLocale, ['message' => $e->getMessage()])
+                    "message" => "Hiba történt a művelet során: " . $e->getMessage()
                 );
                 return $response;
             }
@@ -98,23 +109,23 @@ function dataToHandleInDb($conn, $dataToHandleInDb, $locale = null)
                 $stmt->execute();
                 //echo $query;
                 $payload = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                if ($stmt->execute()) {
+                if ($stmt->errorCode() === '00000') {
                     $results['status'] = 200;
-                    $results['message'] = localizeSuccessMessage('success.success', $effectiveLocale);
+                    $results['message'] = 'success';
                     $results['payload'] = $payload;
-                    $results['rowCount'] = $stmt->rowCount();
+                    $results['rowCount'] = count($payload);
                     $results['stmt'] = $query;
                 } else {
                     $errorInfo = $stmt->errorInfo();
                     $results['status'] = 500;
-                    $results['message'] = localizeErrorMessage('errors.database_error', $effectiveLocale, ['message' => implode(' | ', $errorInfo)]);
+                    $results['message'] = 'Hiba történt a lekérdezés végrehajtása során.';
                     $results['errorInfo'] = $errorInfo;
                 }
                 return $results;
             } catch (Exception $e) {
                 $errorInfo = $e->getMessage();
                 $results['status'] = 500;
-                $results['message'] = localizeErrorMessage('errors.database_error', $effectiveLocale, ['message' => $errorInfo]);
+                $results['message'] = 'Hiba történt a lekérdezés végrehajtása során';
                 $results['errorInfo'] = $errorInfo;
                 return $results;
             }
@@ -150,20 +161,20 @@ function dataToHandleInDb($conn, $dataToHandleInDb, $locale = null)
                     $response = array(
                         "status" => 200,
                         "isUpdated" => 1,
-                        "message" => localizeSuccessMessage('success.data_update_successful', $effectiveLocale)
+                        "message" => "A frissítés sikeres."
                     );
                 } else {
                     $response = array(
                         "status" => 400,
                         "isUpdated" => 0,
-                        "error" => localizeErrorMessage('errors.data_update_failed', $effectiveLocale, ['error' => 'update_failed'])
+                        "error" => "A frissítés sikertelen"
                     );
                 }
                 return $response;
             } catch (Exception $e) {
                 $response = array(
                     "isUpdated" => 0,
-                    "error" => localizeErrorMessage('errors.database_error', $effectiveLocale, ['message' => $e->getMessage()])
+                    "error" => "Hiba történt a művelet során: " . $e->getMessage()
                 );
                 return $response;
             }
@@ -185,11 +196,11 @@ function dataToHandleInDb($conn, $dataToHandleInDb, $locale = null)
                 $stmt->execute();
                 $response = array(
                     "status" => 200,
-                    "message" => localizeSuccessMessage('success.image_deleted', $effectiveLocale)
+                    "message" => "Data deleted successfully."
                 );
                 return $response;
             } catch (Exception $e) {
-                $error = localizeErrorMessage('errors.database_error', $effectiveLocale, ['message' => $e->getMessage()]);
+                $error = "Hiba történt a művelet során: " . $e->getMessage();
                 echo json_encode($error);
             }
             break;

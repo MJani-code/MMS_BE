@@ -1,17 +1,14 @@
 <?php
-// header("Access-Control-Allow-Origin: http://192.168.76.68:3000"); // Változtasd meg a frontend URL-t, ha szükséges
-// header("Access-Control-Allow-Methods: *"); // Engedélyezett HTTP metódusok (pl. POST)
-// header("Access-Control-Allow-Headers: *"); // Engedélyezett fejlécek
-// header("Content-Type: application/json"); // Példa: JSON válasz küldése
+header("Content-Type: application/json");
 
 require('../inc/conn.php');
-require('../functions/db/dbFunctions.php');
+//require('../functions/db/dbFunctions.php');
 require('../inc/secretkey.php');
 require('../vendor/autoload.php');
+require('../functions/taskFunctions.php');
 
 use \Firebase\JWT\JWT;
 use \Firebase\JWT\Key;
-
 
 class AuthHandler
 {
@@ -33,7 +30,7 @@ class AuthHandler
         ]);
     }
 
-    public function handleAuth()
+    public function handleAuth($locale = 'en')
     {
         $jsonData = file_get_contents("php://input");
         $data = json_decode($jsonData, true);
@@ -43,7 +40,7 @@ class AuthHandler
 
         //Jött Token?
         if (!$token) {
-            echo $this->createResponse(400, 'Nincs token!');
+            echo createLocalizedErrorResponse(400, 'no_token', $locale);
             return;
         }
 
@@ -53,7 +50,7 @@ class AuthHandler
                 // Ellenőrizzük a token lejárati idejét
                 if ($decoded->expirationTime < time()) {
                     // A token lejárt
-                    echo $this->createResponse(401, 'A token lejárt, kérjük jelentkezz be újra.');
+                    echo json_encode(createLocalizedErrorResponse(401, 'errors.token_expired', $locale));
                     return;
                 } else {
                     // A token még érvényes. Leellenőrizzük, hogy a token létezik-e az adatbázisban
@@ -64,7 +61,8 @@ class AuthHandler
                     $stmt->execute(['token' => $token]);
                     $user = $stmt->fetch(PDO::FETCH_ASSOC);
                     if (!$user) {
-                        echo $this->createResponse(400, 'Hiányzik a token.');
+                        echo json_encode(createLocalizedErrorResponse(401, 'errors.invalid_token', $locale));
+                        return;
                     } else {
                         //urlTo kikérdezése adatbázisból
                         // Normalizáljuk az urlTo-t: ha nem csak '/', akkor távolítsuk el a végéről a '/' jelet
@@ -84,15 +82,15 @@ class AuthHandler
 
                         if (!$isPathAccessible) {
                             http_response_code(404);
-                            echo $this->createResponse(404, 'Hozzáférés megtagadva', ['urlTo' => '/admin/tasks', 'title' => 'Megbízások']);
+                            echo json_encode(createLocalizedErrorResponse(404, 'errors.access_denied', $locale, ['urlTo' => '/admin/tasks', 'title' => 'Megbízások']));
                             return;
                         }
 
-                        echo $this->createResponse(200, 'Érvényes token.', $user);
+                        echo json_encode(createLocalizedErrorResponse(200, 'success.valid_token', $locale));
                     }
                 }
             } catch (Exception $e) {
-                echo $this->createResponse(400, 'Hibás token. ' . $e);
+                echo json_encode(createLocalizedErrorResponse(400, 'errors.invalid_token', $locale, ['error' => $e->getMessage()]));
             }
         }
     }

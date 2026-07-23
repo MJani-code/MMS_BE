@@ -1,9 +1,14 @@
 <?php
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
+require_once __DIR__ . '/../../inc/conn.php';
+require_once __DIR__ . '/../../functions/taskFunctions.php';
+require_once __DIR__ . '/../user/auth/auth.php';
 
-require('../../inc/conn.php');
-require('../../functions/taskFunctions.php');
-require('../../api/user/auth/auth.php');
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 
 //error debugging
 ini_set('display_errors', 1);
@@ -15,6 +20,7 @@ class GetInitialData
     private PDO $conn;
     private Auth $auth;
     private ?int $userRoleId = null;
+    private ?int $companyId = null;
     private string $locale;
 
     public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
@@ -44,7 +50,8 @@ class GetInitialData
     {
         $authentication = $this->auth->authenticate(4);
         if (($authentication['status'] ?? 500) === 200) {
-            $this->userRoleId = (int)($this->auth->roleId ?? 0);
+            $this->userRoleId = (int)($authentication['data']->roleId ?? 0);
+            $this->companyId = (int)($authentication['data']->companyId ?? 0);
         }
         return $authentication;
     }
@@ -66,7 +73,7 @@ class GetInitialData
                 "SELECT DISTINCT t.text, tc.dbTable, tc.dbColumn, tc.align, tc.filterable, tc.value
                  FROM task_columns tc
                  LEFT JOIN task_column_permissions tcp ON tcp.task_columns_id = tc.id
-                 LEFT JOIN translations t ON t.task_columns_id = tc.id AND t.locale = :locale
+                 LEFT JOIN translations t ON t.task_column_id = tc.id AND t.locale = :locale
                  WHERE tc.task_column_types_id = 1
                    AND tc.is_active = 1
                    AND (tcp.role_id IS NULL OR tcp.role_id >= :role_id)
@@ -75,30 +82,37 @@ class GetInitialData
             );
 
             $statuses = $this->fetchAll(
-                "SELECT ts.id, ts.name, ts.color
+                "SELECT ts.id, t.text AS name, ts.color
                  FROM task_statuses ts
-                 WHERE ts.is_active = 1"
+                 LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = :locale
+                 WHERE ts.is_active = 1",
+                ['locale' => $this->locale]
             );
 
             $allowedStatuses = $this->fetchAll(
-                "SELECT DISTINCT ts.id, ts.name, ts.color
+                "SELECT DISTINCT ts.id, t.text AS name, ts.color
                  FROM task_statuses ts
                  LEFT JOIN task_status_permissions tsp ON tsp.task_status_id = ts.id
+                 LEFT JOIN translations t on t.task_status_id = ts.id AND t.locale = :locale
                  WHERE ts.is_active = 1
                    AND (tsp.role_id IS NULL OR tsp.role_id >= :role_id)",
-                $params
+                array_merge($params, ['locale' => $this->locale])
             );
 
             $locationTypes = $this->fetchAll(
-                "SELECT lt.id, lt.name, lt.color
+                "SELECT lt.id, t.text AS name, lt.color
                  FROM location_types lt
-                 WHERE lt.is_active = 1"
+                 LEFT JOIN translations t ON t.location_type_id = lt.id AND t.locale = :locale
+                 WHERE lt.is_active = 1",
+                ['locale' => $this->locale]
             );
 
             $taskTypes = $this->fetchAll(
-                "SELECT ttd.id, ttd.name, ttd.color
+                "SELECT ttd.id, t.text AS name, ttd.color
                  FROM task_type_details ttd
-                 WHERE ttd.is_active = 1"
+                 LEFT JOIN translations t ON t.task_type_detail_id = ttd.id AND t.locale = :locale
+                 WHERE ttd.is_active = 1",
+                ['locale' => $this->locale]
             );
 
             $responsibles = $this->fetchAll(
@@ -109,16 +123,38 @@ class GetInitialData
             );
 
             $priorities = $this->fetchAll(
-                "SELECT p.id, p.name, p.color
+                "SELECT p.id, t.text AS name, p.color
                  FROM priorities p
-                 WHERE p.is_active = 1"
+                 LEFT JOIN translations t ON t.priority_id = p.id AND t.locale = :locale
+                 WHERE p.is_active = 1",
+                ['locale' => $this->locale]
             );
 
-            $statusesGroupsResult = $this->fetchAll(
-                "SELECT t.status_by_exohu_id AS id, ts.name, ts.color, COUNT(t.id) AS count
+            $companies = $this->fetchAll(
+                "SELECT c.id, c.name
+                 FROM companies c
+                 WHERE c.is_active = 1"
+            );
+
+            $statusesGroupsSql =
+                "SELECT t.status_by_exohu_id AS id, tr.text AS name, ts.color, COUNT(DISTINCT t.id) AS count
                  FROM tasks t
                  LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
-                 GROUP BY t.status_by_exohu_id, ts.name, ts.color"
+                 LEFT JOIN translations tr ON tr.task_status_id = ts.id AND tr.locale = :locale
+                 LEFT JOIN task_responsibles trp ON trp.task_id = t.id AND trp.deleted = 0";
+            if (!in_array("17", $this->isUserAllowed()['data']->permissions ?? [])) {
+                $statusesGroupsSql .= " WHERE trp.company_id = :company_id AND trp.deleted = 0";
+            }
+            $statusesGroupsSql .= " GROUP BY t.status_by_exohu_id, tr.text, ts.color";
+
+            $params = ['locale' => $this->locale];
+            if (!in_array("17", $this->isUserAllowed()['data']->permissions ?? [])) {
+                $params['company_id'] = $this->companyId;
+            }
+
+            $statusesGroupsResult = $this->fetchAll(
+                $statusesGroupsSql,
+                $params
             );
 
             $statusGroups = [];
@@ -142,6 +178,7 @@ class GetInitialData
                 'taskTypes' => $taskTypes,
                 'responsibles' => $responsibles,
                 'priorities' => $priorities,
+                'companies' => $companies,
                 'statusGroups' => $statusGroups
             ]);
         } catch (\Throwable $th) {
@@ -151,11 +188,9 @@ class GetInitialData
 }
 
 // Authorization header kezelése biztonságosan
-$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
+$tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
-$token = $matches[1];
-
-$token = $matches[1];
+$token = $matches[1] ?? '';
 $auth = new Auth($conn, $token, $secretkey);
 $locale = $_GET['locale'] ?? 'hu';
 

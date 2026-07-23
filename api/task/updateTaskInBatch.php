@@ -55,19 +55,25 @@ class updateTaskInBatch
 
         //Statusszín lekérdezése
         $statusId = intval($updateItem['value']);
-        $statusQuery = "SELECT color, name FROM task_statuses WHERE id = :statusId";
+        $statusQuery =
+            "SELECT ts.color, t.text as name
+        FROM task_statuses ts
+        LEFT JOIN translations t ON t.task_status_id = ts.id AND t.locale = :locale
+        WHERE ts.id = :statusId
+        ";
         $stmt = $this->conn->prepare($statusQuery);
         $stmt->bindValue(":statusId", $statusId);
+        $stmt->bindValue(":locale", $updateItem['locale'] ?? 'hu');
         $stmt->execute();
         $statusResult = $stmt->fetch(PDO::FETCH_ASSOC);
         if (count($statusResult) === 0) {
             $this->response = [
                 'status' => 400,
-                'message' => localizeErrorMessage('errors.invalid_status_id', null)
+                'message' => localizeErrorMessage('errors.invalid_status_id', $updateItem['locale'] ?? 'hu')
             ];
             return $this->response;
         }
-        return $this->response = ['status' => 200, 'message' => localizeSuccessMessage('success.query_successful', null), 'data' => $statusResult];
+        return $this->response = ['status' => 200, 'message' => localizeSuccessMessage('success.query_successful', $updateItem['locale'] ?? 'hu'), 'data' => $statusResult];
     }
 
     private function executeUpdate($updateItem, $userId)
@@ -83,11 +89,11 @@ class updateTaskInBatch
             $stmt->bindValue(":updated_by", $userId);
             $stmt->execute();
         } catch (\Throwable $th) {
-            throw new Exception(localizeErrorMessage('errors.database_error', null, ['message' => $th->getMessage()]));
+            throw new Exception(localizeErrorMessage('errors.database_error', $updateItem['locale'] ?? 'hu', ['message' => $th->getMessage()]));
         }
 
         if ($this->conn->affected_rows === 0) {
-            throw new Exception(localizeErrorMessage('errors.no_updatable_task', null));
+            throw new Exception(localizeErrorMessage('errors.no_updatable_task', $updateItem['locale'] ?? 'hu'));
         }
     }
 
@@ -112,7 +118,7 @@ class updateTaskInBatch
             $this->executeUpdate($updateItem, $this->userId);
             $this->response = [
                 'status' => 200,
-                'message' => localizeSuccessMessage('success.data_update_successful', null),
+                'message' => localizeSuccessMessage('success.data_update_successful', $updateItem['locale'] ?? 'hu'),
                 'payload' => [
                     'taskIds' => $updateItem['taskIds'],
                     'value' => $updateItem['value'],
@@ -125,7 +131,7 @@ class updateTaskInBatch
         } catch (Exception $e) {
             $this->response = [
                 'status' => 500,
-                'message' => localizeErrorMessage('errors.database_error', null, ['message' => $e->getMessage()])
+                'message' => localizeErrorMessage('errors.database_error', $updateItem['locale'] ?? 'hu', ['message' => $e->getMessage()])
             ];
             return;
         }

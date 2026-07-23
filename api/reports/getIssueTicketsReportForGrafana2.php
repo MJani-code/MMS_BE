@@ -244,10 +244,9 @@ class GetIssueTickets
 
             // enrichedData előállítása, gps adatok hozzáadásával
             $enrichedData = [];
-            foreach ($filteredData as $key => $item) {
+            foreach ($filteredData as $item) {
                 $id = isset($item['lockerDisplayName']) ? str_replace('EXP-', '', $item['lockerDisplayName']) : null;
                 if ($id && isset($exoboxIndex[$id])) {
-                    $item['index'] = $key + 1;
                     $item['latitude'] = $exoboxIndex[$id]['lat'] ?? null;
                     $item['longitude'] = $exoboxIndex[$id]['lng'] ?? null;
                 }

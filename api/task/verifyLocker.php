@@ -9,7 +9,6 @@ $response = [];
 
 $jsonData = file_get_contents("php://input");
 $lockerData = json_decode($jsonData, true);
-
 //Eltávolítani az isActive mezőt a lockerData tömbből
 unset($lockerData['is_active']);
 
@@ -23,9 +22,8 @@ class CheckLocker
     private $response;
     private $auth;
     private $token;
-    private $locale;
 
-    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth, $locale = 'hu')
+    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth)
     {
         $this->conn = $conn;
         $this->losUserName = $losUserName;
@@ -34,7 +32,6 @@ class CheckLocker
         $this->losGetLockerStationsForPortalUrl = $losGetLockerStationsForPortalUrl;
         $this->response = &$response;
         $this->auth = $auth;
-        $this->locale = $locale;
         $this->token = $this->getTokenFromDatabase();
     }
 
@@ -58,18 +55,17 @@ class CheckLocker
     private function storeTokenInDatabase($token)
     {
         $stmt = $this->conn->prepare("INSERT INTO api_tokens (token, api) VALUES (:token, :api)");
-        $stmt->execute([':token' => $token, ':api' => 'LOS']);
+        $stmt->execute([':token' => $token , ':api' => 'LOS']);
     }
 
     public function getLockerDataFunction($lockerData)
     {
         //locker adatok lekérdezése
         try {
-            $locale = $lockerData['locale'] ?? 'hu';
             $token = $this->token;
             $url = $this->losGetLockerStationsForPortalUrl;
             $LockerStationHistoryModel = [array('LockerStationFilterType' => 'Uuid', 'Filter' => $lockerData['serial'])];
-
+            
             $data = array('Countrycode' => 'HU', 'Filter' => null, 'LockerStationHistoryModel' => $LockerStationHistoryModel, 'maxResultCount' => 10, 'skipCount' => 0);
 
             $ch = curl_init($url);
@@ -90,14 +86,14 @@ class CheckLocker
             }
 
             if ($result === false) {
-                return $this->response = $this->createResponse(400, localizeErrorMessage('errors.failed_to_get_locker_data', null, ['message' => curl_error($ch)]));
+                return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
             }
 
             curl_close($ch);
             $result = json_decode($result, true);
 
             if (!isset($result['payload']['items'][0])) {
-                return $this->response = createLocalizedErrorResponse(404, 'errors.point_not_found_by_id', $locale, [], 'locker not found');
+                return $this->response = createResponse(404, 'Nem található ilyen szériaszámú csomagautomata');
             }
 
             $isLockerAdded = isset($result['payload']['items'][0]['lockerStationId']) ? 1 : 0;
@@ -128,10 +124,10 @@ class CheckLocker
             if ($result['status'] == 200) {
                 //put lockerData and arrayToStoreResult into one array
                 $lockerData = array_merge($lockerData, $arrayToStoreResult);
-                $this->response = $this->createResponse(200, localizeSuccessMessage('success.query_successful', $locale), $lockerData);
+                $this->response = $this->createResponse(200, 'Sikeres lekérdezés', $lockerData);
             }
         } catch (Exception $e) {
-            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', $locale, [], $e->getMessage());
+            return $this->response = $this->createResponse(400, $e->getMessage());
         }
     }
 
@@ -154,7 +150,7 @@ class CheckLocker
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($result === false) {
-                return $this->createResponse(400, localizeErrorMessage('errors.login_failed_with_reason', null, ['message' => curl_error($ch)]));
+                return $this->createResponse(400, 'Login failed: ' . curl_error($ch));
             }
 
             curl_close($ch);
@@ -163,12 +159,12 @@ class CheckLocker
             if (isset($result['payload']['token'])) {
                 $this->token = $result['payload']['token'];
                 $this->storeTokenInDatabase($this->token);
-                return $this->createResponse(200, localizeSuccessMessage('success.login_successful', null), $result);
+                return $this->createResponse(200, 'Login successful', $result);
             } else {
-                return $this->createResponse(400, localizeErrorMessage('errors.login_failed', null));
+                return $this->createResponse(400, 'Login failed');
             }
         } catch (Exception $e) {
-            return $this->response = createLocalizedErrorResponse(400, 'errors.unexpected', $this->locale, [], $e->getMessage());
+            return $this->createResponse(400, $e->getMessage());
         }
     }
 }

@@ -86,4 +86,9 @@ return [
         'en' => 'Query successful.',
         'sl' => 'Poizvedba je uspela.'
     ],
+    'success.valid_token' => [
+        'hu' => 'A token érvényes.',
+        'en' => 'The token is valid.',
+        'sl' => 'Zeton je veljaven.'
+    ]
 ];

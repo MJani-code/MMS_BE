@@ -12,9 +12,8 @@ $data = json_decode($jsonData, true);
 
 $id = $data['id'];
 $taskId = $data['taskId'];
-$locale = $data['locale'] ?? 'hu';
 $dbTable = 'task_fees';
-
+$locale = $data['locale'];
 
 class DeleteFee
 {
@@ -31,7 +30,7 @@ class DeleteFee
 
     //TODO: user validation here
 
-    public function deleteFeeFunction($conn, $dbTable, $id, $taskId, $locale = 'hu')
+    public function deleteFeeFunction($conn, $dbTable, $id, $taskId, $locale)
     {
         $userId = null;
         $isAccess = $this->auth->authenticate(12);
@@ -45,10 +44,7 @@ class DeleteFee
             }
         }
         $result = deleteFee($conn, $dbTable, $id, $taskId, $userId, $locale);
-        if ($result['status'] !== 200) {
-            return $this->response = $result;
-        }
-        return $this->response = $result;
+        $this->response = $result;
     }
 }
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
