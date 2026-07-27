@@ -19,14 +19,16 @@ class GetInitialData
 {
     private PDO $conn;
     private Auth $auth;
+    private array $userAuthData;
     private ?int $userRoleId = null;
     private ?int $companyId = null;
     private string $locale;
 
-    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
+    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu', $userAuthData = [])
     {
         $this->conn = $conn;
         $this->auth = $auth;
+        $this->userAuthData = $userAuthData;
         $this->locale = $locale;
     }
 
@@ -65,6 +67,9 @@ class GetInitialData
                 (string)($isAccess['message'] ?? 'Unauthorized')
             );
         }
+        $this->userAuthData = $this->auth->authenticate(4);
+        $permissions = $this->userAuthData['data']->permissions;
+        $companyId = $this->userAuthData['data']->companyId;
 
         try {
             $params = ['role_id' => $this->userRoleId];
@@ -130,6 +135,24 @@ class GetInitialData
                 ['locale' => $this->locale]
             );
 
+            $feesSql =
+                "SELECT
+            f.id as id,
+            CONCAT(t.text,'(',f.net_unit_price ,')') as name,
+            f.fee_type as type,
+            f.net_unit_price as value
+            FROM fees f
+            LEFT JOIN translations t ON t.fee_id = f.id AND t.locale = :locale
+            ";
+            $params = ['locale' => $this->locale];
+            if (!in_array(23, $permissions)) {
+                $feesSql .= " WHERE f.company_id = :company_id AND f.is_active = 1";
+                $params['company_id'] = $this->companyId;
+            } else {
+                $feesSql .= " WHERE f.is_active = 1";
+            }
+            $fees = $this->fetchAll($feesSql, $params);
+
             $companies = $this->fetchAll(
                 "SELECT c.id, c.name
                  FROM companies c
@@ -178,6 +201,7 @@ class GetInitialData
                 'taskTypes' => $taskTypes,
                 'responsibles' => $responsibles,
                 'priorities' => $priorities,
+                'fees' => $fees,
                 'companies' => $companies,
                 'statusGroups' => $statusGroups
             ]);
