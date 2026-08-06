@@ -7,6 +7,12 @@ require('../../functions/analyzeLockers.php');
 require('../../api/user/auth/auth.php');
 require(__DIR__ . '/helpers/getAvailableCompartmentsCache.php');
 
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+
 $response = [];
 
 const GAC_CACHE_TTL_SECONDS = 30;
@@ -57,9 +63,18 @@ class getAvailableCompartments
     private $response;
     private $auth;
     private $token;
+    private $getAllActivePointsUrl;
+    private $d4meUtilizationUrl;
+    private $tokenD4Me;
+    private $user;
+    private $password;
 
-    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth)
+    public function __construct($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, &$response, $auth, $getAllActivePointsUrl, $user, $password, $tokenD4Me, $d4meUtilizationUrl = null)
     {
+        $this->tokenD4Me = $tokenD4Me;
+        $this->getAllActivePointsUrl = $getAllActivePointsUrl;
+        $this->user = $user;
+        $this->password = $password;
         $this->conn = $conn;
         $this->losUserName = $losUserName;
         $this->losPassword = $losPassword;
@@ -68,6 +83,7 @@ class getAvailableCompartments
         $this->response = &$response;
         $this->auth = $auth;
         $this->token = $this->getTokenFromDatabase();
+        $this->d4meUtilizationUrl = $d4meUtilizationUrl;
     }
 
     public function createResponse($statusCode, $message, $data = null)
@@ -96,6 +112,10 @@ class getAvailableCompartments
     public function getLockerDataFunction($lockerData)
     {
         try {
+            /*
+            LOS http request to get locker data            
+            */
+
             $token = $this->token;
             $pageSize = $lockerData['pageSize'];
             $url = $this->losGetLockerStationsForPortalUrl;
@@ -118,7 +138,7 @@ class getAvailableCompartments
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
 
-            $result = curl_exec($ch);
+            $losData = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($httpCode == 401) {
@@ -126,13 +146,68 @@ class getAvailableCompartments
                 return $this->getLockerDataFunction($lockerData);
             }
 
-            if ($result === false) {
+            if ($losData === false) {
                 return $this->response = $this->createResponse(400, 'Failed to get locker data: ' . curl_error($ch));
             }
 
             curl_close($ch);
 
-            $availableData = getAvailableCompartmentCountByLocation(json_decode($result, true));
+            /*
+            get d4meLocationIds
+            */
+            $d4meLocationIds = [];
+            $exoboxPointsRawData = getExoboxPoints($this->getAllActivePointsUrl, $this->user, $this->password, null);
+            // echo json_encode($exoboxPointsRawData);
+            foreach ($exoboxPointsRawData['payload'] as $point) {
+                if (
+                    isset($point['manufacturer']) &&
+                    $point['manufacturer'] === 'd4me' &&
+                    $point['status'] == 1
+                ) {
+                    $d4meLocationIds[] = $point['point_id'];
+                }
+            }
+            /*
+            short the d4meLocationIds array to the first 10 elements
+            */
+            //$d4meLocationIds = array_slice($d4meLocationIds, 0, 10);
+            // echo json_encode($d4meLocationIds);
+
+            /*
+            d4me http request to get locker data
+            */
+            $d4meUrl = $this->d4meUtilizationUrl;
+
+            $d4meData['data'] = [];
+            foreach ($d4meLocationIds as $locationId) {
+                $url = str_replace(':locationId', $locationId, $d4meUrl);
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Content-Type: application/json',
+                    'Authorization: Bearer ' . $this->tokenD4Me
+                ]);
+                $d4meResponse = curl_exec($ch);
+                $d4meResponse = json_decode($d4meResponse, true);
+                //$d4meData tömbbe hozzáadjuk a d4meResponse data tömbjét, ha van benne data kulcs
+                if (isset($d4meResponse['data'])) {
+                    $d4meData['data'] = array_merge($d4meData['data'], $d4meResponse['data']);
+                }
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+            }
+
+            $data = json_decode($losData, true);
+            if (!is_array($data)) {
+                $data = [];
+            }
+
+            // Optional d4me payload can be passed in request body and is merged by analyzer.
+            if (isset($d4meData) && !empty($d4meData)) {
+                $data['data'] = $d4meData['data'];
+            }
+
+            $availableData = getAvailableCompartmentCountByLocation($data);
 
             return $this->response = $this->createResponse(200, 'Locker data retrieved successfully', $availableData);
         } catch (Exception $e) {
@@ -177,7 +252,7 @@ class getAvailableCompartments
 }
 $auth = new Auth($conn, $tokenMMS, $secretkey);
 
-$getAvailableCompartments = new getAvailableCompartments($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, $response, $auth);
+$getAvailableCompartments = new getAvailableCompartments($conn, $losUserName, $losPassword, $losLoginUrl, $losGetLockerStationsForPortalUrl, $response, $auth, $getAllActivePointsUrl, $user, $password, $tokenD4Me, $d4meUtilizationUrl);
 $getAvailableCompartments->getLockerDataFunction($lockerData);
 
 if (is_array($response) && (($response['status'] ?? null) === 200)) {
