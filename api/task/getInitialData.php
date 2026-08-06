@@ -9,24 +9,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-
-//error debugging
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 class GetInitialData
 {
     private PDO $conn;
     private Auth $auth;
+    private array $userAuthData;
     private ?int $userRoleId = null;
     private ?int $companyId = null;
     private string $locale;
 
-    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu')
+    public function __construct(PDO $conn, Auth $auth, string $locale = 'hu', $userAuthData = [])
     {
         $this->conn = $conn;
         $this->auth = $auth;
+        $this->userAuthData = $userAuthData;
         $this->locale = $locale;
     }
 
@@ -65,6 +61,9 @@ class GetInitialData
                 (string)($isAccess['message'] ?? 'Unauthorized')
             );
         }
+        $this->userAuthData = $this->auth->authenticate(4);
+        $permissions = $this->userAuthData['data']->permissions;
+        $companyId = $this->userAuthData['data']->companyId;
 
         try {
             $params = ['role_id' => $this->userRoleId];
@@ -147,6 +146,7 @@ class GetInitialData
                 $feesSql .= " WHERE f.is_active = 1 ORDER BY t.text DESC";
             }
             $fees = $this->fetchAll($feesSql, $params);
+
             $companies = $this->fetchAll(
                 "SELECT c.id, c.name
                  FROM companies c
@@ -195,6 +195,7 @@ class GetInitialData
                 'taskTypes' => $taskTypes,
                 'responsibles' => $responsibles,
                 'priorities' => $priorities,
+                'fees' => $fees,
                 'companies' => $companies,
                 'statusGroups' => $statusGroups
             ]);
