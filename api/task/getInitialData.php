@@ -146,10 +146,10 @@ class GetInitialData
             ";
             $params = ['locale' => $this->locale];
             if (!in_array(23, $permissions)) {
-                $feesSql .= " WHERE f.company_id = :company_id AND f.is_active = 1";
+                $feesSql .= " WHERE f.company_id = :company_id AND f.is_active = 1 ORDER BY t.text DESC";
                 $params['company_id'] = $this->companyId;
             } else {
-                $feesSql .= " WHERE f.is_active = 1";
+                $feesSql .= " WHERE f.is_active = 1 ORDER BY t.text DESC";
             }
             $fees = $this->fetchAll($feesSql, $params);
 
