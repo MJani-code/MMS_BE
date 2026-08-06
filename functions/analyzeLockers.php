@@ -91,68 +91,135 @@ function getErrorCountByLocation($data)
  */
 function getAvailableCompartmentCountByLocation($data)
 {
-    $resultList = isset($data['payload']['items']) ? $data['payload']['items'] : $data;
-
     $availableByLocation = [];
-    $sizeMap = [
+    $losSizeMap = [
         1 => 'small',
         2 => 'medium',
         3 => 'big'
     ];
+    $d4meSizeMap = [
+        10 => 'small',
+        20 => 'medium',
+        30 => 'big',
+        40 => 'extraLarge'
+    ];
 
-    foreach ($resultList as $location) {
+    $createSizeBucket = function () {
+        return [
+            'small' => 0,
+            'medium' => 0,
+            'big' => 0,
+            'extraLarge' => 0
+        ];
+    };
+
+    $mergeByLocation = function ($lockerStationId, $totalCompartmentCount, $emptyCompartmentCount, $totalBySize, $emptyBySize) use (&$availableByLocation, $createSizeBucket) {
+        $locationKey = $lockerStationId === null ? '__null__' : (string)$lockerStationId;
+
+        if (!isset($availableByLocation[$locationKey])) {
+            $availableByLocation[$locationKey] = [
+                'lockerStationId' => $lockerStationId,
+                'totalCompartmentCount' => 0,
+                'totalOfEmpty' => 0,
+                // 'totalBySize' => $createSizeBucket(),
+                'emptyBySize' => $createSizeBucket()
+            ];
+        }
+
+        $availableByLocation[$locationKey]['totalCompartmentCount'] += $totalCompartmentCount;
+        $availableByLocation[$locationKey]['totalOfEmpty'] += $emptyCompartmentCount;
+
+        foreach ($emptyBySize as $sizeKey => $count) {
+            if (!isset($availableByLocation[$locationKey]['emptyBySize'][$sizeKey])) {
+                $availableByLocation[$locationKey]['emptyBySize'][$sizeKey] = 0;
+            }
+            $availableByLocation[$locationKey]['emptyBySize'][$sizeKey] += $count;
+        }
+    };
+
+    $losResultList = isset($data['payload']['items']) && is_array($data['payload']['items'])
+        ? $data['payload']['items']
+        : (is_array($data) ? $data : []);
+
+    foreach ($losResultList as $location) {
+        if (!is_array($location) || !isset($location['lockerList']) || !is_array($location['lockerList'])) {
+            continue;
+        }
+
         $lockerStationId = $location['lockerStationId'] ?? null;
         $totalCompartmentCount = 0;
         $emptyCompartmentCount = 0;
+        $totalBySize = $createSizeBucket();
+        $emptyBySize = $createSizeBucket();
 
-        $totalBySize = [
-            'small' => 0,
-            'medium' => 0,
-            'big' => 0
-        ];
+        foreach ($location['lockerList'] as $locker) {
+            if (!isset($locker['compartmentList']) || !is_array($locker['compartmentList'])) {
+                continue;
+            }
 
-        $emptyBySize = [
-            'small' => 0,
-            'medium' => 0,
-            'big' => 0
-        ];
+            $totalCompartmentCount += count($locker['compartmentList']);
 
-        if (isset($location['lockerList']) && is_array($location['lockerList'])) {
-            foreach ($location['lockerList'] as $locker) {
-                if (!isset($locker['compartmentList']) || !is_array($locker['compartmentList'])) {
-                    continue;
+            foreach ($locker['compartmentList'] as $compartment) {
+                $size = $compartment['size'] ?? null;
+                $sizeKey = isset($losSizeMap[$size]) ? $losSizeMap[$size] : null;
+
+                if ($sizeKey !== null) {
+                    $totalBySize[$sizeKey]++;
                 }
 
-                $totalCompartmentCount += count($locker['compartmentList']);
-
-                foreach ($locker['compartmentList'] as $compartment) {
-                    $size = $compartment['size'] ?? null;
-                    $sizeKey = isset($sizeMap[$size]) ? $sizeMap[$size] : null;
-
+                if (isset($compartment['status']) && (int)$compartment['status'] === 1) {
+                    $emptyCompartmentCount++;
                     if ($sizeKey !== null) {
-                        $totalBySize[$sizeKey]++;
-                    }
-
-                    if (isset($compartment['status']) && (int)$compartment['status'] === 1) {
-                        $emptyCompartmentCount++;
-                        if ($sizeKey !== null) {
-                            $emptyBySize[$sizeKey]++;
-                        }
+                        $emptyBySize[$sizeKey]++;
                     }
                 }
             }
         }
 
-        $availableByLocation[] = [
-            'lockerStationId' => $lockerStationId,
-            'totalCompartmentCount' => $totalCompartmentCount,
-            'totalOfEmpty' => $emptyCompartmentCount,
-            // 'totalBySize' => $totalBySize,
-            'emptyBySize' => $emptyBySize
-        ];
+        $mergeByLocation($lockerStationId, $totalCompartmentCount, $emptyCompartmentCount, $totalBySize, $emptyBySize);
     }
 
-    return $availableByLocation;
+    $d4meResultList = isset($data['data']) && is_array($data['data']) ? $data['data'] : [];
+    if (empty($d4meResultList) && is_array($data) && isset($data[0]) && is_array($data[0]) && isset($data[0]['multiSpaceDoors'])) {
+        $d4meResultList = $data;
+    }
+
+    foreach ($d4meResultList as $box) {
+        if (!is_array($box) || !isset($box['multiSpaceDoors']) || !is_array($box['multiSpaceDoors'])) {
+            continue;
+        }
+
+        $lockerStationId = $box['locationId'] ?? null;
+        $totalCompartmentCount = 0;
+        $emptyCompartmentCount = 0;
+        $totalBySize = $createSizeBucket();
+        $emptyBySize = $createSizeBucket();
+
+        foreach ($box['multiSpaceDoors'] as $door) {
+            if (!is_array($door)) {
+                continue;
+            }
+
+            $totalCompartmentCount++;
+
+            $size = $door['boxSizeType'] ?? null;
+            $sizeKey = isset($d4meSizeMap[$size]) ? $d4meSizeMap[$size] : null;
+            if ($sizeKey !== null) {
+                $totalBySize[$sizeKey]++;
+            }
+
+            if (isset($door['doorAvailability']) && (int)$door['doorAvailability'] === 1) {
+                $emptyCompartmentCount++;
+                if ($sizeKey !== null) {
+                    $emptyBySize[$sizeKey]++;
+                }
+            }
+        }
+
+        $mergeByLocation($lockerStationId, $totalCompartmentCount, $emptyCompartmentCount, $totalBySize, $emptyBySize);
+    }
+
+    return array_values($availableByLocation);
 }
 
 /**
