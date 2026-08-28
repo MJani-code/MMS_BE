@@ -4,8 +4,8 @@ require('../../inc/conn.php');
 require('../../api/user/auth/auth.php');
 
 //debug ini
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+// error_reporting(E_ALL);
+// ini_set('display_errors', 1);
 
 $jsonData = file_get_contents("php://input");
 $notificationId = json_decode($jsonData, true);
