@@ -4,6 +4,13 @@ error_reporting(E_ALL);
 
 require('../inc/conn.php');
 require('../lib/LockerDailyPermissionChecker.php');
+require(__DIR__ . '/../../vendor/autoload.php');
+
+use Monolog\Logger;
+use Monolog\Handler\RotatingFileHandler;
+
+$logger = new Logger('generateLockerDailyPermissions');
+$logger->pushHandler(new RotatingFileHandler('logs/generateLockerDailyPermissions.log', 5));
 
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
@@ -15,3 +22,5 @@ if (empty($token)) {
 
 $checker = new LockerDailyPermissionChecker($conn, $getAllActivePointsUrl, $user, $password, $token);
 $result = $checker->getLockerAvailabilityData();
+
+$logger->info('Locker availability data retrieved', ['result' => $result]);
