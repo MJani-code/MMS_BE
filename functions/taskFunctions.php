@@ -1495,10 +1495,125 @@ function addIntervention($conn, $taskId, $newIntervention, $userId)
     }
 }
 
-function downloadNewPoints($data)
+function boxIdAndTofShopIdMatchValidator($originalData, $dataInDb)
+{
+    $matches = [];
+    foreach ($originalData as $original) {
+        $tofShopId = $original['tof_shop_id'] ?? null;
+        $boxId = $original['box_id'] ?? null;
+
+        foreach ($dataInDb as $dbRecord) {
+            if ((($dbRecord['tof_shop_id'] ?? null) != $tofShopId || ($dbRecord['box_id'] ?? null) != $boxId) && $original['status'] == 0) {
+                continue;
+            }
+            //id, lat and lng values to add
+            $matches[] = intval($original['tof_shop_id']);
+        }
+
+        //Remove duplicates
+        $matches = array_map("unserialize", array_unique(array_map("serialize", $matches)));
+    }
+
+    return $matches;
+}
+
+function addGpsDataToLocations($locations, $locationsWithGps)
+{
+    foreach ($locations as &$location) {
+        foreach ($locationsWithGps as $gpsLocation) {
+            if ($location['tof_shop_id'] == $gpsLocation['id']) {
+                $location['latitude'] = $gpsLocation['lat'] ?? null;
+                $location['longitude'] = $gpsLocation['lng'] ?? null;
+                break;
+            }
+        }
+    }
+    return $locations;
+}
+
+function downloadNewPoints($conn, $data, $url, $user, $password)
 {
     try {
         $adatok = $data;
+
+        //All tof_shop_id and box_id values from task_locations table in db
+        $taskLocationsStmt = $conn->query("SELECT tof_shop_id, box_id FROM task_locations");
+        $taskLocations = $taskLocationsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        //Get all points from Exobox API
+        $exoboxPoints = getExoboxPoints($url, $user, $password, null);
+        $exoboxPoints = $exoboxPoints['payload'];
+
+        //to keep only id and provider_point_id fields from exoboxPoints
+        $exoboxPointsForValidation = array_map(function ($point) {
+            return [
+                'tof_shop_id' => $point['id'] ?? null,
+                'box_id' => $point['provider_point_id'] ?? null
+            ];
+        }, $exoboxPoints);
+
+        // Validate which Exobox points match the task locations in the database
+        $filteredLocations = boxIdAndTofShopIdMatchValidator($exoboxPointsForValidation, $taskLocations);
+        if (empty($filteredLocations)) {
+            echo json_encode([
+                'status' => 400,
+                'message' => localizeErrorMessage('errors.no_data_found')
+            ]);
+            exit;
+        }
+
+        $statuses = [6, 9, 10];
+
+        //Query the filtered locations with lockers
+        $filteredLocationsPlaceholders = rtrim(str_repeat('?,', count($filteredLocations)), ',');
+        $statusesPlaceholders = rtrim(str_repeat('?,', count($statuses)), ',');
+        $stmt = $conn->prepare("SELECT
+        tl.tof_shop_id,
+        tl.box_id,
+        s.name AS status_exohu,
+        COALESCE(p.location_photos, '') AS location_photos,
+        td.delivery_date,
+        tl.locker_approach AS lockerApproach
+        FROM task_locations tl
+        LEFT JOIN tasks t ON t.task_locations_id = tl.id
+        LEFT JOIN task_statuses s ON s.id = t.status_by_exohu_id
+        LEFT JOIN task_dates td ON td.task_id = t.id
+        LEFT JOIN task_types tt ON tt.task_id = t.id
+        LEFT JOIN (
+            SELECT
+                task_locations_id,
+                GROUP_CONCAT(DISTINCT url SEPARATOR '||') AS location_photos
+            FROM task_location_photos
+            WHERE url IS NOT NULL AND url <> ''
+            GROUP BY task_locations_id
+        ) p ON p.task_locations_id = tl.id
+        WHERE tl.tof_shop_id IN ($filteredLocationsPlaceholders)
+        AND t.status_by_exohu_id IN ($statusesPlaceholders)
+        AND EXISTS (SELECT 1
+            FROM task_lockers tlo
+            WHERE tlo.task_locations_id = tl.id
+            AND tlo.deleted = 0
+            AND tlo.is_registered = 1
+            AND tlo.is_active = 1
+            AND tt.type_id = 3
+            AND tlo.fault IS NULL
+        )");
+        $stmt->execute(array_merge($filteredLocations, $statuses));
+        $locationsWithLockers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($locationsWithLockers as &$row) {
+            $photos = $row['location_photos'] ?? '';
+            if (is_string($photos) && $photos !== '') {
+                $row['location_photos'] = array_values(array_filter(array_unique(explode('||', $photos))));
+            } else {
+                $row['location_photos'] = [];
+            }
+        }
+        unset($row);
+
+        $locationsWithLockers = addGpsDataToLocations($locationsWithLockers, $exoboxPoints);
+
+        $adatok = $locationsWithLockers;
 
         // Excel generálása
         $spreadsheet = new Spreadsheet();
