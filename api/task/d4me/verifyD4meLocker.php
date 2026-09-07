@@ -93,7 +93,7 @@ class getLockerCondition
         }
 
         $apiResponse = $this->callApi($this->d4meLockerCondition, $this->tokenD4Me, $this->lockerData['boxId'] ?? null);
-        
+
         if (isset($apiResponse['error'])) {
             return $this->response = $this->createResponse(500, localizeErrorMessage('errors.apiCallFailed', $locale) . $apiResponse['error']);
         }
@@ -156,7 +156,9 @@ class getLockerCondition
 
         $result = array_merge($this->lockerData, $arrayToStoreResult);
 
-        // echo json_encode($result);
+        //Update locker's is_active and is_registered values in table
+        $updateStmt = $this->conn->prepare("UPDATE task_lockers SET is_active = ?, is_registered = ? WHERE id = ?");
+        $updateStmt->execute([$isActive, $isLockerAdded, $this->lockerData['id']]);
         return $this->response = $this->createResponse(200, localizeSuccessMessage('success.success', $locale), $result);
     }
 }
