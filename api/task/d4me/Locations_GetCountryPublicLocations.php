@@ -1,20 +1,11 @@
 <?php
-header('Content-Type: application/json');
-require('../../../inc/conn.php');
-require_once('../../../vendor/autoload.php');
-require(DOC_ROOT . '/api/user/auth/auth.php');
+require_once __DIR__ . '/../../../inc/conn.php';
+require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../../api/user/auth/auth.php';
 
-//error debug
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 use Monolog\Logger;
 use Monolog\Handler\RotatingFileHandler;
-
-$log = new Logger('Locations_GetCountryPublicLocations');
-$log->pushHandler(new RotatingFileHandler('logs/Locations_GetCountryPublicLocations.log', 5));
-
-$response = [];
 
 class getLocations
 {
@@ -70,26 +61,23 @@ class getLocations
         return ['response' => $response];
     }
 
-    public function getItems()
+    public function getItems($skipAuth = false)
     {
-        // Get user ID from authentication
-        $userId = null;
-        $isAccess = $this->auth->authenticate(4);
-        if ($isAccess['status'] !== 200) {
-            $this->log->error('Authentication failed', ['userId' => $userId]);
-            return $this->response = $isAccess;
-        } else {
-            $this->log->info('Authentication successful', ['userId' => $isAccess['data']->userId]);
-            $userId = $isAccess['data']->userId;
+        if (!$skipAuth) {
+            // Get user ID from authentication
+            $userId = null;
+            $isAccess = $this->auth->authenticate(4);
+            if ($isAccess['status'] !== 200) {
+                $this->log->error('Authentication failed', ['userId' => $userId]);
+                return $this->response = $isAccess;
+            } else {
+                $this->log->info('Authentication successful', ['userId' => $isAccess['data']->userId]);
+                $userId = $isAccess['data']->userId;
+            }
         }
 
         //First API call to get dataCount
         //$apiResponse = $this->callApi($this->d4meApiGetPhotoUrl, $this->tokenD4Me);
-
-        if (isset($apiResponse['error'])) {
-            $this->log->error('API call error', ['error' => $apiResponse['error']]);
-            return $this->response = $this->createResponse(500, "API call error: " . $apiResponse['error']);
-        }
 
         // $data = json_decode($apiResponse['response'], true);
         // if (json_last_error() !== JSON_ERROR_NONE) {
@@ -123,14 +111,30 @@ class getLocations
     }
 }
 
-$tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
-preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
-$token = $matches[1];
-$searchTerm = $_GET['boxId'] ?? '';
+if (realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__) {
+    header('Content-Type: application/json');
 
-$auth = new Auth($conn, $token, $secretkey);
+    $log = new Logger('Locations_GetCountryPublicLocations');
+    $log->pushHandler(new RotatingFileHandler(__DIR__ . '/logs/Locations_GetCountryPublicLocations.log', 5));
 
-$items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiGetPhotoUrl, $log, $searchTerm);
-$items->getItems();
+    $response = [];
+    $tokenRow = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+    preg_match('/Bearer\s(\S+)/', $tokenRow, $matches);
+    $token = $matches[1] ?? null;
+    $searchTerm = $_GET['boxId'] ?? '';
 
-echo json_encode($response);
+    if ($token === null || $token === '') {
+        echo json_encode([
+            'status' => 401,
+            'message' => 'Missing or invalid authorization token',
+            'data' => null,
+        ]);
+        exit;
+    }
+
+    $auth = new Auth($conn, $token, $secretkey);
+    $items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiGetPhotoUrl, $log, $searchTerm);
+    $result = $items->getItems();
+
+    echo json_encode($result);
+}
