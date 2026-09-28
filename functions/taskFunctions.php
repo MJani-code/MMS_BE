@@ -1504,19 +1504,23 @@ function boxIdAndTofShopIdMatchValidator($originalData, $dataInDb)
         $boxId = $original['box_id'] ?? null;
 
         foreach ($dataInDb as $dbRecord) {
-            if ((($dbRecord['tof_shop_id'] ?? null) != $tofShopId || ($dbRecord['box_id'] ?? null) != $boxId) && $original['status'] == 0) {
+            if ($original['status'] != 0) {
                 continue;
             }
+
+            if (($dbRecord['tof_shop_id'] ?? null) != $tofShopId || ($dbRecord['box_id'] ?? null) != $boxId) {
+                continue;
+            }
+
             $matches['tof_shop_id'][] = intval($original['tof_shop_id'] ?? 0);
             $matches['box_id'][] = intval($original['box_id'] ?? 0);
+
             $matches['tof_shop_id'] = array_unique($matches['tof_shop_id']);
             $matches['box_id'] = array_unique($matches['box_id']);
         }
-
         //Remove duplicates
         $matches = array_map("unserialize", array_unique(array_map("serialize", $matches)));
     }
-
     return $matches;
 }
 
@@ -1552,13 +1556,6 @@ function getD4mePublicLocations($conn, $auth = null, $searchTerm = '', $boxIds =
         $log->pushHandler(new \Monolog\Handler\RotatingFileHandler($logDir . '/downloadNewPoints.log', 5));
 
         $result = [];
-        // $items = new getLocations($conn, $response, $auth, $tokenD4Me, $d4meApiGetPhotoUrl, $log, $searchTerm);
-        // $result = $items->getItems(true);
-
-        // if (($result['status'] ?? 500) !== 200 || !isset($result['data']) || !is_array($result['data'])) {
-        //     return createResponse(400, 'Hiba tortent a D4Me helyszinek lekerese kozben.');
-        // }
-
         $mergedData = $result['data'] ?? [];
 
         // Ha boxId lista erkezik, minden boxId-ra kulon futtatjuk a lekerdezest searchTermkent,
@@ -1583,16 +1580,6 @@ function getD4mePublicLocations($conn, $auth = null, $searchTerm = '', $boxIds =
                 $mergedData = array_merge($mergedData, $boxResult['data']);
             }
         }
-
-        // $normalized = array_map(function ($point) {
-        //     return [
-        //         'id' => $point['id'] ?? $point['tof_shop_id'] ?? null,
-        //         'provider_point_id' => $point['provider_point_id'] ?? $point['box_id'] ?? null,
-        //         'lat' => $point['lat'] ?? $point['latitude'] ?? null,
-        //         'lng' => $point['lng'] ?? $point['longitude'] ?? null,
-        //     ];
-        // }, $result['data']);
-
         return createResponse(200, 'success', $mergedData);
     } catch (Throwable $e) {
         return createResponse(400, 'Hiba tortent: ' . $e->getMessage());
@@ -1608,43 +1595,33 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         $logDir = __DIR__ . '/../api/task/logs';
         if (!is_dir($logDir)) {
             @mkdir($logDir, 0777, true);
-        }
-
-        $log = new \Monolog\Logger('downloadNewPoints');
-        $log->pushHandler(new \Monolog\Handler\RotatingFileHandler($logDir . '/downloadNewPoints.log', 5));
-        $log->info('Starting downloadNewPoints function');
+        }        
 
         //All tof_shop_id and box_id values from task_locations table in db
         $taskLocationsStmt = $conn->query("SELECT tof_shop_id, box_id FROM task_locations");
         $taskLocations = $taskLocationsStmt->fetchAll(PDO::FETCH_ASSOC);
-        $log->info('Fetched task locations from database', ['taskLocations' => $taskLocations]);
+
 
         //Get all points from Exobox API
         $exoboxPoints = getExoboxPoints($url, $user, $password, null);
         $exoboxPoints = $exoboxPoints['payload'];
-        $log->info('Fetched Exobox points', ['exoboxPoints' => $exoboxPoints]);
 
-        //to keep only id and provider_point_id fields from exoboxPoints
-        $exoboxPointsForValidation = array_map(function ($point) {
+
+        //to keep only id and provider_point_id fields from exoboxPoints        
+        $exoboxPointsNormalized = array_map(function ($point) {
             return [
                 'tof_shop_id' => $point['id'] ?? null,
-                'box_id' => $point['provider_point_id'] ?? null
+                'box_id' => $point['provider_point_id'] ?? null,
+                'status' => intval($point['status'] ?? null)
             ];
         }, $exoboxPoints);
-        $log->info('Prepared Exobox points for validation', ['exoboxPointsForValidation' => $exoboxPointsForValidation]);
+
 
         // Validate which Exobox points match the task locations in the database
-        //TODO: a filteredLocationsben egy külön mezőben a box_id-t is tárolni kellene és majd csak azokra indítani a lekérdezést D4Me felé
-        $filteredTofShopIds = boxIdAndTofShopIdMatchValidator($exoboxPointsForValidation, $taskLocations)['tof_shop_id'] ?? [];
-        $filteredBoxIds = boxIdAndTofShopIdMatchValidator($exoboxPointsForValidation, $taskLocations)['box_id'] ?? [];
-        $log->info('Filtered tof shop ids', ['filteredTofShopIds' => $filteredTofShopIds]);
-        $log->info('Filtered box ids', ['filteredBoxIds' => $filteredBoxIds]);
+        $filteredTofShopIds = boxIdAndTofShopIdMatchValidator($exoboxPointsNormalized, $taskLocations)['tof_shop_id'] ?? [];
+        $filteredBoxIds = boxIdAndTofShopIdMatchValidator($exoboxPointsNormalized, $taskLocations)['box_id'] ?? [];
+        
 
-        //Get point from D4me API through getD4mePublicLocations
-        $d4mePointsResponse = getD4mePublicLocations($conn, $auth, '', $filteredBoxIds);
-        $d4mePoints = $d4mePointsResponse['payload'] ?? [];        
-
-        $log->info('Fetched D4me points', ['d4mePoints' => $d4mePoints]);
         if (empty($filteredTofShopIds)) {
             echo json_encode([
                 'status' => 400,
@@ -1664,10 +1641,12 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         s.name AS status_exohu,
         COALESCE(p.location_photos, '') AS location_photos,
         td.delivery_date,
-        tl.locker_approach AS lockerApproach
+        tl.locker_approach AS lockerApproach,
+        tlo.brand AS brand
         FROM task_locations tl
         LEFT JOIN tasks t ON t.task_locations_id = tl.id
         LEFT JOIN task_statuses s ON s.id = t.status_by_exohu_id
+        LEFT JOIN task_lockers tlo ON tlo.task_locations_id = tl.id
         LEFT JOIN (
             SELECT task_id, MAX(delivery_date) AS delivery_date
             FROM task_dates
@@ -1698,7 +1677,18 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         )");
         $stmt->execute(array_merge($filteredTofShopIds, $statuses));
         $locationsWithLockers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $log->info('Fetched locations with lockers', ['locationsWithLockers' => $locationsWithLockers]);
+
+
+        //Get boxId extracted from $locationsWithLockers where brand = Direct4Me into one array for easier access later
+        $boxIdsForD4MeQuery = array_column(array_filter($locationsWithLockers, function ($row) {
+            return isset($row['brand']) && $row['brand'] === 'Direct4Me';
+        }), 'box_id');
+
+
+        //Get point from D4me API through getD4mePublicLocations
+        $d4mePointsResponse = getD4mePublicLocations($conn, $auth, '', $boxIdsForD4MeQuery);
+        $d4mePoints = $d4mePointsResponse['payload'] ?? [];
+
 
         foreach ($locationsWithLockers as &$row) {
             $photos = $row['location_photos'] ?? '';
@@ -1709,7 +1699,7 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
             }
         }
         unset($row);
-        $log->info('Processed location photos for locations with lockers', ['locationsWithLockers' => $locationsWithLockers]);
+
 
         $d4meImagesById = [];
         foreach ($d4mePoints as $d4mePoint) {
@@ -1752,9 +1742,8 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         unset($row);
 
         $locationsWithLockers = addGpsDataToLocations($locationsWithLockers, $exoboxPoints);
-        $log->info('Added GPS data to locations with lockers', ['locationsWithLockers' => $locationsWithLockers]);
         $adatok = $locationsWithLockers;
-        $log->info('Prepared data for Excel export', ['adatok' => $adatok]);
+
 
         // Excel generálása
         $spreadsheet = new Spreadsheet();
