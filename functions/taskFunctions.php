@@ -924,7 +924,7 @@ function downloadTig($conn, $companyId)
 {
     try {
         // SQL Lekérdezés
-        $stmt = $conn->query("SELECT tl.name, CONCAT(tl.zip,' ',tl.city,' ',tl.address) as helyszín ,td.delivery_date, f.name as díjtípus, tf.serial, tf.net_unit_price, tf.quantity, tf.total, tl.tof_shop_id, c.name as companyName
+        $stmt = $conn->query("SELECT t.id as task_id, tl.name, CONCAT(tl.zip,' ',tl.city,' ',tl.address) as helyszín ,td.delivery_date, f.name as díjtípus, tf.serial, tf.net_unit_price, tf.quantity, tf.total, tl.tof_shop_id, c.name as companyName
         FROM task_fees tf
         LEFT JOIN tasks t on t.id = tf.task_id
         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
@@ -941,6 +941,35 @@ function downloadTig($conn, $companyId)
         WHERE t.status_by_exohu_id = 9 AND tf.deleted = 0 AND tr.company_id = $companyId;");
         $adatok = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Díjtípus szerinti összegzés (megbízásszám = egyedi task-ok száma díjtípusonként)
+        $feeSummary = [];
+        $maintenanceCount = 0;
+        $installationCount = 0;
+        $repairCount = 0;
+        foreach ($adatok as $sor) {
+            $feeType = $sor['díjtípus'] ?? '';
+            if (!isset($feeSummary[$feeType])) {
+                $feeSummary[$feeType] = ['total' => 0, 'quantity' => 0, 'taskIds' => []];
+            }
+            $feeSummary[$feeType]['total'] += (float)($sor['total'] ?? 0);
+            $feeSummary[$feeType]['quantity'] += (float)($sor['quantity'] ?? 0);
+            if (isset($sor['task_id'])) {
+                $feeSummary[$feeType]['taskIds'][$sor['task_id']] = true;
+            }
+
+            // Díjtípus nevéből azonosítjuk a karbantartási / telepítési díjtételeket
+            $feeTypeLower = mb_strtolower($feeType, 'UTF-8');
+            if (mb_strpos($feeTypeLower, 'karbantart') !== false) {
+                $maintenanceCount++;
+            }
+            if (mb_strpos($feeTypeLower, 'telepít') !== false) {
+                $installationCount++;
+            }
+            if (mb_strpos($feeTypeLower, 'javítás') !== false) {
+                $repairCount++;
+            }
+        }
+
         // Excel generálása
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
@@ -952,8 +981,30 @@ function downloadTig($conn, $companyId)
         // Adatok beírása
         $startRow = 2;
         foreach ($adatok as $index => $sor) {
+            unset($sor['task_id']);
             $sheet->fromArray(array_values($sor), NULL, 'A' . ($startRow + $index));
         }
+
+        // Összegzés kiírása, három üres sort hagyva a lista után
+        $summaryStartRow = $startRow + count($adatok) + 3;
+        $sheet->setCellValue('A' . $summaryStartRow, 'Összesítés díjtípus szerint');
+        $summaryHeaderRow = $summaryStartRow + 1;
+        // Mennyiség oszlop: kiszállításos díjtípusoknál megtett kilóméter, a többinél munkaóra
+        $sheet->fromArray(['Díjtípus', 'Megbízásszám', 'Mennyiség', 'Összesen'], NULL, 'A' . $summaryHeaderRow);
+        $summaryRow = $summaryHeaderRow + 1;
+        foreach ($feeSummary as $feeType => $summary) {
+            $sheet->fromArray([$feeType, count($summary['taskIds']), $summary['quantity'], $summary['total']], NULL, 'A' . $summaryRow);
+            $summaryRow++;
+        }
+
+        $sheet->setCellValue('A' . $summaryRow, 'Karbantartások összesen (darabszám)');
+        $sheet->setCellValue('B' . $summaryRow, $maintenanceCount);
+        $summaryRow++;
+        $sheet->setCellValue('A' . $summaryRow, 'Telepítések összesen (darabszám)');
+        $sheet->setCellValue('B' . $summaryRow, $installationCount);
+        $summaryRow++;
+        $sheet->setCellValue('A' . $summaryRow, 'Javítások összesen (darabszám)');
+        $sheet->setCellValue('B' . $summaryRow, $repairCount);
 
         // Ideiglenes fájl létrehozása
         $temp_file = tempnam(sys_get_temp_dir(), 'excel');
@@ -1595,7 +1646,7 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         $logDir = __DIR__ . '/../api/task/logs';
         if (!is_dir($logDir)) {
             @mkdir($logDir, 0777, true);
-        }        
+        }
 
         //All tof_shop_id and box_id values from task_locations table in db
         $taskLocationsStmt = $conn->query("SELECT tof_shop_id, box_id FROM task_locations");
@@ -1620,7 +1671,7 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         // Validate which Exobox points match the task locations in the database
         $filteredTofShopIds = boxIdAndTofShopIdMatchValidator($exoboxPointsNormalized, $taskLocations)['tof_shop_id'] ?? [];
         $filteredBoxIds = boxIdAndTofShopIdMatchValidator($exoboxPointsNormalized, $taskLocations)['box_id'] ?? [];
-        
+
 
         if (empty($filteredTofShopIds)) {
             echo json_encode([
