@@ -65,17 +65,19 @@ class NotificationGenerator
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
-        $userIds = [];
+        $roleIds = [2, 3];
+        $userIdsByCompanyAndRole = [];
         foreach ($rows as $row) {
-            // Felhasználói ID-k 3-as rolehoz lekérdezése ha még nem történt meg
-            if (empty($userIds)) {
-                echo "Felhasználói ID-k lekérdezése: ";
-                $userIds = $this->getUserIdsByRoleIdAndCompanyId(3, $row['companyId']);
-                echo implode(", ", $userIds);
-            }
-            foreach ($userIds as $userId) {
-                $msg = "Új feladat";
-                $this->insertIfNotExists($row['companyId'], $userId, 3, $row['taskId'], 'new_task', $msg);
+            foreach ($roleIds as $roleId) {
+                $cacheKey = $row['companyId'] . '_' . $roleId;
+                // Felhasználói ID-k lekérdezése cégenként és rolehoz ha még nem történt meg
+                if (!isset($userIdsByCompanyAndRole[$cacheKey])) {
+                    $userIdsByCompanyAndRole[$cacheKey] = $this->getUserIdsByRoleIdAndCompanyId($roleId, $row['companyId']);
+                }
+                foreach ($userIdsByCompanyAndRole[$cacheKey] as $userId) {
+                    $msg = "Új feladat";
+                    $this->insertIfNotExists($row['companyId'], $userId, $roleId, $row['taskId'], 'new_task', $msg);
+                }
             }
         }
     }
@@ -87,9 +89,9 @@ class NotificationGenerator
     {
         $check = $this->pdo->prepare("
             SELECT COUNT(*) FROM notifications
-            WHERE type = ? AND task_id = ? AND company_id = ?
+            WHERE type = ? AND task_id = ? AND company_id = ? AND role_id = ? AND user_id = ?
         ");
-        $check->execute([$type, $taskId, $companyId]);
+        $check->execute([$type, $taskId, $companyId, $roleId, $userId]);
         $exists = $check->fetchColumn();
 
         if (!$exists) {
