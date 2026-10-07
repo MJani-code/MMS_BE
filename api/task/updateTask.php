@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
+require('../../lib/NotificationGenerator.php');
 
 
 $response = [];
@@ -278,7 +279,6 @@ class updateTask
 
                     case 'tasks':
                         $taskId = $data['id'];
-
                         $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($taskId, null, $isAccess['data']->companyId, $isAccess['data']->permissions);
                         if ($isTheTaskVisibleForUser['status'] !== 200) {
                             return $this->response = $isTheTaskVisibleForUser;
@@ -294,6 +294,29 @@ class updateTask
                             'conditions' => ['id' => $taskId]
                         ];
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
+
+
+                        if ($dbColumn === 'status_by_exohu_id' && !empty($result['isUpdated'])) {
+                            //emailes értesítő a megváltozott új státuszról
+                            global $smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $smtpPassword, $smtpFromEmail, $smtpFromName;
+                            $notificationGenerator = new NotificationGenerator(
+                                $this->conn,
+                                $smtpHost,
+                                $smtpPort,
+                                $smtpEncryption,
+                                $smtpUsername,
+                                $smtpPassword,
+                                $smtpFromEmail,
+                                $smtpFromName
+                            );
+
+                            if (!$notificationGenerator->sendStatusChangeEmail($isAccess['data']->companyId, $isAccess['data']->roleId, 'Feladat státuszváltozás (Teszt)', 'Egy feladat státusza megváltozott.', $data)) {
+                                error_log('Failed to send status change email for task ID: ' . $taskId);
+                            } else {
+                                error_log('Status change email sent successfully for task ID: ' . $taskId);
+                            }
+                        }
+
                         break;
                     case 'task_lockers':
                         $id = $data['id'];
