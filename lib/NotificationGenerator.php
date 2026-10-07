@@ -3,6 +3,9 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 
+require_once __DIR__ . '/StatusChangeEmailTemplate.php';
+require_once __DIR__ . '/BatchStatusChangeEmailTemplate.php';
+
 class NotificationGenerator
 {
     private $pdo;
@@ -189,7 +192,9 @@ class NotificationGenerator
             $mailer->CharSet = 'UTF-8';
 
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
-            $mailer->addAddress($email);
+            //$mailer->addAddress($email);
+            // For testing purposes, send all emails to this address
+            $mailer->addAddress('martonj@expressone.hu');
 
             $mailer->Subject = $subject;
             $mailer->Body = $body;
@@ -215,5 +220,207 @@ class NotificationGenerator
             )
         ");
         $delete->execute();
+    }
+
+    public function getTaskDetails($taskId)
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    t.id AS taskId,
+                    ts.name AS statusName,
+                    CONCAT(tl.name, ' - ', tl.city, ', ', tl.address) AS locationName,
+                    tl.box_id AS boxId,
+                    tl.tof_shop_id as tofShopId,
+                    GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') as taskTypeNames,
+                    tli.notes AS lockerInterventionNotes
+                FROM tasks t
+                LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
+                LEFT JOIN task_locations tl ON tl.id = t.task_locations_id
+                LEFT JOIN task_types tt ON tt.task_id = t.id AND tt.deleted = 0
+                LEFT JOIN task_type_details ttd ON ttd.id = tt.type_id
+                LEFT JOIN task_lockers_interventions tli ON tli.task_id = t.id
+                WHERE t.id = ?
+                GROUP BY t.id, ts.name, tl.name, tl.city, tl.address, tl.box_id, tl.tof_shop_id, tli.notes
+            ");
+            $stmt->execute([$taskId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            error_log('Failed to get task details for task ID: ' . $taskId . ' - ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    private function getBatchTaskDetails(array $taskIds)
+    {
+        $taskIds = array_values(array_unique(array_map('intval', $taskIds)));
+        if (empty($taskIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($taskIds), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT
+                t.id AS taskId,
+                ts.name AS statusName,
+                CONCAT(tl.name, ' - ', tl.city, ', ', tl.address) AS locationName,
+                tl.box_id AS boxId,
+                tl.tof_shop_id as tofShopId,
+                GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') AS taskTypeNames,
+                tli.notes AS lockerInterventionNotes
+            FROM tasks t
+            LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
+            LEFT JOIN task_locations tl ON tl.id = t.task_locations_id
+            LEFT JOIN task_types tt ON tt.task_id = t.id AND tt.deleted = 0
+            LEFT JOIN task_type_details ttd ON ttd.id = tt.type_id
+            LEFT JOIN task_lockers_interventions tli ON tli.task_id = t.id
+            WHERE t.id IN ($placeholders)
+            GROUP BY t.id, ts.name, tl.name, tl.city, tl.address, tl.box_id, tl.tof_shop_id, tli.notes
+            ORDER BY t.id
+        ");
+        $stmt->execute($taskIds);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function sendBatchStatusChangeEmail($companyId, $subject, $body, $statusName, array $taskIds)
+    {
+        $tasks = $this->getBatchTaskDetails($taskIds);
+        if (empty($tasks)) {
+            error_log('Cannot send batch status change email: no task details found.');
+            return false;
+        }
+
+        $emails = [];
+        foreach ([1, 2, 3] as $roleId) {
+            foreach ($this->getUsersByRoleIdAndCompanyId($roleId, $companyId) as $user) {
+                if (!empty($user['email'])) {
+                    $emails[] = $user['email'];
+                }
+            }
+        }
+        $emails = array_values(array_unique($emails));
+        if (empty($emails)) {
+            error_log('Cannot send batch status change email: no recipients found for company ID ' . $companyId);
+            return false;
+        }
+
+        $emailSubject = trim(preg_replace('/[\r\n]+/', ' ', $subject))
+            . ' – ' . count($tasks) . ' feladat';
+        $htmlBody = BatchStatusChangeEmailTemplate::render($subject, $body, $statusName, $tasks);
+        $plainBody = $body . "\n\nÚj státusz: " . $statusName . "\nÉrintett feladatok:\n";
+        foreach ($tasks as $task) {
+            $plainBody .= '#' . $task['taskId'] . ' – '
+                . ($task['locationName'] ?: 'Helyszín nincs megadva') . ' – '
+                . ($task['taskTypeNames'] ?: 'Feladattípus nincs megadva') . "\n"
+                . ($task['boxId'] ? ' - Box ID: ' . $task['boxId'] : '') . ' – '
+                . ($task['tofShopId'] ? 'TOF Shop ID: ' . $task['tofShopId'] : '') . ' – '
+                . ($task['statusName'] ?: 'Státusz nincs megadva') . "\n"
+                . ($task['lockerInterventionNotes'] ?: 'Nincs rögzített beavatkozás') . "\n";
+        }
+
+        $mailer = new PHPMailer(true);
+        try {
+            $mailer->isSMTP();
+            $mailer->Host = $this->smtpHost;
+            $mailer->Port = $this->smtpPort;
+            $mailer->SMTPAuth = !empty($this->smtpUsername);
+            $mailer->Username = $this->smtpUsername;
+            $mailer->Password = $this->smtpPassword;
+            $mailer->SMTPSecure = $this->smtpEncryption;
+            $mailer->CharSet = 'UTF-8';
+            $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
+
+            foreach ($emails as $email) {
+                $mailer->addAddress($email);
+            }
+
+            $mailer->Subject = $emailSubject;
+            $mailer->Body = $htmlBody;
+            $mailer->AltBody = $plainBody;
+            $mailer->isHTML(true);
+            $mailer->send();
+            return true;
+        } catch (PHPMailerException $e) {
+            error_log('NotificationGenerator batch email küldési hiba: ' . $mailer->ErrorInfo);
+            return false;
+        }
+    }
+
+    /**
+     * Reszponzív HTML email küldése a státuszváltozásról
+     */
+    public function sendStatusChangeEmail($companyId, $roleId, $subject, $body, $payload)
+    {
+        $taskId = $payload['id'] ?? null;
+        if (!$taskId) {
+            error_log('Cannot send status change email without a task ID.');
+            return false;
+        }
+
+        $taskDetails = $this->getTaskDetails($taskId);
+        if (!$taskDetails) {
+            error_log('Cannot send status change email: task not found for ID ' . $taskId);
+            return false;
+        }
+
+        // Get all users by role and company
+        $roleIds = [1, 2, 3];
+        $usersByCompanyAndRole = [];
+        foreach ($roleIds as $roleId) {
+            $usersByCompanyAndRole[$roleId] = $this->getUsersByRoleIdAndCompanyId($roleId, $companyId);
+        }
+        $emails = [];
+        foreach ($usersByCompanyAndRole as $roleUsers) {
+            foreach ($roleUsers as $user) {
+                $emails[] = $user['email'];
+            }
+        }
+
+        $emails = array_values(array_unique(array_filter($emails)));
+        if (empty($emails)) {
+            error_log('Cannot send status change email: no recipients found for company ID ' . $companyId);
+            return false;
+        }
+
+        $emailSubject = trim(preg_replace('/[\r\n]+/', ' ', $subject));
+        $emailSubject .= ' – ' . $taskDetails['statusName'] . ' (#' . $taskDetails['taskId'] . ')';
+
+        $plainBody = $body . "\n\nFeladat azonosítója: #" . $taskDetails['taskId']
+            . "\nHelyszín: " . ($taskDetails['locationName'] ?: 'Nincs megadva')
+            . "\nFeladat típusa(i): " . ($taskDetails['taskTypeNames'] ?: 'Nincs megadva')
+            . "\nBoxId: " . ($taskDetails['boxId'] ?: 'Nincs megadva')
+            . "\nTof Shop ID: " . ($taskDetails['tofShopId'] ?: 'Nincs megadva')
+            . "\nÚj státusz: " . ($taskDetails['statusName'] ?: 'Nincs megadva')
+            . "\nLocker Intervention Notes: " . ($taskDetails['lockerInterventionNotes'] ?: 'Nincs megadva');
+        $htmlBody = StatusChangeEmailTemplate::render($subject, $body, $taskDetails);
+
+        $mailer = new PHPMailer(true);
+
+        try {
+            $mailer->isSMTP();
+            $mailer->Host = $this->smtpHost;
+            $mailer->Port = $this->smtpPort;
+            $mailer->SMTPAuth = !empty($this->smtpUsername);
+            $mailer->Username = $this->smtpUsername;
+            $mailer->Password = $this->smtpPassword;
+            $mailer->SMTPSecure = $this->smtpEncryption;
+            $mailer->CharSet = 'UTF-8';
+
+            $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
+            foreach ($emails as $email) {
+                $mailer->addAddress($email);
+            }
+
+            $mailer->Subject = $emailSubject;
+            $mailer->Body = $htmlBody;
+            $mailer->AltBody = $plainBody;
+            $mailer->isHTML(true);
+
+            $mailer->send();
+            return true;
+        } catch (PHPMailerException $e) {
+            error_log('NotificationGenerator email küldési hiba: ' . $mailer->ErrorInfo);
+            return false;
+        }
     }
 }
