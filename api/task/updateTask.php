@@ -307,7 +307,7 @@ class updateTask
                                 $smtpFromName
                             );
 
-                            if (!$notificationGenerator->sendStatusChangeEmail($isAccess['data']->companyId, $isAccess['data']->roleId, 'Feladat státuszváltozás (Teszt)', 'Egy feladat státusza megváltozott.', $data)) {
+                            if (!$notificationGenerator->sendStatusChangeEmail($isAccess['data']->companyId, 'Feladat státuszváltozás (Teszt)', 'Egy feladat státusza megváltozott.', $data)) {
                                 error_log('Failed to send status change email for task ID: ' . $taskId);
                             } else {
                                 error_log('Status change email sent successfully for task ID: ' . $taskId);

@@ -58,16 +58,17 @@ class NotificationGenerator
     }
 
     /**
-     * Felhasználók (ID + email) lekérdezése szerepkör és cég alapján
+     * Feliratkozott felhasználók lekérdezése cég és értesítéstípus alapján
      */
-    private function getUsersByRoleIdAndCompanyId($roleId, $companyId)
+    private function getSubscribedUsersByCompanyId($companyId, $subscriptionName)
     {
         $stmt = $this->pdo->prepare("
-            SELECT u.id, u.email
+            SELECT u.id, u.email, u.role_id
             FROM users u
-            WHERE u.role_id = ? AND u.company_id = ? AND u.deleted = 0
+            LEFT JOIN notification_subscriptions ns ON ns.user_id = u.id AND ns.notification_name = ?
+            WHERE u.company_id = ? AND u.deleted = 0 AND ns.id IS NOT NULL AND ns.is_subscribed = 1
         ");
-        $stmt->execute([$roleId, $companyId]);
+        $stmt->execute([$subscriptionName, $companyId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -94,30 +95,25 @@ class NotificationGenerator
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
-        $roleIds = [1, 2, 3];
-        $usersByCompanyAndRole = [];
+        $usersByCompany = [];
         // Címzettenként gyűjtött új feladatok az összesített emailhez
         $emailQueue = [];
         foreach ($rows as $row) {
-            foreach ($roleIds as $roleId) {
-                $cacheKey = $row['companyId'] . '_' . $roleId;
-                // Felhasználók (ID + email) lekérdezése cégenként és rolehoz ha még nem történt meg
-                if (!isset($usersByCompanyAndRole[$cacheKey])) {
-                    $usersByCompanyAndRole[$cacheKey] = $this->getUsersByRoleIdAndCompanyId($roleId, $row['companyId']);
-                }
-                echo json_encode($usersByCompanyAndRole);
-                foreach ($usersByCompanyAndRole[$cacheKey] as $user) {
-                    $msg = "Új feladat";
-                    $isInserted = $this->insertIfNotExists($row['companyId'], $user['id'], $roleId, $row['taskId'], 'new_task', $msg);
-                    if ($isInserted && !empty($user['email'])) {
-                        $emailQueue[$user['email']][$row['taskId']] = [
-                            'taskId' => $row['taskId'],
-                            'locationName' => $row['locationName'],
-                            'taskTypeNames' => $row['taskTypeNames'],
-                            'lockerIssueDescription' => $row['lockerIssueDescription'],
-                            'lockerIssueCompartmentNumber' => $row['lockerIssueCompartmentNumber'],
-                        ];
-                    }
+            $companyId = $row['companyId'];
+            if (!isset($usersByCompany[$companyId])) {
+                $usersByCompany[$companyId] = $this->getSubscribedUsersByCompanyId($companyId, 'sendNewTasksEmail');
+            }
+            foreach ($usersByCompany[$companyId] as $user) {
+                $msg = "Új feladat";
+                $isInserted = $this->insertIfNotExists($companyId, $user['id'], $user['role_id'], $row['taskId'], 'new_task', $msg);
+                if ($isInserted && !empty($user['email'])) {
+                    $emailQueue[$user['email']][$row['taskId']] = [
+                        'taskId' => $row['taskId'],
+                        'locationName' => $row['locationName'],
+                        'taskTypeNames' => $row['taskTypeNames'],
+                        'lockerIssueDescription' => $row['lockerIssueDescription'],
+                        'lockerIssueCompartmentNumber' => $row['lockerIssueCompartmentNumber'],
+                    ];
                 }
             }
         }
@@ -291,11 +287,9 @@ class NotificationGenerator
         }
 
         $emails = [];
-        foreach ([1, 2, 3] as $roleId) {
-            foreach ($this->getUsersByRoleIdAndCompanyId($roleId, $companyId) as $user) {
-                if (!empty($user['email'])) {
-                    $emails[] = $user['email'];
-                }
+        foreach ($this->getSubscribedUsersByCompanyId($companyId, 'sendBatchStatusChangeEmail') as $user) {
+            if (!empty($user['email'])) {
+                $emails[] = $user['email'];
             }
         }
         $emails = array_values(array_unique($emails));
@@ -330,9 +324,12 @@ class NotificationGenerator
             $mailer->CharSet = 'UTF-8';
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
 
-            foreach ($emails as $email) {
-                $mailer->addAddress($email);
-            }
+            // foreach ($emails as $email) {
+            //     $mailer->addAddress($email);
+            // }
+
+            //For testing
+            $mailer->addAddress('martonj@expressone.hu'); // Replace with your test email address
 
             $mailer->Subject = $emailSubject;
             $mailer->Body = $htmlBody;
@@ -349,7 +346,7 @@ class NotificationGenerator
     /**
      * Reszponzív HTML email küldése a státuszváltozásról
      */
-    public function sendStatusChangeEmail($companyId, $roleId, $subject, $body, $payload)
+    public function sendStatusChangeEmail($companyId, $subject, $body, $payload)
     {
         $taskId = $payload['id'] ?? null;
         if (!$taskId) {
@@ -363,17 +360,9 @@ class NotificationGenerator
             return false;
         }
 
-        // Get all users by role and company
-        $roleIds = [1, 2, 3];
-        $usersByCompanyAndRole = [];
-        foreach ($roleIds as $roleId) {
-            $usersByCompanyAndRole[$roleId] = $this->getUsersByRoleIdAndCompanyId($roleId, $companyId);
-        }
         $emails = [];
-        foreach ($usersByCompanyAndRole as $roleUsers) {
-            foreach ($roleUsers as $user) {
-                $emails[] = $user['email'];
-            }
+        foreach ($this->getSubscribedUsersByCompanyId($companyId, 'sendStatusChangeEmail') as $user) {
+            $emails[] = $user['email'];
         }
 
         $emails = array_values(array_unique(array_filter($emails)));
@@ -407,9 +396,14 @@ class NotificationGenerator
             $mailer->CharSet = 'UTF-8';
 
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
-            foreach ($emails as $email) {
-                $mailer->addAddress($email);
-            }
+            // foreach ($emails as $email) {
+            //     $mailer->addAddress($email);
+            // }
+
+            error_log('Sending status change email to: ' . implode(', ', $emails));
+            exit;
+            //For testing
+            //$mailer->addAddress('martonj@expressone.hu'); // Replace with your test email address
 
             $mailer->Subject = $emailSubject;
             $mailer->Body = $htmlBody;
