@@ -133,10 +133,7 @@ class NotificationGenerator
             WHERE type = ? AND task_id = ? AND company_id = ? AND role_id = ? AND user_id = ?
         ");
         $check->execute([$type, $taskId, $companyId, $roleId, $userId]);
-        echo json_encode([$type, $taskId, $companyId, $roleId, $userId]);
-
         $exists = $check->fetchColumn();
-        echo json_encode([$exists]);
 
         if (!$exists) {
             $insert = $this->pdo->prepare("
@@ -188,9 +185,7 @@ class NotificationGenerator
             $mailer->CharSet = 'UTF-8';
 
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
-            //$mailer->addAddress($email);
-            // For testing purposes, send all emails to this address
-            $mailer->addAddress('martonj@expressone.hu');
+            $mailer->addAddress($email);
 
             $mailer->Subject = $subject;
             $mailer->Body = $body;
@@ -324,12 +319,9 @@ class NotificationGenerator
             $mailer->CharSet = 'UTF-8';
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
 
-            // foreach ($emails as $email) {
-            //     $mailer->addAddress($email);
-            // }
-
-            //For testing
-            $mailer->addAddress('martonj@expressone.hu'); // Replace with your test email address
+            foreach ($emails as $email) {
+                $mailer->addAddress($email);
+            }
 
             $mailer->Subject = $emailSubject;
             $mailer->Body = $htmlBody;
@@ -396,14 +388,9 @@ class NotificationGenerator
             $mailer->CharSet = 'UTF-8';
 
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
-            // foreach ($emails as $email) {
-            //     $mailer->addAddress($email);
-            // }
-
-            error_log('Sending status change email to: ' . implode(', ', $emails));
-            exit;
-            //For testing
-            //$mailer->addAddress('martonj@expressone.hu'); // Replace with your test email address
+            foreach ($emails as $email) {
+                $mailer->addAddress($email);
+            }
 
             $mailer->Subject = $emailSubject;
             $mailer->Body = $htmlBody;
