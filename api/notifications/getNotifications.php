@@ -37,15 +37,14 @@ class NotificationService
         $downloadedIds = array_values(array_map('intval', $downloadedIds));
         $placeholders = implode(',', array_fill(0, count($downloadedIds), '?'));
         $sql = "
-        SELECT n.id, n.type, n.message, tt.created_at as createdAt, GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') AS typeNames, CONCAT(tl.city, ' ', tl.address) AS location
+        SELECT n.id, n.type, n.message, n.created_at as createdAt, GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') AS typeNames, CONCAT(tl.city, ' ', tl.address) AS location
         FROM notifications n
-        LEFT JOIN task_types tt on tt.task_id = n.task_id
+        LEFT JOIN task_types tt on tt.task_id = n.task_id AND tt.deleted = 0
         LEFT JOIN task_type_details ttd on ttd.id = tt.type_id
         LEFT JOIN tasks t on t.id = n.task_id
         LEFT JOIN task_locations tl on tl.id = t.task_locations_id
         WHERE n.user_id = ?
         AND n.read_at IS NULL
-        AND tt.deleted = 0
         AND n.id NOT IN ($placeholders)
         GROUP BY n.id
         ORDER BY n.created_at DESC;
@@ -55,15 +54,14 @@ class NotificationService
         $stmt->execute($params);
       } else {
         $stmt = $this->conn->prepare("
-          SELECT n.id, n.type, n.message, tt.created_at as createdAt, GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') AS typeNames, CONCAT(tl.city, ' ', tl.address) AS location
+          SELECT n.id, n.type, n.message, n.created_at as createdAt, GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') AS typeNames, CONCAT(tl.city, ' ', tl.address) AS location
           FROM notifications n
-          LEFT JOIN task_types tt on tt.task_id = n.task_id
+          LEFT JOIN task_types tt on tt.task_id = n.task_id AND tt.deleted = 0
           LEFT JOIN task_type_details ttd on ttd.id = tt.type_id
           LEFT JOIN tasks t on t.id = n.task_id
           LEFT JOIN task_locations tl on tl.id = t.task_locations_id
           WHERE n.user_id = ?
           AND n.read_at IS NULL
-          AND tt.deleted = 0
           GROUP BY n.id
           ORDER BY n.created_at DESC;
         ");
