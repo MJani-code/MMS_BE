@@ -20,6 +20,7 @@ class updateTaskInBatch
     private $userAuthData;
     private $userId;
     private $changedTaskIds = [];
+    private $pendingStatusName = null;
 
     public function __construct($conn, &$response, $auth)
     {
@@ -150,29 +151,8 @@ class updateTaskInBatch
             }
 
             $this->executeUpdate($updateItem, $this->userId);
-            if (!empty($this->changedTaskIds)) {
-                global $smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $smtpPassword, $smtpFromEmail, $smtpFromName;
-                $notificationGenerator = new NotificationGenerator(
-                    $this->conn,
-                    $smtpHost,
-                    $smtpPort,
-                    $smtpEncryption,
-                    $smtpUsername,
-                    $smtpPassword,
-                    $smtpFromEmail,
-                    $smtpFromName
-                );
-
-                if (!$notificationGenerator->sendBatchStatusChangeEmail(
-                    $this->userAuthData->companyId,
-                    'Feladatok státuszváltozása (Teszt)',
-                    'Az alábbi feladatok státusza megváltozott.',
-                    $name,
-                    $this->changedTaskIds
-                )) {
-                    error_log('Failed to send batch status change email for task IDs: ' . implode(',', $this->changedTaskIds));
-                }
-            }
+            // az értesítés a válasz elküldése után történik
+            $this->pendingStatusName = $name;
 
             $this->response = [
                 'status' => 200,
@@ -194,6 +174,36 @@ class updateTaskInBatch
             return;
         }
     }
+    public function sendPendingNotifications()
+    {
+        if ($this->pendingStatusName === null || empty($this->changedTaskIds)) {
+            return;
+        }
+        try {
+            global $smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $smtpPassword, $smtpFromEmail, $smtpFromName;
+            $notificationGenerator = new NotificationGenerator(
+                $this->conn,
+                $smtpHost,
+                $smtpPort,
+                $smtpEncryption,
+                $smtpUsername,
+                $smtpPassword,
+                $smtpFromEmail,
+                $smtpFromName
+            );
+
+            if (!$notificationGenerator->sendBatchStatusChangeEmail(
+                'Feladatok státuszváltozása (Teszt)',
+                'Az alábbi feladatok státusza megváltozott.',
+                $this->pendingStatusName,
+                $this->changedTaskIds
+            )) {
+                error_log('Failed to send batch status change email for task IDs: ' . implode(',', $this->changedTaskIds));
+            }
+        } catch (\Throwable $th) {
+            error_log('Error while sending batch status change email: ' . $th->getMessage());
+        }
+    }
 }
 
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
@@ -206,3 +216,19 @@ $updateTask = new updateTaskInBatch($conn, $response, $auth);
 $updateTask->updateTaskData($updateItem);
 
 echo json_encode($response);
+
+// válasz lezárása a kliens felé, majd jöhet az értesítés
+ignore_user_abort(true);
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+} else {
+    if (ob_get_level() > 0) {
+        header('Connection: close');
+        header('Content-Length: ' . ob_get_length());
+    }
+    while (ob_get_level() > 0) {
+        ob_end_flush();
+    }
+    flush();
+}
+$updateTask->sendPendingNotifications();

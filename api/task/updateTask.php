@@ -1,11 +1,22 @@
 <?php
 header('Content-Type: application/json');
 
+//error showing
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require('../../inc/conn.php');
 require('../../functions/taskFunctions.php');
 require('../../api/user/auth/auth.php');
 require('../../lib/NotificationGenerator.php');
+require('../../vendor/autoload.php');
 
+use Monolog\Logger;
+use Monolog\Handler\RotatingFileHandler;
+
+$log = new Logger('updateTask');
+$log->pushHandler(new RotatingFileHandler(__DIR__ . '/logs/updateTask.log', 5));
 
 $response = [];
 
@@ -26,12 +37,15 @@ class updateTask
     private $response;
     private $auth;
     private $userAuthData;
+    private $log;
+    private $pendingStatusChange = null;
 
-    public function __construct($conn, &$response, $auth)
+    public function __construct($conn, &$response, $auth, $log)
     {
         $this->conn = $conn;
         $this->response = &$response;
         $this->auth = $auth;
+        $this->log = $log;
     }
 
     public function updateTaskData($isFileUpload, $conn, $file, $locationId)
@@ -292,26 +306,9 @@ class updateTask
                         ];
                         $result = dataToHandleInDb($this->conn, $dataToHandleInDb);
 
-
                         if ($dbColumn === 'status_by_exohu_id' && !empty($result['isUpdated'])) {
-                            //emailes értesítő a megváltozott új státuszról
-                            global $smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $smtpPassword, $smtpFromEmail, $smtpFromName;
-                            $notificationGenerator = new NotificationGenerator(
-                                $this->conn,
-                                $smtpHost,
-                                $smtpPort,
-                                $smtpEncryption,
-                                $smtpUsername,
-                                $smtpPassword,
-                                $smtpFromEmail,
-                                $smtpFromName
-                            );
-
-                            if (!$notificationGenerator->sendStatusChangeEmail($isAccess['data']->companyId, 'Feladat státuszváltozás (Teszt)', 'Egy feladat státusza megváltozott.', $data)) {
-                                error_log('Failed to send status change email for task ID: ' . $taskId);
-                            } else {
-                                error_log('Status change email sent successfully for task ID: ' . $taskId);
-                            }
+                            // az értesítés az update és a válasz elküldése után történik
+                            $this->pendingStatusChange = $data;
                         }
 
                         break;
@@ -398,6 +395,36 @@ class updateTask
             }
         }
     }
+    public function sendPendingNotifications()
+    {
+        if ($this->pendingStatusChange === null) {
+            return;
+        }
+        $data = $this->pendingStatusChange;
+        $this->pendingStatusChange = null;
+        $taskId = $data['id'] ?? null;
+        try {
+            global $smtpHost, $smtpPort, $smtpEncryption, $smtpUsername, $smtpPassword, $smtpFromEmail, $smtpFromName;
+            $notificationGenerator = new NotificationGenerator(
+                $this->conn,
+                $smtpHost,
+                $smtpPort,
+                $smtpEncryption,
+                $smtpUsername,
+                $smtpPassword,
+                $smtpFromEmail,
+                $smtpFromName
+            );
+
+            if (!$notificationGenerator->sendStatusChangeEmail('Feladat státuszváltozás (Teszt)', 'Egy feladat státusza megváltozott.', $data)) {
+                $this->log->error('Failed to send status change email for task ID: ' . $taskId);
+            } else {
+                $this->log->info('Status change email sent successfully for task ID: ' . $taskId);
+            }
+        } catch (\Throwable $th) {
+            $this->log->error('Error occurred while sending status change email for task ID: ' . $taskId . '. Error: ' . $th->getMessage());
+        }
+    }
 }
 
 $tokenRow = $_SERVER['HTTP_AUTHORIZATION'];
@@ -406,7 +433,23 @@ $token = $matches[1];
 
 $auth = new Auth($conn, $token, $secretkey);
 
-$updateTask = new updateTask($conn, $response, $auth);
+$updateTask = new updateTask($conn, $response, $auth, $log);
 $updateTask->updateTaskData($isFileUpload, $conn, $file, $locationId);
 
 echo json_encode($response);
+
+// válasz lezárása a kliens felé, majd jöhet az értesítés
+ignore_user_abort(true);
+if (function_exists('fastcgi_finish_request')) {
+    fastcgi_finish_request();
+} else {
+    if (ob_get_level() > 0) {
+        header('Connection: close');
+        header('Content-Length: ' . ob_get_length());
+    }
+    while (ob_get_level() > 0) {
+        ob_end_flush();
+    }
+    flush();
+}
+$updateTask->sendPendingNotifications();
