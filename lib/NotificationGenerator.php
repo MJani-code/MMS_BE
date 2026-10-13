@@ -459,7 +459,7 @@ class NotificationGenerator
             $mailer->SMTPSecure = $this->smtpEncryption;
             $mailer->CharSet = 'UTF-8';
             $mailer->setFrom($this->smtpFromEmail, $this->smtpFromName);
-            //$mailer->addAddress($email);
+            $mailer->addAddress($email);
 
             $mailer->Subject = $emailSubject;
             $mailer->Body = $htmlBody;
@@ -508,7 +508,7 @@ class NotificationGenerator
         }
 
         $emails = array_values(array_unique(array_filter($emails)));
-        
+
         $this->logger->info('Prepared recipient list for status change email', [
             'emails' => $emails,
         ]);
