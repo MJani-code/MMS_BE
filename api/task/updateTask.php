@@ -365,10 +365,31 @@ class updateTask
                         break;
                 }
                 if (isset($result)) {
+                    try {
+                        $stmt = $this->conn->prepare("SELECT id FROM tasks WHERE task_locations_id = ?");
+                        $stmt->bindParam(1, $id, PDO::PARAM_INT);
+                        $stmt->execute();
+                        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        $taskIdFromDb = $row['id'] ?? null;
+                    } catch (\Throwable $th) {
+                        $this->response = array(
+                            'status' => 500,
+                            'message' => localizeErrorMessage('errors.unexpected', $locale),
+                            'payload' => null
+                        );
+                        return $this->response;
+                    }
+
+
                     if ($result['isUpdated']) {
+                        if ($dbColumn === 'box_id' || $dbColumn === 'tof_shop_id') {
+                            $value = intval($value);
+                        }
+
                         $payload = array(
                             'id' => $id,
-                            'taskId' => intval($taskId),
+                            'taskId' => intval($taskIdFromDb),
                             'column' => $dbColumn,
                             'value' => $value
                         );
