@@ -1575,8 +1575,18 @@ function boxIdAndTofShopIdMatchValidator($originalData, $dataInDb)
     return $matches;
 }
 
-function addGpsDataToLocations($locations, $locationsWithGps)
+function addGpsDataToLocations($locations, $locationsWithGps, $d4mePoints = [])
 {
+    $d4meGpsById = [];
+    foreach ($d4mePoints as $d4mePoint) {
+        if (isset($d4mePoint['id'])) {
+            $d4meGpsById[(string)$d4mePoint['id']] = [
+                'latitude' => $d4mePoint['latitude'] ?? null,
+                'longitude' => $d4mePoint['longitude'] ?? null,
+            ];
+        }
+    }
+
     foreach ($locations as &$location) {
         foreach ($locationsWithGps as $gpsLocation) {
             if ($location['tof_shop_id'] == $gpsLocation['id']) {
@@ -1585,7 +1595,18 @@ function addGpsDataToLocations($locations, $locationsWithGps)
                 break;
             }
         }
+
+        // D4Me GPS adat: a box_id egyezik a D4Me location id-val
+        $boxId = isset($location['box_id']) ? (string)$location['box_id'] : '';
+        if ($boxId !== '' && isset($d4meGpsById[$boxId])) {
+            $gps = $d4meGpsById[$boxId];
+            if ($gps['latitude'] !== null && $gps['longitude'] !== null) {
+                $location['latitude'] = $gps['latitude'];
+                $location['longitude'] = $gps['longitude'];
+            }
+        }
     }
+    unset($location);
     return $locations;
 }
 
@@ -1792,7 +1813,7 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         }
         unset($row);
 
-        $locationsWithLockers = addGpsDataToLocations($locationsWithLockers, $exoboxPoints);
+        $locationsWithLockers = addGpsDataToLocations($locationsWithLockers, $exoboxPoints, $d4mePoints);
         $adatok = $locationsWithLockers;
 
 
