@@ -387,12 +387,21 @@ class updateTask
                             $value = intval($value);
                         }
 
-                        $payload = array(
-                            'id' => $id,
-                            'taskId' => intval($taskIdFromDb),
-                            'column' => $dbColumn,
-                            'value' => $value
-                        );
+                        if ($dbTable === 'task_lockers') {
+                            $payload = array(
+                                'id' => $id,
+                                'taskId' => intval($taskId),
+                                'column' => $dbColumn,
+                                'value' => $value
+                            );
+                        } else {
+                            $payload = array(
+                                'id' => $id,
+                                'taskId' => intval($taskIdFromDb),
+                                'column' => $dbColumn,
+                                'value' => $value
+                            );
+                        }
                         $this->response = array(
                             'status' => 200,
                             'message' => localizeSuccessMessage('success.data_update_successful', $locale),
@@ -437,7 +446,7 @@ class updateTask
                 $smtpFromName
             );
 
-            if (!$notificationGenerator->sendStatusChangeEmail('Feladat státuszváltozás (Teszt)', 'Egy feladat státusza megváltozott.', $data)) {
+            if (!$notificationGenerator->sendStatusChangeEmail('Feladat státuszváltozás', 'Egy feladat státusza megváltozott.', $data)) {
                 $this->log->error('Failed to send status change email for task ID: ' . $taskId);
             } else {
                 $this->log->info('Status change email sent successfully for task ID: ' . $taskId);
