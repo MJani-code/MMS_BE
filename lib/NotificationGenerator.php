@@ -315,7 +315,8 @@ class NotificationGenerator
                     tl.tof_shop_id as tofShopId,
                     GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') as taskTypeNames,
                     tli.notes AS lockerInterventionNotes,
-                    tr.company_id AS responsibleCompanyId
+                    tr.company_id AS responsibleCompanyId,
+                    t.updated_by AS updatedBy
                 FROM tasks t
                 LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
                 LEFT JOIN task_locations tl ON tl.id = t.task_locations_id
@@ -324,7 +325,7 @@ class NotificationGenerator
                 LEFT JOIN task_lockers_interventions tli ON tli.task_id = t.id
                 LEFT JOIN task_responsibles tr ON tr.id = (SELECT MAX(trm.id) FROM task_responsibles trm WHERE trm.task_id = t.id AND trm.deleted = 0)
                 WHERE t.id = ?
-                GROUP BY t.id, ts.name, tl.name, tl.city, tl.address, tl.box_id, tl.tof_shop_id, tli.notes, tr.company_id
+                GROUP BY t.id, ts.name, tl.name, tl.city, tl.address, tl.box_id, tl.tof_shop_id, tli.notes, tr.company_id, t.updated_by
             ");
             $stmt->execute([$taskId]);
             $taskDetails = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -362,7 +363,8 @@ class NotificationGenerator
                     tl.tof_shop_id as tofShopId,
                     GROUP_CONCAT(DISTINCT ttd.name ORDER BY tt.type_id ASC SEPARATOR ', ') AS taskTypeNames,
                     tli.notes AS lockerInterventionNotes,
-                    tr.company_id AS responsibleCompanyId
+                    tr.company_id AS responsibleCompanyId,
+                    t.updated_by AS updatedBy
                 FROM tasks t
                 LEFT JOIN task_statuses ts ON ts.id = t.status_by_exohu_id
                 LEFT JOIN task_locations tl ON tl.id = t.task_locations_id
@@ -371,7 +373,7 @@ class NotificationGenerator
                 LEFT JOIN task_lockers_interventions tli ON tli.task_id = t.id
                 LEFT JOIN task_responsibles tr ON tr.id = (SELECT MAX(trm.id) FROM task_responsibles trm WHERE trm.task_id = t.id AND trm.deleted = 0)
                 WHERE t.id IN ($placeholders)
-                GROUP BY t.id, ts.name, tl.name, tl.city, tl.address, tl.box_id, tl.tof_shop_id, tli.notes
+                GROUP BY t.id, ts.name, tl.name, tl.city, tl.address, tl.box_id, tl.tof_shop_id, tli.notes, t.updated_by
                 ORDER BY t.id
             ");
             $stmt->execute($taskIds);
@@ -405,7 +407,8 @@ class NotificationGenerator
         foreach ($tasks as $task) {
             $companyId = $task['responsibleCompanyId'] ?? null;
             foreach ($this->getSubscribedUsersByCompanyId($companyId, 'sendBatchStatusChangeEmail', 'getBatchStatusChangeEmailFromAnyCompany') as $user) {
-                if (!empty($user['email'])) {
+                // a módosítást végző user nem kap értesítést a saját módosításáról
+                if (!empty($user['email']) && (string) $user['id'] !== (string) ($task['updatedBy'] ?? '')) {
                     $tasksByEmail[$user['email']][$task['taskId']] = $task;
                 }
             }
@@ -504,6 +507,10 @@ class NotificationGenerator
 
         $emails = [];
         foreach ($this->getSubscribedUsersByCompanyId($companyId, 'sendStatusChangeEmail', 'getStatusChangeEmailFromAnyCompany') as $user) {
+            // a módosítást végző user nem kap értesítést a saját módosításáról
+            if ((string) $user['id'] === (string) ($taskDetails['updatedBy'] ?? '')) {
+                continue;
+            }
             $emails[] = $user['email'];
         }
 
