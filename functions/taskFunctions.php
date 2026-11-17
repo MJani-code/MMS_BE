@@ -1583,11 +1583,13 @@ function addGpsDataToLocations($locations, $locationsWithGps, $d4mePoints = [])
             $d4meGpsById[(string)$d4mePoint['id']] = [
                 'latitude' => $d4mePoint['latitude'] ?? null,
                 'longitude' => $d4mePoint['longitude'] ?? null,
+                'boxesCount' => $d4mePoint['boxesCount'] ?? null,
             ];
         }
     }
 
     foreach ($locations as &$location) {
+        $location['boxesCount'] = $location['boxesCount'] ?? null;
         foreach ($locationsWithGps as $gpsLocation) {
             if ($location['tof_shop_id'] == $gpsLocation['id']) {
                 $location['latitude'] = $gpsLocation['lat'] ?? null;
@@ -1600,6 +1602,7 @@ function addGpsDataToLocations($locations, $locationsWithGps, $d4mePoints = [])
         $boxId = isset($location['box_id']) ? (string)$location['box_id'] : '';
         if ($boxId !== '' && isset($d4meGpsById[$boxId])) {
             $gps = $d4meGpsById[$boxId];
+            $location['boxesCount'] = $gps['boxesCount'];
             if ($gps['latitude'] !== null && $gps['longitude'] !== null) {
                 $location['latitude'] = $gps['latitude'];
                 $location['longitude'] = $gps['longitude'];
@@ -1822,7 +1825,7 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         $sheet = $spreadsheet->getActiveSheet();
 
         // Fejléc
-        $fejlec = ['tof_shop_id', 'box_id', 'status_exohu', 'latitude', 'longitude', 'location_photos', 'delivery_date', 'lockerApproach'];
+        $fejlec = ['tof_shop_id', 'box_id', 'status_exohu', 'latitude', 'longitude', 'location_photos', 'delivery_date', 'lockerApproach', 'boxesCount'];
         $sheet->fromArray($fejlec, NULL, 'A1');
 
         $startRow = 2;
