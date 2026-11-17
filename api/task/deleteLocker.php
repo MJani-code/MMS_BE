@@ -37,7 +37,7 @@ class RemoveLocker
             return $this->response = $isAccess;
         } else {
             $userId = $isAccess['data']->userId;
-            $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($newItems['taskId'], null, $isAccess['data']->companyId, $isAccess['data']->permissions);
+            $isTheTaskVisibleForUser = $this->auth->isTheTaskVisibleForUser($newItems['task_id'], null, $isAccess['data']->companyId, $isAccess['data']->permissions);
             if ($isTheTaskVisibleForUser['status'] !== 200) {
                 return $this->response = $isTheTaskVisibleForUser;
             }
