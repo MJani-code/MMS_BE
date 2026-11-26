@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../inc/config.php';
 require_once __DIR__ . '/db/dbFunctions.php';
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../lib/D4meExportWarning.php';
 require_once __DIR__ . '/../api/task/d4me/Locations_GetCountryPublicLocations.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -1613,15 +1614,11 @@ function addGpsDataToLocations($locations, $locationsWithGps, $d4mePoints = [])
     return $locations;
 }
 
-function getD4mePublicLocations($conn, $auth = null, $searchTerm = '', $boxIds = [])
+function getD4mePublicLocations($conn, $auth = null, $searchTerm = '', $boxIds = [], $trace = null)
 {
     global $tokenD4Me, $d4meApiGetPhotoUrl;
 
     try {
-        if (!class_exists('getLocations')) {
-            return createResponse(500, 'getLocations class is not available.');
-        }
-
         $logDir = __DIR__ . '/../api/task/d4me/logs';
         if (!is_dir($logDir)) {
             @mkdir($logDir, 0777, true);
@@ -1630,38 +1627,19 @@ function getD4mePublicLocations($conn, $auth = null, $searchTerm = '', $boxIds =
         $log = new \Monolog\Logger('downloadNewPoints');
         $log->pushHandler(new \Monolog\Handler\RotatingFileHandler($logDir . '/downloadNewPoints.log', 5));
 
-        $result = [];
-        $mergedData = $result['data'] ?? [];
-
-        // Ha boxId lista erkezik, minden boxId-ra kulon futtatjuk a lekerdezest searchTermkent,
-        // majd az eredmenyt osszefuzzuk az alap valasszal.
-        if (is_array($boxIds) && !empty($boxIds)) {
-            foreach ($boxIds as $boxId) {
-
-                $boxSearchTerm = trim((string)$boxId);
-                if ($boxSearchTerm === '') {
-                    continue;
-                }
-
-                $boxResponse = [];
-                $boxItems = new getLocations($conn, $boxResponse, $auth, $tokenD4Me, $d4meApiGetPhotoUrl, $log, $boxSearchTerm);
-                $boxResult = $boxItems->getItems(true);
-
-                if (($boxResult['status'] ?? 500) !== 200 || !isset($boxResult['data']) || !is_array($boxResult['data'])) {
-                    $log->warning('D4Me boxId query failed', ['boxId' => $boxSearchTerm, 'status' => $boxResult['status'] ?? null]);
-                    continue;
-                }
-
-                $mergedData = array_merge($mergedData, $boxResult['data']);
-            }
-        }
-        return createResponse(200, 'success', $mergedData);
+        $client = new D4meLocationsClient();
+        $result = $client->getLocations($d4meApiGetPhotoUrl, $tokenD4Me, $boxIds, $log, $trace);
+        $response = createResponse(200, 'success', $result['data']);
+        $response['failed_box_ids'] = $result['failed_box_ids'];
+        $response['missing_id_count'] = $result['missing_id_count'];
+        return $response;
     } catch (Throwable $e) {
+        error_log('D4Me locations retrieval failed: ' . $e->getMessage());
         return createResponse(400, 'Hiba tortent: ' . $e->getMessage());
     }
 }
 
-function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
+function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null, $trace = null)
 {
     try {
         $adatok = $data;
@@ -1673,13 +1651,23 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         }
 
         //All tof_shop_id and box_id values from task_locations table in db
+        if ($trace) {
+            $trace('task_locations_started');
+        }
         $taskLocationsStmt = $conn->query("SELECT tof_shop_id, box_id FROM task_locations");
         $taskLocations = $taskLocationsStmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($trace) {
+            $trace('task_locations_finished', ['count' => count($taskLocations)]);
+            $trace('exobox_started');
+        }
 
 
         //Get all points from Exobox API
         $exoboxPoints = getExoboxPoints($url, $user, $password, null);
         $exoboxPoints = $exoboxPoints['payload'];
+        if ($trace) {
+            $trace('exobox_finished', ['count' => is_array($exoboxPoints) ? count($exoboxPoints) : null]);
+        }
 
 
         //to keep only id and provider_point_id fields from exoboxPoints        
@@ -1693,8 +1681,17 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
 
 
         // Validate which Exobox points match the task locations in the database
+        if ($trace) {
+            $trace('matching_started');
+        }
         $filteredTofShopIds = boxIdAndTofShopIdMatchValidator($exoboxPointsNormalized, $taskLocations)['tof_shop_id'] ?? [];
+        if ($trace) {
+            $trace('matching_first_pass_finished', ['count' => count($filteredTofShopIds)]);
+        }
         $filteredBoxIds = boxIdAndTofShopIdMatchValidator($exoboxPointsNormalized, $taskLocations)['box_id'] ?? [];
+        if ($trace) {
+            $trace('matching_second_pass_finished', ['count' => count($filteredBoxIds)]);
+        }
 
 
         if (empty($filteredTofShopIds)) {
@@ -1708,6 +1705,9 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         $statuses = [6, 9, 10];
 
         //Query the filtered locations with lockers
+        if ($trace) {
+            $trace('locations_query_started');
+        }
         $filteredTofShopIdsPlaceholders = rtrim(str_repeat('?,', count($filteredTofShopIds)), ',');
         $statusesPlaceholders = rtrim(str_repeat('?,', count($statuses)), ',');
         $stmt = $conn->prepare("SELECT DISTINCT
@@ -1752,6 +1752,9 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         )");
         $stmt->execute(array_merge($filteredTofShopIds, $statuses));
         $locationsWithLockers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if ($trace) {
+            $trace('locations_query_finished', ['count' => count($locationsWithLockers)]);
+        }
 
 
         //Get boxId extracted from $locationsWithLockers where brand = Direct4Me into one array for easier access later
@@ -1761,8 +1764,25 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
 
 
         //Get point from D4me API through getD4mePublicLocations
-        $d4mePointsResponse = getD4mePublicLocations($conn, $auth, '', $boxIdsForD4MeQuery);
+        if ($trace) {
+            $trace('d4me_started', [
+                'count' => count($boxIdsForD4MeQuery),
+                'unique_count' => count(array_unique($boxIdsForD4MeQuery)),
+            ]);
+        }
+        $d4mePointsResponse = getD4mePublicLocations($conn, $auth, '', $boxIdsForD4MeQuery, $trace);
         $d4mePoints = $d4mePointsResponse['payload'] ?? [];
+        $d4meFailed = ($d4mePointsResponse['status'] ?? 500) !== 200;
+        $d4meFailedIds = $d4mePointsResponse['failed_box_ids'] ?? [];
+        $d4meMissingIdCount = $d4mePointsResponse['missing_id_count'] ?? 0;
+        if ($trace) {
+            $trace('d4me_finished', [
+                'count' => count($d4mePoints),
+                'status' => $d4mePointsResponse['status'] ?? null,
+                'failed_count' => count($d4meFailedIds),
+                'missing_id_count' => $d4meMissingIdCount,
+            ]);
+        }
 
 
         foreach ($locationsWithLockers as &$row) {
@@ -1816,13 +1836,23 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         }
         unset($row);
 
+        if ($trace) {
+            $trace('gps_matching_started');
+        }
         $locationsWithLockers = addGpsDataToLocations($locationsWithLockers, $exoboxPoints, $d4mePoints);
+        if ($trace) {
+            $trace('gps_matching_finished');
+        }
         $adatok = $locationsWithLockers;
 
 
         // Excel generálása
+        if ($trace) {
+            $trace('excel_generation_started');
+        }
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+        addD4meWarningSheet($spreadsheet, $d4meFailed, $d4meFailedIds, $d4meMissingIdCount);
 
         // Fejléc
         $fejlec = ['tof_shop_id', 'box_id', 'status_exohu', 'latitude', 'longitude', 'location_photos', 'delivery_date', 'lockerApproach', 'boxesCount'];
@@ -1895,18 +1925,30 @@ function downloadNewPoints($conn, $data, $url, $user, $password, $auth = null)
         rename($temp_file, $temp_file_with_ext);
 
         $writer = new Xlsx($spreadsheet);
+        if ($trace) {
+            $trace('excel_save_started', ['rows' => $currentRow - 1]);
+        }
         $writer->save($temp_file_with_ext);
+        if ($trace) {
+            $trace('excel_save_finished', ['bytes' => filesize($temp_file_with_ext)]);
+        }
 
         // Fájl letöltése
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="newpoints.xlsx"');
         header('Cache-Control: max-age=0');
         readfile($temp_file_with_ext);
+        if ($trace) {
+            $trace('download_finished');
+        }
 
         // Fájl törlése
         unlink($temp_file_with_ext);
         exit();
     } catch (Throwable $e) {
+        if ($trace) {
+            $trace('failed', ['exception_type' => get_class($e)]);
+        }
         if (!headers_sent()) {
             header('Content-Type: application/json');
         }
