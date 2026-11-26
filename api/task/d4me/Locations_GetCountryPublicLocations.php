@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../../inc/conn.php';
 require_once __DIR__ . '/../../../vendor/autoload.php';
 require_once __DIR__ . '/../../../api/user/auth/auth.php';
+require_once __DIR__ . '/../../../lib/D4meLocationsClient.php';
 
 
 use Monolog\Logger;
@@ -39,16 +40,7 @@ class getLocations
 
     private function callApi($url, $token, $searchTerm = '')
     {
-        if (!empty($searchTerm)) {
-            $url .= '&SearchTerm=' . urlencode($searchTerm) . '&SearchFields[]=id';
-        }
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type:application/json',
-            'Authorization: Bearer ' . $token
-        ]);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "GET");
+        $ch = D4meLocationsClient::createHandle($url, $token, empty($searchTerm) ? '' : $searchTerm);
         $response = curl_exec($ch);
 
         if ($response === false || curl_errno($ch)) {
